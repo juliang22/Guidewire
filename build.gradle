@@ -1,0 +1,61 @@
+version '1.0'
+
+apply plugin: 'java'
+
+repositories {
+  mavenCentral()
+}
+
+dependencies {
+/*  implementation 'org.apache.httpcomponents:httpclient:4.5.13'
+  implementation 'com.fasterxml.jackson.core:jackson-databind:2.14.0'
+  implementation 'com.fasterxml.jackson.core:jackson-core:2.14.0'*/
+
+ /* implementation 'io.swagger.parser.v3:swagger-parser:2.1.8'*/
+/*  implementation 'io.swagger.parser.v3:swagger-parser-v3:2.1.8'*/
+/*  implementation 'io.swagger.parser.v3:swagger-parser-core:2.0.12'*/
+/*  implementation 'io.swagger.parser.v3:swagger-parser-v2-converter:2.1.8'*/
+
+/*  compileOnly fileTree(dir: 'META-INF/external_lib', include: '*.jar' )*/
+/*  implementation fileTree(dir: 'META-INF/lib', include: '*.jar')*/
+
+/*  compileOnly group: 'io.swagger.parser.v3', name: 'swagger-parser', version: '2.1.8'*/
+  implementation(group: 'io.swagger.parser.v3', name: 'swagger-parser', version: '2.1.8') {
+    exclude group: 'org.slf4j'
+/*    exclude group: 'org.slf4j', module: 'org.slf4j-api'*/
+  }
+/*  implementation group: 'org.openapitools.swagger.parser', name: 'swagger-parser', version: '2.0.2-OpenAPITools.org-1'*/
+
+  compileOnly 'com.appian:connected-systems-core:1.2.0'
+  implementation 'com.appian:connected-systems-client:1.1.0'
+  testImplementation 'com.appian:connected-systems-core:1.2.0'
+
+}
+
+
+jar {
+  duplicatesStrategy = DuplicatesStrategy.FAIL
+  into('META-INF/lib') {
+    from(configurations.runtimeClasspath)
+  }
+
+  manifest {
+    attributes("Spring-Context": "*;publish-context:=false")
+  }
+}
+
+configurations.all {
+
+/*  exclude module: 'slf4j-api'*/
+
+/*  exclude module: 'slf4j-log4j12'
+  exclude module: 'jms'
+  exclude module: 'jmxtools'
+  exclude module: 'jmxri'*/
+
+/*  resolutionStrategy {
+    preferProjectModules()
+    force 'org.slf4j:slf4j-api:1.7.22'
+  }*/
+}
+

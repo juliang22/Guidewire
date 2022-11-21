@@ -1,0 +1,15 @@
+<appian-plugin name="GuideWire" key="guidewire">
+  <plugin-info>
+    <description>GuideWire Connected System Plugin</description>
+    <vendor name="Appian" url="https://appian.com/"/>
+    <version>1.0.0.0</version>
+    <application-version min="7.6.0.4"/>
+  </plugin-info>
+  <connected-system-template key="GuidewireCSP"
+                             name="GuidewireCSP"
+                             class="com.appian.guidewire.templates.GuidewireCSP">
+    <integration-template key="GetClaimsIntegrationTemplate"
+                          name="GetClaimsIntegrationTemplate"
+                          class="com.appian.guidewire.templates.claims.GetClaimsIntegrationTemplate" />
+  </connected-system-template>
+</appian-plugin>

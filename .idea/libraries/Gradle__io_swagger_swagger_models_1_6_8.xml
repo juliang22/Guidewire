@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="Gradle: io.swagger:swagger-models:1.6.8">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/io.swagger/swagger-models/1.6.8/2e62ff621ca28e204508edace4b95c2075045947/swagger-models-1.6.8.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.gradle/caches/modules-2/files-2.1/io.swagger/swagger-models/1.6.8/1b4d787266529090639a98f689622e8674576be1/swagger-models-1.6.8-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>
