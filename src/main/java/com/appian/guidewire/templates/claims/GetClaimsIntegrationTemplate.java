@@ -30,7 +30,6 @@ import std.ConstantKeys;
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.READ)
 public class GetClaimsIntegrationTemplate extends SimpleIntegrationTemplate implements ConstantKeys {
 
-
   @Override
   protected SimpleConfiguration getConfiguration(
     SimpleConfiguration integrationConfiguration,
@@ -38,15 +37,9 @@ public class GetClaimsIntegrationTemplate extends SimpleIntegrationTemplate impl
     PropertyPath propertyPath,
     ExecutionContext executionContext) {
 
-    OpenAPI openAPI = new OpenAPIV3Parser().read("https://petstore3.swagger.io/api/v3/openapi.json");
-
-/*    SwaggerParseResult result = new OpenAPIParser().readLocation("https://petstore3.swagger.io/api/v3/openapi.json", null, null);*/
-
-/*    SwaggerParseResult result = new OpenAPIParser().readLocation("https://petstore.swagger.io/v2/swagger" +
-        ".json", null, null);
-    System.out.println("RESULT: " +result);*/
-    //Swagger swagger = new Swagger20Parser().read("GWClaims.json");
-
+    // First get OpenAPI content from source
+    String content = "{\"openapi\":\"3.0.2\"}";
+    OpenAPI openAPI = new OpenAPIV3Parser().readContents(content).getOpenAPI();
 
     TextPropertyDescriptor REST_CALL_TYPE = TextPropertyDescriptor.builder().key(REST_CALL).label(
         "Choose Integrations")
