@@ -1,10 +1,19 @@
 package com.appian.guidewire.templates.claims;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import org.apache.commons.io.IOUtils;
 
 import com.appian.connectedsystems.simplified.sdk.SimpleIntegrationTemplate;
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
@@ -18,13 +27,15 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.TextPrope
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
+import com.google.common.io.Resources;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.parser.OpenAPIV3Parser;
-
 import std.ConstantKeys;
 
-// Must provide an integration id. This value need only be unique for this connected system
+
+
+
 @TemplateId(name="GetClaimsIntegrationTemplate")
 // Set template type to READ since this integration does not have side effects
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.READ)
@@ -37,9 +48,30 @@ public class GetClaimsIntegrationTemplate extends SimpleIntegrationTemplate impl
     PropertyPath propertyPath,
     ExecutionContext executionContext) {
 
-    // First get OpenAPI content from source
-    String content = "{\"openapi\":\"3.0.2\"}";
-    OpenAPI openAPI = new OpenAPIV3Parser().readContents(content).getOpenAPI();
+
+    try (InputStream input = GetClaimsIntegrationTemplate.class.getClassLoader()
+        .getResourceAsStream("com/appian/guidewire/templates/Policies.yaml")) {
+      String content = IOUtils.toString(input, "utf-8");
+/*      System.out.println(content);*/
+      OpenAPI openAPI = new OpenAPIV3Parser().readContents(content).getOpenAPI();
+      System.out.println(openAPI.getPaths());
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+
+/*    try {
+      String content = Resources.toString(Resources.getResource(OPENAPI_SAMPLE),
+          StandardCharsets.UTF_8);
+      System.out.println(content);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }*/
+/*    OpenAPI openAPI = new OpenAPIV3Parser().readContents("openapis/petstore3.yaml").getOpenAPI();*/
+
+
+
+/*    OpenAPI openAPI = new OpenAPIV3Parser().readContents(content).getOpenAPI();
+    Paths paths = openAPI.getPaths();*/
 
     TextPropertyDescriptor REST_CALL_TYPE = TextPropertyDescriptor.builder().key(REST_CALL).label(
         "Choose Integrations")
@@ -69,7 +101,7 @@ public class GetClaimsIntegrationTemplate extends SimpleIntegrationTemplate impl
           textProperty("search").label("search")
               .isRequired(true)
               .refresh(RefreshPolicy.ALWAYS)
-              .description("This will be concatenated with the connected system text property on execute")
+              .description("paths.toString()")
               .build()
 /*          REST_CALL_TYPE*/
           );
