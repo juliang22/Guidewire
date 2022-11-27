@@ -1,13 +1,22 @@
 package std;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import org.apache.commons.io.IOUtils;
 
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationError;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
+import com.appian.guidewire.templates.claims.GetClaimsIntegrationTemplate;
+
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.parser.OpenAPIV3Parser;
+import io.swagger.v3.parser.core.models.ParseOptions;
 
 public class Util {
 
@@ -64,8 +73,18 @@ public class Util {
                 .build();
     }
 
-
-
+    public static OpenAPI getOpenApi(String api) {
+        try (InputStream input = GetClaimsIntegrationTemplate.class.getClassLoader().getResourceAsStream(api)) {
+            String content = IOUtils.toString(input, "utf-8");
+            ParseOptions parseOptions = new ParseOptions();
+            parseOptions.setResolve(true); // implicit
+            parseOptions.setResolveFully(true);
+            OpenAPI openAPI = new OpenAPIV3Parser().readContents(content, null, parseOptions).getOpenAPI();
+            return openAPI;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
 
 }

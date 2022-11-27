@@ -1,19 +1,10 @@
 package com.appian.guidewire.templates.claims;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
-import org.apache.commons.io.IOUtils;
 
 import com.appian.connectedsystems.simplified.sdk.SimpleIntegrationTemplate;
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
@@ -27,10 +18,7 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.TextPrope
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
-import com.google.common.io.Resources;
 
-import io.swagger.v3.oas.models.OpenAPI;
-import io.swagger.v3.parser.OpenAPIV3Parser;
 import std.ConstantKeys;
 
 
@@ -48,30 +36,9 @@ public class GetClaimsIntegrationTemplate extends SimpleIntegrationTemplate impl
     PropertyPath propertyPath,
     ExecutionContext executionContext) {
 
+/*    OpenAPI openAPI = Util.getOpenApi("com/appian/guidewire/templates/Policies.yaml");
+    System.out.println(openAPI.getPaths().get("/batch"));*/
 
-    try (InputStream input = GetClaimsIntegrationTemplate.class.getClassLoader()
-        .getResourceAsStream("com/appian/guidewire/templates/Policies.yaml")) {
-      String content = IOUtils.toString(input, "utf-8");
-/*      System.out.println(content);*/
-      OpenAPI openAPI = new OpenAPIV3Parser().readContents(content).getOpenAPI();
-      System.out.println(openAPI.getPaths());
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-
-/*    try {
-      String content = Resources.toString(Resources.getResource(OPENAPI_SAMPLE),
-          StandardCharsets.UTF_8);
-      System.out.println(content);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }*/
-/*    OpenAPI openAPI = new OpenAPIV3Parser().readContents("openapis/petstore3.yaml").getOpenAPI();*/
-
-
-
-/*    OpenAPI openAPI = new OpenAPIV3Parser().readContents(content).getOpenAPI();
-    Paths paths = openAPI.getPaths();*/
 
     TextPropertyDescriptor REST_CALL_TYPE = TextPropertyDescriptor.builder().key(REST_CALL).label(
         "Choose Integrations")

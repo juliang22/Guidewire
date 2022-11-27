@@ -1,15 +1,27 @@
-<appian-plugin name="GuideWire" key="guidewire">
+<appian-plugin name="Guidewire" key="com.appian.guidewire">
   <plugin-info>
-    <description>GuideWire Connected System Plugin</description>
+    <description>Guidewire Connected System Plugin</description>
     <vendor name="Appian" url="https://appian.com/"/>
     <version>1.0.0.0</version>
     <application-version min="7.6.0.4"/>
   </plugin-info>
-  <connected-system-template key="GuidewireCSP"
-                             name="GuidewireCSP"
-                             class="com.appian.guidewire.templates.GuidewireCSP">
-    <integration-template key="GetClaimsIntegrationTemplate"
-                          name="GetClaimsIntegrationTemplate"
-                          class="com.appian.guidewire.templates.claims.GetClaimsIntegrationTemplate" />
-  </connected-system-template>
+  <connected-system key="Guidewire">
+    <version major-version="1">
+      <connected-system-template key="GuidewireCSP"
+                                 name="Guidewire"
+                                 class="com.appian.guidewire.templates.GuidewireCSP"/>
+      <integration-template key="ClaimsIntegrationTemplate"
+                            name="Claims"
+                            class="com.appian.guidewire.templates.claims.ClaimsIntegrationTemplate"
+                            request-policy="write" />
+      <integration-template key="PoliciesIntegrationTemplate"
+                            name="Policies"
+                            class="com.appian.guidewire.templates.policies.PoliciesIntegrationTemplate"
+                            request-policy="write" />
+      <integration-template key="JobsIntegrationTemplate"
+                            name="Jobs"
+                            class="com.appian.guidewire.templates.jobs.JobsIntegrationTemplate"
+                            request-policy="write" />
+    </version>
+  </connected-system>
 </appian-plugin>
