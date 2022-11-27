@@ -3,21 +3,16 @@ package com.appian.guidewire;
 import static org.junit.Assert.assertNotNull;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.text.WordUtils;
 import org.junit.Test;
 
 import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.PathItem;
-import io.swagger.v3.oas.models.media.ComposedSchema;
-import io.swagger.v3.oas.models.media.ObjectSchema;
-import io.swagger.v3.oas.models.media.Schema;
-import io.swagger.v3.oas.models.parameters.RequestBody;
 import std.Util;
+
+import com.appian.connectedsystems.templateframework.sdk.configuration.Choice;
+import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
 
 public class ParseOpenAPIsTests {
 
@@ -27,10 +22,44 @@ public class ParseOpenAPIsTests {
     @Test
     public void test_ParseResourcesOpenAPI() throws Exception {
 
-        OpenAPI openAPI = Util.getOpenApi("com/appian/guidewire/templates/Claims.yaml");
+        OpenAPI openAPI = Util.getOpenApi("com/appian/guidewire/templates/claims.yaml");
+        ArrayList<Choice> choices = new ArrayList<>();
+        openAPI.getPaths().entrySet().forEach(item -> {
+            PathItem path = item.getValue();
+            String key = item.getKey();
+
+            Operation get, post, patch, delete;
+            if ((get = path.getGet()) != null) {
+                choices.add(
+                    Choice.builder().name("GET  " + key + " - " + get.getSummary()).value("GET-"+key).build()
+                );
+            }
+            if ((post = path.getPost()) != null) {
+                choices.add(
+                    Choice.builder().name("POST  " + key + " - " + post.getSummary()).value("POST-"+key).build()
+                );
+            }
+            if ((patch = path.getPatch()) != null) {
+                choices.add(
+                    Choice.builder().name("PATCH  " + key + " - " + patch.getSummary()).value("PATCH-"+key).build()
+                );
+            }
+            if ((delete = path.getDelete()) != null) {
+                choices.add(
+                    Choice.builder().name("DELETE  " + key + " - " + delete.getSummary()).value("DELETE-"+key).build()
+                );
+            }
+        });
+
+        TextPropertyDescriptor REST_DROPDOWN = TextPropertyDescriptor.builder()
+            .key("CLAIMS_PATHS")
+            .label("Choose REST Call")
+            .transientChoices(true)
+            .choices(choices.stream().toArray(Choice[]::new))
+            .build();
 
         // Checks if parser works on all post/patch paths
-            // - Works for Policies.yaml (which doesn't have patch paths for some reason, might have to try
+            // - Works for policies.yaml (which doesn't have patch paths for some reason, might have to try
             // getting the openapi 3.0 schema from that endpoint. Excludes document paths which have a
             // different parsing structure.
             // - Almost working for Claims, excluding documents and

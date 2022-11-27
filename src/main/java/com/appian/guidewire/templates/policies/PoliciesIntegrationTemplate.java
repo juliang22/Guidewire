@@ -8,16 +8,15 @@ import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfigurat
 import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.TemplateId;
+import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
+import com.appian.guidewire.templates.GuidewireCSP;
 
-import std.RootDropdownBuilder;
 import std.ConstantKeys;
-
-
-
+import std.ParseOpenAPI;
 
 @TemplateId(name="PoliciesIntegrationTemplate")
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.WRITE)
@@ -30,7 +29,10 @@ public class PoliciesIntegrationTemplate extends SimpleIntegrationTemplate imple
       PropertyPath propertyPath,
       ExecutionContext executionContext) {
 
-    return RootDropdownBuilder.buildRestDropdownType(integrationConfiguration, POLICIES);
+
+    return ParseOpenAPI.buildRootDropdown(integrationConfiguration, POLICIES);
+
+/*    return RootDropdownBuilder.buildRestDropdownType(integrationConfiguration, POLICIES);*/
 
   }
 

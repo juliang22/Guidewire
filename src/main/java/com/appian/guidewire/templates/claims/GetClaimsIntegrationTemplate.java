@@ -36,7 +36,7 @@ public class GetClaimsIntegrationTemplate extends SimpleIntegrationTemplate impl
     PropertyPath propertyPath,
     ExecutionContext executionContext) {
 
-/*    OpenAPI openAPI = Util.getOpenApi("com/appian/guidewire/templates/Policies.yaml");
+/*    OpenAPI openAPI = Util.getOpenApi("com/appian/guidewire/templates/policies.yaml");
     System.out.println(openAPI.getPaths().get("/batch"));*/
 
 

@@ -10,9 +10,20 @@ public interface ConstantKeys {
   String USERNAME = "username";
   String PASSWORD = "password";
 
+
+  // API Types enum (clean up below duplication later)
+  public enum APIS {
+    Jobs,
+    Claims,
+    Policies
+  }
+
+  String PATIENCE = "patience";
+
+
   // API Types
   String API_CALL_TYPE = "apiCallType";
-  String JOBS = "job";
+  String JOBS = "jobs";
   String CLAIMS = "claims";
   String POLICIES = "policies";
 

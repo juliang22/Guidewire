@@ -13,8 +13,8 @@ import com.appian.connectedsystems.templateframework.sdk.diagnostics.Integration
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
 
-import std.RootDropdownBuilder;
 import std.ConstantKeys;
+import std.RootDropdownBuilder;
 
 
 @TemplateId(name="JobsIntegrationTemplate")
@@ -27,6 +27,7 @@ public class JobsIntegrationTemplate extends SimpleIntegrationTemplate implement
       SimpleConfiguration connectedSystemConfiguration,
       PropertyPath propertyPath,
       ExecutionContext executionContext) {
+
 
     return RootDropdownBuilder.buildRestDropdownType(integrationConfiguration, JOBS);
   }

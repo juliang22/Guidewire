@@ -12,9 +12,10 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyP
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
+import com.appian.guidewire.templates.GuidewireCSP;
 
-import std.RootDropdownBuilder;
 import std.ConstantKeys;
+import std.ParseOpenAPI;
 
 @TemplateId(name = "ClaimsIntegrationTemplate")
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.WRITE)
@@ -27,7 +28,9 @@ public class ClaimsIntegrationTemplate extends SimpleIntegrationTemplate impleme
       PropertyPath propertyPath,
       ExecutionContext executionContext) {
 
-    return RootDropdownBuilder.buildRestDropdownType(integrationConfiguration, CLAIMS);
+
+    return ParseOpenAPI.buildRootDropdown(integrationConfiguration, CLAIMS);
+    /*return RootDropdownBuilder.buildRestDropdownType(integrationConfiguration, CLAIMS);*/
    }
 
   @Override
