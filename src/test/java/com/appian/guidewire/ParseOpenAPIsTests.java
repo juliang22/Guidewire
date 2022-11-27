@@ -1,21 +1,20 @@
 package com.appian.guidewire;
 
-import com.appian.guidewire.templates.claims.GetClaimsIntegrationTemplate;
-import com.google.common.io.Resources;
-import io.swagger.v3.oas.models.OpenAPI;
-import io.swagger.v3.parser.OpenAPIV3Parser;
+import static org.junit.Assert.assertNotNull;
 
-import org.apache.commons.io.IOUtils;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.text.WordUtils;
 import org.junit.Test;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.media.ComposedSchema;
+import io.swagger.v3.oas.models.media.ObjectSchema;
+import io.swagger.v3.oas.models.media.Schema;
+import std.Util;
 
 public class ParseOpenAPIsTests {
 
@@ -25,16 +24,36 @@ public class ParseOpenAPIsTests {
     @Test
     public void test_ParseResourcesOpenAPI() throws Exception {
 
-        try (InputStream input = GetClaimsIntegrationTemplate.class.getClassLoader()
-            .getResourceAsStream("openapis/Policies.yaml")) {
-            String content = IOUtils.toString(input, "utf-8");
-            /*      System.out.println(content);*/
-            OpenAPI openAPI = new OpenAPIV3Parser().readContents(content).getOpenAPI();
-/*            System.out.println(openAPI.getPaths());*/
-            assertNotNull(openAPI);
-            assertEquals(openAPI.getOpenapi(), "3.0.1");
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        OpenAPI openAPI = Util.getOpenApi("com/appian/guidewire/templates/Policies.yaml");
+        // Get Paths
+/*        openAPI.getPaths().entrySet().forEach(s -> System.out.println(s.getKey()));*/
+
+        /*        String ref =
+            openAPI.getPaths().get("/policies/{policyId}/activities").getPost().getRequestBody().getContent().get("application/json").getSchema().get$ref();
+        String[] split = ref.split("/");
+        ref = split[split.length-1];
+        System.out.println(openAPI.getComponents().getSchemas().get(ref).getAllOf());*/
+        ObjectSchema schema = (ObjectSchema)
+            openAPI.getPaths().get("/policies/{policyId}/activities").getPost().getRequestBody().getContent().get("application/json").getSchema().getProperties().get("data");
+        schema.getProperties().get("attributes").getProperties().forEach((key, item) -> {
+            Schema itemSchema = ((Schema)item);
+
+            if (itemSchema.getType().equals("object")) {
+                System.out.println(key + " : " + itemSchema.getType());
+                itemSchema.getProperties().forEach((innerKey, innerItem) -> {
+                    Schema innerItemSchema = ((Schema)innerItem);
+                    System.out.println("        "+innerKey + " : " + innerItemSchema.getType());
+
+                });
+            } else {
+                System.out.println(key + " : " + itemSchema.getType());
+            }
+        });
+
+
+
+        assertNotNull(openAPI);
+
+
     }
 }

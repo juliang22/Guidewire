@@ -28,26 +28,37 @@ public class RootDropdownBuilder extends ConfigurableTemplate implements Constan
     RESTDropdowns restDropdown = null;
     switch (apiCallType) {
       case POLICIES:
-        restDropdown = new PoliciesBuilder(); break;
+        restDropdown = new PoliciesBuilder();
+        break;
       case CLAIMS:
-        restDropdown = new ClaimsBuilder(); break;
+        restDropdown = new ClaimsBuilder();
+        break;
       case JOBS:
-        restDropdown = new JobsBuilder(); break;
+        restDropdown = new JobsBuilder();
+        break;
     }
 
     // Based on the above builder, create dropdowns for whatever rest method is selected
-    TextPropertyDescriptor restCallType = null;
-    switch ((String) integrationConfiguration.getValue(REST_CALL)) {
+    TextPropertyDescriptor restEndpoint = null;
+    switch ((String)integrationConfiguration.getValue(REST_CALL)) {
       case GET:
-        restCallType = restDropdown.buildGetDropdown(); break;
+        restEndpoint = restDropdown.buildGetDropdown();
+        break;
       case POST:
-        restCallType = restDropdown.buildPostDropdown(); break;
+        restEndpoint = restDropdown.buildPostDropdown();
+        break;
       case PATCH:
-        restCallType = restDropdown.buildPatchDropdown(); break;
+        restEndpoint = restDropdown.buildPatchDropdown();
+        break;
       case DELETE:
-        restCallType = restDropdown.buildDeleteDropdown(); break;
+        restEndpoint = restDropdown.buildDeleteDropdown();
+        break;
     }
-    return integrationConfiguration.setProperties(API_CALL_TYPE_HIDDEN, REST_DROPDOWN, restCallType)
+    if (integrationConfiguration.getValue(GET_JOBS_DROPDOWN) != null) {
+
+      System.out.println(integrationConfiguration.getValue(GET_JOBS_DROPDOWN).toString());
+    }
+    return integrationConfiguration.setProperties(API_CALL_TYPE_HIDDEN, REST_DROPDOWN, restEndpoint)
         .setValue(API_CALL_TYPE, apiCallType);
   }
 }

@@ -40,19 +40,19 @@ public interface ConstantKeys {
   // Get Policies
   String GET_POLICIES_DROPDOWN = "getPoliciesDropdown";
   String GET_POLICIES = "getPolicies";
-  String GET_POLICY_BY_ID = "getPoliciesByID";
+  String GET_POLICY_BY_ID = "getPolicyByID";
   String GET_RESOURCE_ON_POLICY = "getResourceOnPolicy";
 
   // Get Claims
-  String GET_CLAIMS_DROPDOWN = "getPoliciesDropdown";
-  String GET_CLAIMS = "getPolicies";
-  String GET_CLAIM_BY_ID = "getPoliciesByID";
-  String GET_RESOURCE_ON_CLAIM = "getResourceOnPolicy";
+  String GET_CLAIMS_DROPDOWN = "getClaimsDropdown";
+  String GET_CLAIMS = "getClaims";
+  String GET_CLAIM_BY_ID = "getClaimByID";
+  String GET_RESOURCE_ON_CLAIM = "getResourceOnClaim";
 
   // Get Jobs
-  String GET_JOBS_DROPDOWN = "getPoliciesDropdown";
-  String GET_JOBS = "getPolicies";
-  String GET_JOB_BY_ID = "getPoliciesByID";
-  String GET_RESOURCE_ON_JOB = "getResourceOnPolicy";
+  String GET_JOBS_DROPDOWN = "getJobsDropdown";
+  String GET_JOBS = "getJobs";
+  String GET_JOB_BY_ID = "getJobByID";
+  String GET_RESOURCE_ON_JOB = "getResourceOnJob";
 
 }
