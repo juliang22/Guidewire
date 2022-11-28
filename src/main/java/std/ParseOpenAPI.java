@@ -1,6 +1,10 @@
 package std;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.templateframework.sdk.configuration.Choice;
@@ -9,18 +13,16 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.TextPrope
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor.TextPropertyDescriptorBuilder;
 import com.appian.guidewire.templates.GuidewireCSP;
 
-import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
-import io.swagger.v3.oas.models.PathItem;
-
+import io.swagger.v3.oas.models.Paths;
+import me.xdrop.fuzzywuzzy.FuzzySearch;
+import me.xdrop.fuzzywuzzy.model.ExtractedResult;
 
 public class ParseOpenAPI implements ConstantKeys {
 
   public static SimpleConfiguration buildRootDropdown(
       SimpleConfiguration integrationConfiguration, String api) {
 
-    // Get the endpoint the user has selected and compare
-    String selectedEndpoint = integrationConfiguration.getValue(API_CALL_TYPE);
     TextPropertyDescriptorBuilder chosenApi = null;
     switch (api) {
       case POLICIES:
@@ -34,62 +36,125 @@ public class ParseOpenAPI implements ConstantKeys {
         break;*/
     }
 
-    // If not endpoint is selected, just build the api dropdown
-    // If a user switched to another api after haven selected an endpoint, set the endpoint to null
-    // If a user selects api then endpoint, update label and description accordingly
+
+    // If there is a search query, sort the dropdown with the query
+    String searchQuery = integrationConfiguration.getValue(SEARCH);
+    chosenApi = (searchQuery == null || searchQuery.equals("")) ?
+        chosenApi :
+        initializePaths(api, searchQuery);
+
+    // If no endpoint is selected, just build the api dropdown
+    String selectedEndpoint = integrationConfiguration.getValue(API_CALL_TYPE);
+
     if (selectedEndpoint == null) {
-      return integrationConfiguration.setProperties(chosenApi.build());
+      return integrationConfiguration.setProperties(
+          SEARCHBAR,
+          chosenApi.build()
+      );
     }
+
+
+    // If a user switched to another api after they selected an endpoint, set the endpoint and search to null
+    // If a user selects api then a corresponding endpoint, update label and description accordingly
     String[] endpoint = selectedEndpoint.split(":");
     if (!endpoint[0].equals(api)) {
-      return integrationConfiguration.setProperties(chosenApi.build()).setValue(API_CALL_TYPE, null);
+      return integrationConfiguration.setProperties(SEARCHBAR, chosenApi.build())
+          .setValue(API_CALL_TYPE, null)
+          .setValue(SEARCH, "");
     } else {
       return integrationConfiguration.setProperties(
-          chosenApi.description(endpoint[1] + " " + endpoint[2]).instructionText(endpoint[3]).build());
+          SEARCHBAR,
+          chosenApi.description(endpoint[1] + " " + endpoint[2]).instructionText(endpoint[3]).build()
+      );
     }
 
-}
+  }
 
-  public static TextPropertyDescriptorBuilder initializePaths(String api) {
-    // Choice of API to pass in are Claims, Jobs, and Policies
-    OpenAPI openAPI = Util.getOpenApi("com/appian/guidewire/templates/"+api+".yaml");
-    ArrayList<Choice> choices = new ArrayList<>();
-    openAPI.getPaths().entrySet().forEach(item -> {
-      PathItem path = item.getValue();
-      String key = item.getKey();
+  public static TextPropertyDescriptorBuilder initializePaths(String api, String searchQuery) {
 
-      Operation get, post, patch, delete;
-      if ((get = path.getGet()) != null) {
-        choices.add(
-            Choice.builder().name("GET - " + key + " - "  + get.getSummary())
-                .value(api+":GET:" + key + ":" + get.getSummary()).build()
-        );
+    ArrayList<Choice> choices = null;
+    if (searchQuery.equals("")) {
+      choices = ParseOpenAPI.endpointChoiceBuilder(api);
+    } else {
+      switch (api) {
+        case POLICIES:
+          choices = getEndpointChoices(GuidewireCSP.policyPathsForSearch, searchQuery);
+          break;
+        case CLAIMS:
+          choices = getEndpointChoices(GuidewireCSP.claimPathsForSearch, searchQuery);
+          break;
+/*        case JOBS:
+          choices = getEndpointChoices(GuidewireCSP.jobPathsForSearch, searchQuery);
+          break;*/
       }
-      if ((post = path.getPost()) != null) {
-        choices.add(
-            Choice.builder().name("POST - " + key + " - "  + post.getSummary())
-                .value(api + ":POST:" + key + ":" + post.getSummary()).build()
-        );
-      }
-      if ((patch = path.getPatch()) != null) {
-        choices.add(
-            Choice.builder().name("PATCH - " + key + " - "  + patch.getSummary())
-                .value(api + ":PATCH:" + key + ":" + patch.getSummary()).build()
-        );
-      }
-      if ((delete = path.getDelete()) != null) {
-        choices.add(
-            Choice.builder().name("DELETE - " + key + " - " + delete.getSummary())
-                .value(api + ":DELETE:" + key +":"+ delete.getSummary()).build()
-        );
-      }
-    });
+    }
+
     return TextPropertyDescriptor.builder()
         .key(API_CALL_TYPE)
         .isRequired(true)
         .refresh(RefreshPolicy.ALWAYS)
-        .label("Choose REST Call")
+        .label("Select Endpoint")
         .transientChoices(true)
         .choices(choices.stream().toArray(Choice[]::new));
   }
+
+  public static ArrayList<Choice> getEndpointChoices(
+      Collection<String> choicesForSearch,
+      String search) {
+
+    List<ExtractedResult> extractedResults = FuzzySearch.extractSorted(search, choicesForSearch);
+    ArrayList<Choice> newChoices = new ArrayList<>();
+    extractedResults.stream().forEach(choice -> {
+
+        newChoices.add(
+            Choice.builder()
+                .name(choice.getString().substring(choice.getString().indexOf(" - ")+3))
+                .value(choice.getString().replace(" - ", ":"))
+                .build()
+        );
+
+    });
+    return newChoices;
+  }
+
+  // Parse through OpenAPI yaml and return all endpoints as Choice for dropdown
+  public static ArrayList<Choice> endpointChoiceBuilder(String api) {
+    Paths paths = Util.getOpenApi("com/appian/guidewire/templates/" + api + ".yaml").getPaths();
+    ArrayList<Choice> choices = new ArrayList<>();
+
+    // Check if rest call exists on path and add each rest call of path to list of choices
+    Map<String,Operation> operations = new HashMap<String,Operation>();
+    paths.forEach((pathName, path) -> {
+
+      operations.put(GET, path.getGet());
+      operations.put(POST, path.getPost());
+      operations.put(PATCH, path.getPatch());
+      operations.put(DELETE, path.getDelete());
+
+      operations.forEach((restType, restOperation) -> {
+        if (restOperation != null) {
+          String name = api + " - " + restType + " - " + pathName + " - " + restOperation.getSummary();
+          String value = api + ":" + restType + ":" + pathName + ":" + restOperation.getSummary();
+          switch (api) {
+            case POLICIES:
+              GuidewireCSP.policyPathsForSearch.add(name);
+              break;
+            case CLAIMS:
+              GuidewireCSP.claimPathsForSearch.add(name);
+              break;
+/*            case JOBS:
+              GuidewireCSP.jobPathsForSearch.add(api + " - " + restType + " - " + pathName + " - " + restOperation.getSummary());
+              break;
+              */
+          }
+          choices.add(Choice.builder()
+              .name(name)
+              .value(value)
+              .build());
+        }
+      });
+    });
+    return choices;
+  }
+
 }

@@ -29,15 +29,25 @@ public interface ConstantKeys {
 
   //Rest call types
   String REST_CALL = "restCall";
-  String GET = "get";
+  String GET = "GET";
 
-  String POST = "post";
-  String PATCH = "patch";
-  String DELETE = "delete";
+  String POST = "POST";
+  String PATCH = "PATCH";
+  String DELETE = "DELETE";
+
+  String SEARCH = "search";
+  TextPropertyDescriptor SEARCHBAR = new TextPropertyDescriptor.TextPropertyDescriptorBuilder()
+      .key(SEARCH)
+      .label("Sort Endpoints")
+      .refresh(RefreshPolicy.ALWAYS)
+      .instructionText(
+          "Sort the endpoints below with a relevant search query. " +
+              "Example query for the Claims API: 'injury incidents'")
+      .build();
 
   TextPropertyDescriptor REST_DROPDOWN = TextPropertyDescriptor.builder()
       .key(REST_CALL)
-      .label("Choose REST Call")
+      .label("Select Endpoint")
       .choices(Choice.builder().name("Get").value(GET).build(),
           Choice.builder().name("Post").value(POST).build(),
           Choice.builder().name("Patch").value(PATCH).build(),
