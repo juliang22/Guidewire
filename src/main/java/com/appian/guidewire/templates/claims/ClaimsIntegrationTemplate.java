@@ -12,10 +12,9 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyP
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
-import com.appian.guidewire.templates.GuidewireCSP;
 
 import std.ConstantKeys;
-import std.ParseOpenAPI;
+import com.appian.guidewire.templates.UIBuilders.ParseOpenAPI;
 
 @TemplateId(name = "ClaimsIntegrationTemplate")
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.WRITE)

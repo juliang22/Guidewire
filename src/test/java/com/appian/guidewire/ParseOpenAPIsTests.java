@@ -4,9 +4,6 @@ import static org.junit.Assert.assertNotNull;
 
 import org.junit.Test;
 
-import std.ConstantKeys;
-import std.ParseOpenAPI;
-
 public class ParseOpenAPIsTests {
 
     private static final String OPENAPI_SAMPLE = "openapis/petstore3.json";

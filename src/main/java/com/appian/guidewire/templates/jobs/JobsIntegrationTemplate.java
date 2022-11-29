@@ -12,10 +12,9 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyP
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
+import com.appian.guidewire.templates.UIBuilders.ParseOpenAPI;
 
 import std.ConstantKeys;
-import std.RootDropdownBuilder;
-
 
 @TemplateId(name="JobsIntegrationTemplate")
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.WRITE)
@@ -28,8 +27,8 @@ public class JobsIntegrationTemplate extends SimpleIntegrationTemplate implement
       PropertyPath propertyPath,
       ExecutionContext executionContext) {
 
-
-    return RootDropdownBuilder.buildRestDropdownType(integrationConfiguration, JOBS);
+    // TODO: change to jobs once I have access to that schema
+    return ParseOpenAPI.buildRootDropdown(integrationConfiguration, POLICIES);
   }
 
 

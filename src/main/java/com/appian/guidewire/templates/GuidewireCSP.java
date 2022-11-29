@@ -2,7 +2,6 @@ package com.appian.guidewire.templates;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 
 import com.appian.connectedsystems.simplified.sdk.SimpleConnectedSystemTemplate;
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
@@ -11,7 +10,7 @@ import com.appian.connectedsystems.templateframework.sdk.TemplateId;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor.TextPropertyDescriptorBuilder;
 
 import std.ConstantKeys;
-import std.ParseOpenAPI;
+import com.appian.guidewire.templates.UIBuilders.ParseOpenAPI;
 
 @TemplateId(name="GuidewireCSP")
 public class GuidewireCSP extends SimpleConnectedSystemTemplate implements ConstantKeys {

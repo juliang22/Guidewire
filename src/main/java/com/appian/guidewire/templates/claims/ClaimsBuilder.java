@@ -1,17 +1,24 @@
 package com.appian.guidewire.templates.claims;
 
-import com.appian.connectedsystems.simplified.sdk.configuration.ConfigurableTemplate;
+import java.util.ArrayList;
+import java.util.List;
+
 import com.appian.connectedsystems.templateframework.sdk.configuration.Choice;
 import com.appian.connectedsystems.templateframework.sdk.configuration.RefreshPolicy;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
-import com.appian.guidewire.templates.RESTDropdowns;
+import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
+import com.appian.guidewire.templates.UIBuilders.RestParamsBuilder;
 
-import std.ConstantKeys;
+public class ClaimsBuilder extends RestParamsBuilder {
 
-public class ClaimsBuilder extends ConfigurableTemplate implements ConstantKeys, RESTDropdowns {
+  public ClaimsBuilder(String pathName) {
+    super(pathName);
+  }
+  public List<PropertyDescriptor> buildGet() {
 
-  public TextPropertyDescriptor buildGetDropdown() {
-    return TextPropertyDescriptor.builder()
+    return super.buildGet();
+
+/*    return TextPropertyDescriptor.builder()
         .key(GET_CLAIMS_DROPDOWN)
         .label("Choose Integrations")
         .choices(Choice.builder().name("Get All Claims").value(GET_CLAIMS).build(),
@@ -19,10 +26,13 @@ public class ClaimsBuilder extends ConfigurableTemplate implements ConstantKeys,
             Choice.builder().name("Get Resource on Claim").value(GET_RESOURCE_ON_CLAIM).build())
         .isExpressionable(true)
         .refresh(RefreshPolicy.ALWAYS)
-        .build();
+        .build();*/
   }
 
-  public TextPropertyDescriptor buildPostDropdown() {
+  public TextPropertyDescriptor buildPost() {
+
+    super.buildPost();
+
     return TextPropertyDescriptor.builder()
         .key(GET_CLAIMS_DROPDOWN)
         .label("Choose Integrations")
@@ -33,7 +43,10 @@ public class ClaimsBuilder extends ConfigurableTemplate implements ConstantKeys,
   }
 
 
-  public TextPropertyDescriptor buildPatchDropdown() {
+  public TextPropertyDescriptor buildPatch() {
+
+    super.buildPatch();
+
     return TextPropertyDescriptor.builder()
         .key(GET_CLAIMS_DROPDOWN)
         .label("Choose Integrations")
@@ -44,7 +57,10 @@ public class ClaimsBuilder extends ConfigurableTemplate implements ConstantKeys,
   }
 
 
-  public TextPropertyDescriptor buildDeleteDropdown() {
+  public TextPropertyDescriptor buildDelete() {
+
+    super.buildDelete();
+
     return TextPropertyDescriptor.builder()
         .key(GET_CLAIMS_DROPDOWN)
         .label("Choose Integrations")
