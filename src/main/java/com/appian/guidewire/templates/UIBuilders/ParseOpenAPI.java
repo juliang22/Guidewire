@@ -8,10 +8,17 @@ import java.util.Map;
 
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.templateframework.sdk.configuration.Choice;
+import com.appian.connectedsystems.templateframework.sdk.configuration.DisplayHint;
+import com.appian.connectedsystems.templateframework.sdk.configuration.ListTypeDescriptor;
+import com.appian.connectedsystems.templateframework.sdk.configuration.ListTypeDescriptor;
+import com.appian.connectedsystems.templateframework.sdk.configuration.ListTypePropertyDescriptor;
+import com.appian.connectedsystems.templateframework.sdk.configuration.LocalTypeDescriptor;
+import com.appian.connectedsystems.templateframework.sdk.configuration.LocalTypeDescriptor.Builder;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.RefreshPolicy;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor.TextPropertyDescriptorBuilder;
+import com.appian.connectedsystems.templateframework.sdk.configuration.TypeReference;
 import com.appian.guidewire.templates.GuidewireCSP;
 import com.appian.guidewire.templates.claims.ClaimsBuilder;
 import com.appian.guidewire.templates.policies.PoliciesBuilder;
@@ -175,7 +182,7 @@ public class ParseOpenAPI implements ConstantKeys {
         .choices(choices.stream().toArray(Choice[]::new));
     }
 
-  public static void buildRequestBodyUI (OpenAPI openAPI, String pathName){
+  public static LocalTypeDescriptor buildRequestBodyUI (OpenAPI openAPI, String pathName){
     // Working parser of one path at a time
 
     ObjectSchema schema = (ObjectSchema)openAPI.getPaths()
@@ -188,32 +195,57 @@ public class ParseOpenAPI implements ConstantKeys {
         .getProperties()
         .get("data");
 
+    Builder reqBody = LocalTypeDescriptor.builder().name(REQ_BODY);
     schema.getProperties().get("attributes").getProperties().forEach((key, item) -> {
-      ParseOpenAPI.parseRequestBody(key, (Schema)item);
+      PropertyDescriptor newParam = ParseOpenAPI.parseRequestBody(key, (Schema)item, null);
+      if (newParam != null) reqBody.property(newParam);
     });
+    return reqBody.build();
+
   }
 
-  public static void parseRequestBody (Object key, Schema item){
+  public static PropertyDescriptor parseRequestBody (Object key, Schema item, List<Object> innerParams){
 
 
     if (item.getType().equals("object")) {
+
       System.out.println(key + " : " + item.getType());
+      return null;
 
-      if (item.getProperties() == null) return;
+/*      if (item.getProperties() == null) return null;
 
+      Builder objBuilder = LocalTypeDescriptor.builder();
       item.getProperties().forEach((innerKey, innerItem) -> {
-        parseRequestBody(innerKey, (Schema) innerItem);
+        Object newParam = parseRequestBody(innerKey, (Schema) innerItem, innerParams);
+        if (newParam != null) objBuilder.property((PropertyDescriptor)newParam);
       });
+      return objBuilder;*/
+
     } else if (item.getType().equals("array")) {
 
       System.out.println(key + " : " + item.getType());
-
+      return null;
+/*      List<Object> arr = new ArrayList<>();
       item.getItems().getProperties().forEach((innerKey, innerItem) -> {
-        parseRequestBody(innerKey, (Schema) innerItem);
+        Object newParam = parseRequestBody(innerKey, (Schema) innerItem, innerParams);
+        if (newParam != null) arr.add((PropertyDescriptor)newParam);
       });
+      return ListTypePropertyDescriptor.builder()
+ */
+
+
     } else {
       System.out.println(key + " : " + item.getType());
+      return TextPropertyDescriptor.builder()
+          .key(key.toString())
+          .instructionText(item.getDescription())
+          .isExpressionable(true)
+          .displayHint(DisplayHint.EXPRESSION)
+          .placeholder(item.getDescription())
+          .build();
     }
+
+
   }
 
 }

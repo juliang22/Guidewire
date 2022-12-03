@@ -11,6 +11,7 @@ import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.TemplateId;
 import com.appian.connectedsystems.templateframework.sdk.configuration.DisplayHint;
+import com.appian.connectedsystems.templateframework.sdk.configuration.ListTypeDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.ListTypePropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.LocalTypeDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.LocalTypePropertyDescriptor;
@@ -93,13 +94,19 @@ public class JobsIntegrationTemplate extends SimpleIntegrationTemplate implement
                 .build()
         ).build();
 
-    ParseOpenAPI.buildRequestBodyUI(GuidewireCSP.claimsOpenApi, "/claims/{claimId}/checks/{checkId}/mark-cleared");
+    LocalTypeDescriptor reqBody = ParseOpenAPI.buildRequestBodyUI(GuidewireCSP.claimsOpenApi, "");
+
 
     return integrationConfiguration.setProperties(
-        localTypeProperty(metaDataType).label("Meta").isHidden(true).isExpressionable(true).displayHint(DisplayHint.EXPRESSION).build(),
-        localTypeProperty(metaDataType2).label("Meta").isHidden(true).isExpressionable(true).displayHint(DisplayHint.EXPRESSION).build(),
-        localTypeProperty(qnaType).key("SINGLE_QNA").isExpressionable(true).label("QnA").displayHint(DisplayHint.EXPRESSION).build()
-    );
+        localTypeProperty(reqBody)
+            .key("SINGLE_QNA")
+            .isExpressionable(true)
+            .label("QnA")
+            .displayHint(DisplayHint.EXPRESSION)
+            .build()
+/*        localTypeProperty(qnaType).key("SINGLE_QNA").isExpressionable(true).label("QnA").displayHint(DisplayHint.EXPRESSION).build()*/
+        );
+
 
     // TODO: change to jobs once I have access to that schema
 

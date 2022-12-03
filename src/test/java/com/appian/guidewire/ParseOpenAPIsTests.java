@@ -23,12 +23,10 @@ public class ParseOpenAPIsTests {
 
 
 
-  @Test
-  public void plz() {
-    OpenAPI openAPI = Util.getOpenApi("com/appian/guidewire/templates/claims.yaml");
-    ParseOpenAPI.buildRequestBodyUI(openAPI, "");
-  }
 
+
+
+/*
   @Test
   public void pets() {
     OpenAPI openAPI = Util.getOpenApi("com/appian/guidewire/templates/petstore3.yaml");
@@ -191,7 +189,7 @@ public class ParseOpenAPIsTests {
     });
 
 
-    /*        System.out.println(ParseOpenAPI.initializePaths(ConstantKeys.CLAIMS));*/
+    *//*        System.out.println(ParseOpenAPI.initializePaths(ConstantKeys.CLAIMS));*//*
 
     // Checks if parser works on all post/patch paths
     // - Works for policies.yaml (which doesn't have patch paths for some reason, might have to try
@@ -200,7 +198,7 @@ public class ParseOpenAPIsTests {
     // - Almost working for Claims, excluding documents and
     // /claims/{claimId}/service-requests/{serviceRequestId}/invoices has a different structure to work
     // out, Will come back to it once I actually need to build requestBodies
-    /*  OpenAPI openAPI = Util.getOpenApi("com/appian/guidewire/templates/policies.yaml");
+    *//*  OpenAPI openAPI = Util.getOpenApi("com/appian/guidewire/templates/policies.yaml");
         openAPI.getPaths().entrySet().forEach(s -> {
             PathItem path = s.getValue();
 
@@ -262,7 +260,7 @@ public class ParseOpenAPIsTests {
                     }
                 });
             }
-        });*/
+        });*//*
 
 
 
@@ -270,7 +268,7 @@ public class ParseOpenAPIsTests {
 
 
 
-    /*        assertNotNull(openAPI);*/
+    *//*        assertNotNull(openAPI);*//*
 
-  }
+  }*/
 }
