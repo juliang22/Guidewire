@@ -2,8 +2,6 @@ package com.appian.guidewire.templates.UIBuilders;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,8 +16,11 @@ import com.appian.guidewire.templates.GuidewireCSP;
 import com.appian.guidewire.templates.claims.ClaimsBuilder;
 import com.appian.guidewire.templates.policies.PoliciesBuilder;
 
+import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.Paths;
+import io.swagger.v3.oas.models.media.ObjectSchema;
+import io.swagger.v3.oas.models.media.Schema;
 import me.xdrop.fuzzywuzzy.FuzzySearch;
 import me.xdrop.fuzzywuzzy.model.ExtractedResult;
 import std.ConstantKeys;
@@ -28,7 +29,10 @@ import std.Util;
 public class ParseOpenAPI implements ConstantKeys {
 
   public static SimpleConfiguration buildRootDropdown(
-      SimpleConfiguration integrationConfiguration, String api) {
+      SimpleConfiguration integrationConfiguration,
+      String api,
+      List<String> choicesForSearch
+  ) {
 
     TextPropertyDescriptorBuilder chosenApi = null;
     switch (api) {
@@ -43,23 +47,19 @@ public class ParseOpenAPI implements ConstantKeys {
         break;*/
     }
 
-
     // If there is a search query, sort the dropdown with the query
     String searchQuery = integrationConfiguration.getValue(SEARCH);
     chosenApi = (searchQuery == null || searchQuery.equals("")) ?
         chosenApi :
-        initializePaths(api, searchQuery);
-
+        endpointChoiceBuilder(api, searchQuery, choicesForSearch);
 
     // If no endpoint is selected, just build the api dropdown
     // If a user switched to another api after they selected an endpoint, set the endpoint and search to null
     // If a user selects api then a corresponding endpoint, update label and description accordingly
     String selectedEndpoint = integrationConfiguration.getValue(API_CALL_TYPE);
+    List<PropertyDescriptor> result = new ArrayList<>(Arrays.asList(SEARCHBAR, chosenApi.build()));
     if (selectedEndpoint == null) {
-      return integrationConfiguration.setProperties(
-          SEARCHBAR,
-          chosenApi.build()
-      );
+      return integrationConfiguration.setProperties(result.toArray(new PropertyDescriptor[1]));
     }
     String[] selectedEndpointStr = selectedEndpoint.split(":");
     String apiType = selectedEndpointStr[0];
@@ -67,36 +67,18 @@ public class ParseOpenAPI implements ConstantKeys {
     String pathName = selectedEndpointStr[2];
     String pathSummary = selectedEndpointStr[3];
     if (!apiType.equals(api)) {
-      return integrationConfiguration.setProperties(
-          SEARCHBAR,
-          chosenApi.build()
-      ).setValue(API_CALL_TYPE, null).setValue(SEARCH, "");
+      return integrationConfiguration.setProperties(result.toArray(new PropertyDescriptor[1]))
+          .setValue(API_CALL_TYPE, null)
+          .setValue(SEARCH, "");
     } else {
 
       List<PropertyDescriptor> restParams = getRestParams(apiType, restOperation, pathName);
-      Collections.addAll(restParams, SEARCHBAR,
-          chosenApi
-              .description(restOperation + " " + pathName)
-              .instructionText(pathSummary)
-              .build());
-      return integrationConfiguration.setProperties(
-          restParams.toArray(new PropertyDescriptor[0])
-/*          disgusting(restParams, 0),
-          disgusting(restParams, 1),
-          disgusting(restParams, 2)*/
-      );
-
+      result.addAll(restParams);
+      return integrationConfiguration.setProperties(result.toArray(new PropertyDescriptor[1]));
     }
   }
 
-  public static PropertyDescriptor disgusting(List<PropertyDescriptor> p, int i) {
-    return i >= p.size() ?
-        TextPropertyDescriptor.builder().key("stoopid"+i).isHidden(true).build() :
-        p.get(i);
-  }
-
-
-  public static List<PropertyDescriptor>  getRestParams(String api, String restOperation, String pathName) {
+  public static List<PropertyDescriptor> getRestParams(String api, String restOperation, String pathName) {
     RestParamsBuilder restParams = null;
     switch (api) {
       case POLICIES:
@@ -110,12 +92,12 @@ public class ParseOpenAPI implements ConstantKeys {
          break;*/
     }
 
-    List<PropertyDescriptor>  builtParams = null;
+    List<PropertyDescriptor> builtParams = null;
     switch (restOperation) {
       case GET:
         builtParams = restParams.buildGet();
         break;
-/*      case POST:
+      case POST:
         builtParams = restParams.buildPost();
         break;
       case PATCH:
@@ -123,96 +105,115 @@ public class ParseOpenAPI implements ConstantKeys {
         break;
       case DELETE:
         builtParams = restParams.buildDelete();
-        break;*/
+        break;
     }
     return builtParams;
   }
 
-  public static TextPropertyDescriptorBuilder initializePaths(String api, String searchQuery) {
 
-    ArrayList<Choice> choices = null;
-    if (searchQuery.equals("")) {
-      choices = ParseOpenAPI.endpointChoiceBuilder(api);
-    } else {
-      switch (api) {
-        case POLICIES:
-          choices = endpointChoiceBuilderWithSearch(GuidewireCSP.policyPathsForSearch, searchQuery);
-          break;
-        case CLAIMS:
-          choices = endpointChoiceBuilderWithSearch(GuidewireCSP.claimPathsForSearch, searchQuery);
-          break;
+  // Parse through OpenAPI yaml and return all endpoints as Choice for dropdown
+  public static TextPropertyDescriptorBuilder endpointChoiceBuilder(
+      String api,
+      String searchQuery,
+      List<String> choicesForSearch) {
+    Paths paths = null;
+    switch (api) {
+      case POLICIES:
+        paths = GuidewireCSP.policiesOpenApi.getPaths();
+        break;
+      case CLAIMS:
+        paths = GuidewireCSP.claimsOpenApi.getPaths();
+        break;
 /*        case JOBS:
-          choices = getEndpointChoices(GuidewireCSP.jobPathsForSearch, searchQuery);
+        paths = GuidewireCSP.jobsOpenApi.getPaths();
+        choicesForSearch = GuidewireCSP.jobPathsForSearch;
           break;*/
-      }
     }
 
-    return TextPropertyDescriptor.builder()
+
+      ArrayList<Choice> choices = new ArrayList<>();
+      // Build search choices when search query has been entered
+      if (!searchQuery.equals("") && choicesForSearch != null && !choicesForSearch.isEmpty()) {
+        List<ExtractedResult> extractedResults = FuzzySearch.extractSorted(searchQuery, choicesForSearch);
+        extractedResults.stream().forEach(choice -> {
+
+          choices.add(Choice.builder()
+              .name(choice.getString().substring(choice.getString().indexOf(" - ") + 3))
+              .value(choice.getString().replace(" - ", ":"))
+              .build());
+        });
+      } else { // Build search choices when no search query has been entered
+        // Check if rest call exists on path and add each rest call of path to list of choices
+        Map<String,Operation> operations = new HashMap<>();
+
+        paths.forEach((pathName, path) -> {
+          operations.put(GET, path.getGet());
+          operations.put(POST, path.getPost());
+          operations.put(PATCH, path.getPatch());
+          operations.put(DELETE, path.getDelete());
+
+          operations.forEach((restType, restOperation) -> {
+            if (restOperation != null) {
+              String name = api + " - " + restType + " - " + pathName + " - " + restOperation.getSummary();
+              String value = api + ":" + restType + ":" + pathName + ":" + restOperation.getSummary();
+
+              // Builds up choices for search on initial run with all paths
+              choicesForSearch.add(name);
+
+              // Choice UI built
+              choices.add(Choice.builder().name(name).value(value).build());
+            }
+          });
+        });
+      }
+      return TextPropertyDescriptor.builder()
         .key(API_CALL_TYPE)
         .isRequired(true)
         .refresh(RefreshPolicy.ALWAYS)
         .label("Select Endpoint")
         .transientChoices(true)
         .choices(choices.stream().toArray(Choice[]::new));
-  }
+    }
 
-  public static ArrayList<Choice> endpointChoiceBuilderWithSearch(
-      Collection<String> choicesForSearch,
-      String search) {
+  public static void buildRequestBodyUI (OpenAPI openAPI, String pathName){
+    // Working parser of one path at a time
 
-    List<ExtractedResult> extractedResults = FuzzySearch.extractSorted(search, choicesForSearch);
-    ArrayList<Choice> newChoices = new ArrayList<>();
-    extractedResults.stream().forEach(choice -> {
+    ObjectSchema schema = (ObjectSchema)openAPI.getPaths()
+        .get("/claims/{claimId}/service-requests/{serviceRequestId}/invoices")
+        .getPost()
+        .getRequestBody()
+        .getContent()
+        .get("application/json")
+        .getSchema()
+        .getProperties()
+        .get("data");
 
-        newChoices.add(
-            Choice.builder()
-                .name(choice.getString().substring(choice.getString().indexOf(" - ")+3))
-                .value(choice.getString().replace(" - ", ":"))
-                .build()
-        );
-
+    schema.getProperties().get("attributes").getProperties().forEach((key, item) -> {
+      ParseOpenAPI.parseRequestBody(key, (Schema)item);
     });
-    return newChoices;
   }
 
-  // Parse through OpenAPI yaml and return all endpoints as Choice for dropdown
-  public static ArrayList<Choice> endpointChoiceBuilder(String api) {
-    Paths paths = Util.getOpenApi("com/appian/guidewire/templates/" + api + ".yaml").getPaths();
-    ArrayList<Choice> choices = new ArrayList<>();
+  public static void parseRequestBody (Object key, Schema item){
 
-    // Check if rest call exists on path and add each rest call of path to list of choices
-    Map<String,Operation> operations = new HashMap<String,Operation>();
-    paths.forEach((pathName, path) -> {
 
-      operations.put(GET, path.getGet());
-      operations.put(POST, path.getPost());
-      operations.put(PATCH, path.getPatch());
-      operations.put(DELETE, path.getDelete());
+    if (item.getType().equals("object")) {
+      System.out.println(key + " : " + item.getType());
 
-      operations.forEach((restType, restOperation) -> {
-        if (restOperation != null) {
-          String name = api + " - " + restType + " - " + pathName + " - " + restOperation.getSummary();
-          String value = api + ":" + restType + ":" + pathName + ":" + restOperation.getSummary();
-          switch (api) {
-            case POLICIES:
-              GuidewireCSP.policyPathsForSearch.add(name);
-              break;
-            case CLAIMS:
-              GuidewireCSP.claimPathsForSearch.add(name);
-              break;
-/*            case JOBS:
-              GuidewireCSP.jobPathsForSearch.add(api + " - " + restType + " - " + pathName + " - " + restOperation.getSummary());
-              break;
-              */
-          }
-          choices.add(Choice.builder()
-              .name(name)
-              .value(value)
-              .build());
-        }
+      if (item.getProperties() == null) return;
+
+      item.getProperties().forEach((innerKey, innerItem) -> {
+        parseRequestBody(innerKey, (Schema) innerItem);
       });
-    });
-    return choices;
+    } else if (item.getType().equals("array")) {
+
+      System.out.println(key + " : " + item.getType());
+
+      item.getItems().getProperties().forEach((innerKey, innerItem) -> {
+        parseRequestBody(innerKey, (Schema) innerItem);
+      });
+    } else {
+      System.out.println(key + " : " + item.getType());
+    }
   }
 
 }

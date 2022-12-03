@@ -1,12 +1,11 @@
 package com.appian.guidewire.templates.jobs;
 
-import java.util.ArrayList;
 import java.util.List;
 
-import com.appian.connectedsystems.templateframework.sdk.configuration.Choice;
-import com.appian.connectedsystems.templateframework.sdk.configuration.RefreshPolicy;
-import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
+import com.appian.connectedsystems.templateframework.sdk.configuration.LocalTypeDescriptor;
+import com.appian.connectedsystems.templateframework.sdk.configuration.LocalTypePropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
+import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
 import com.appian.guidewire.templates.UIBuilders.RestParamsBuilder;
 
 public class JobsBuilder extends RestParamsBuilder {
@@ -15,6 +14,7 @@ public class JobsBuilder extends RestParamsBuilder {
     super(pathName);
   }
   public List<PropertyDescriptor> buildGet() {
+
 
     return super.buildGet();
 
@@ -29,44 +29,25 @@ public class JobsBuilder extends RestParamsBuilder {
         .build();*/
   }
 
-  public TextPropertyDescriptor buildPost() {
+  public List<PropertyDescriptor>  buildPost() {
 
-    super.buildPost();
+    return super.buildPost();
 
-    return TextPropertyDescriptor.builder()
-        .key(GET_CLAIMS_DROPDOWN)
-        .label("Choose Integrations")
-        .choices(Choice.builder().name("Not built yet").value(GET_CLAIMS).build())
-        .isExpressionable(true)
-        .refresh(RefreshPolicy.ALWAYS)
-        .build();
+
   }
 
 
-  public TextPropertyDescriptor buildPatch() {
+  public List<PropertyDescriptor>  buildPatch() {
 
-    super.buildPatch();
+    return super.buildPatch();
 
-    return TextPropertyDescriptor.builder()
-        .key(GET_CLAIMS_DROPDOWN)
-        .label("Choose Integrations")
-        .choices(Choice.builder().name("Not built yet").value(GET_CLAIMS).build())
-        .isExpressionable(true)
-        .refresh(RefreshPolicy.ALWAYS)
-        .build();
+
   }
 
 
-  public TextPropertyDescriptor buildDelete() {
+  public List<PropertyDescriptor>  buildDelete() {
 
-    super.buildDelete();
+    return super.buildDelete();
 
-    return TextPropertyDescriptor.builder()
-        .key(GET_CLAIMS_DROPDOWN)
-        .label("Choose Integrations")
-        .choices(Choice.builder().name("Not built yet").value(GET_CLAIMS).build())
-        .isExpressionable(true)
-        .refresh(RefreshPolicy.ALWAYS)
-        .build();
   }
 }

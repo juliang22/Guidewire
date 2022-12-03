@@ -14,6 +14,8 @@ import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTem
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
 
 import std.ConstantKeys;
+
+import com.appian.guidewire.templates.GuidewireCSP;
 import com.appian.guidewire.templates.UIBuilders.ParseOpenAPI;
 
 @TemplateId(name="PoliciesIntegrationTemplate")
@@ -27,8 +29,7 @@ public class PoliciesIntegrationTemplate extends SimpleIntegrationTemplate imple
       PropertyPath propertyPath,
       ExecutionContext executionContext) {
 
-
-    return ParseOpenAPI.buildRootDropdown(integrationConfiguration, POLICIES);
+    return ParseOpenAPI.buildRootDropdown(integrationConfiguration, POLICIES, GuidewireCSP.policyPathsForSearch);
 
 /*    return RootDropdownBuilder.buildRestDropdownType(integrationConfiguration, POLICIES);*/
 

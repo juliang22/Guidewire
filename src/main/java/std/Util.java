@@ -79,6 +79,7 @@ public class Util {
             ParseOptions parseOptions = new ParseOptions();
             parseOptions.setResolve(true); // implicit
             parseOptions.setResolveFully(true);
+/*            parseOptions.setResolveCombinators(false);*/
             OpenAPI openAPI = new OpenAPIV3Parser().readContents(content, null, parseOptions).getOpenAPI();
             return openAPI;
         } catch (IOException e) {
