@@ -1,6 +1,10 @@
 package com.appian.guidewire.templates.jobs;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.appian.connectedsystems.simplified.sdk.SimpleIntegrationTemplate;
@@ -10,9 +14,12 @@ import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.TemplateId;
 import com.appian.connectedsystems.templateframework.sdk.configuration.DisplayHint;
 import com.appian.connectedsystems.templateframework.sdk.configuration.LocalTypeDescriptor;
+import com.appian.connectedsystems.templateframework.sdk.configuration.LocalTypePropertyDescriptor;
+import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
 import com.appian.connectedsystems.templateframework.sdk.configuration.RefreshPolicy;
 import com.appian.connectedsystems.templateframework.sdk.configuration.SystemType;
+import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TypeReference;
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
@@ -32,9 +39,10 @@ public class JobsIntegrationTemplate extends SimpleIntegrationTemplate implement
       SimpleConfiguration connectedSystemConfiguration,
       PropertyPath propertyPath,
       ExecutionContext executionContext) {
-/*
 
-    LocalTypeDescriptor metaDataType = localType("METADATA_TYPE")
+
+/*
+*//*    LocalTypeDescriptor metaDataType = localType("METADATA_TYPE")
         .properties(
             textProperty("METADATA_NAME")
                 .label("Metadata Name")
@@ -48,7 +56,25 @@ public class JobsIntegrationTemplate extends SimpleIntegrationTemplate implement
                 .placeholder("api")
                 .isExpressionable(true)
                 .build()
-        ).build();
+        ).build();*//*
+
+    LocalTypeDescriptor.Builder meta2 = localType("METADATA_TYPEZ");
+    List<String> arr = Arrays.asList("hello", "world");
+    arr.forEach(el -> {
+      meta2.properties(
+          TextPropertyDescriptor.builder()
+              .key(el)
+              .instructionText(el)
+              .isExpressionable(true)
+              .displayHint(DisplayHint.EXPRESSION)
+              .placeholder(el)
+              .build()
+      );
+    });
+    LocalTypeDescriptor builtMeta = meta2.build();
+
+    LocalTypeDescriptor layered = localType("stoppid")
+        .properties(builtMeta).build();
 
     LocalTypeDescriptor qnaType = localType("QNA_TYPE")
         .properties(
@@ -75,16 +101,15 @@ public class JobsIntegrationTemplate extends SimpleIntegrationTemplate implement
                 .isExpressionable(true)
                 .isRequired(true)
                 .build(),
-*/
-/*            listTypeProperty("metadata")
+*//*            listTypeProperty("metadata")
                 .label("Metadata")
-                .itemType(TypeReference.from(metaDataType))
+                .itemType(TypeReference.from(builtMeta))
                 .isExpressionable(true)
                 .instructionText("Fill out the name - value pairs of the metadata. Up to 10 metadata objects are allowed.")
                 .description("List of metadata associated with the answer.")
                 .build(),*//*
 
-            localTypeProperty(metaDataType)
+            localTypeProperty(layered)
                 .label("Metadataddd")
                 .isExpressionable(true)
                 .instructionText("Fill out the name - value pairs of the metadata. Up to 10 metadata objects are allowed.")
@@ -93,27 +118,44 @@ public class JobsIntegrationTemplate extends SimpleIntegrationTemplate implement
         ).build();
 
     return integrationConfiguration.setProperties(
-*/
-/*        localTypeProperty(metaDataType).label("Meta").isHidden(true).isExpressionable(true).build(),*//*
+*//*        localTypeProperty(builtMeta).label("Meta").isHidden(true).isExpressionable(true).build(),*//*
 
         localTypeProperty(qnaType).key("SINGLE_QNA").displayHint(DisplayHint.EXPRESSION).isExpressionable(true).label("QnA").build()
 
-    );
-*/
+    );*/
+
 
 
     ParseOpenAPI p = new ParseOpenAPI();
-    LocalTypeDescriptor reqBody= p.buildRequestBodyUI(GuidewireCSP.claimsOpenApi, integrationConfiguration,
+    List<Object> reqBodyArr = p.buildRequestBodyUI(GuidewireCSP.claimsOpenApi, integrationConfiguration,
         "");
 
+    List<PropertyDescriptor> textFields = new ArrayList<>();
+    List<LocalTypeDescriptor> objFields = new ArrayList<>();
+    reqBodyArr.forEach(field -> {
+      if (field instanceof TextPropertyDescriptor) {
+        textFields.add((TextPropertyDescriptor)field);
+      } else if (field instanceof LocalTypeDescriptor) {
+        objFields.add((LocalTypeDescriptor)field);
+      }
+    });
+
+    LocalTypeDescriptor.Builder reqBody = localType("reqd");
+    reqBody.properties(textFields.toArray(new PropertyDescriptor[1]));
+    objFields.forEach(field -> reqBody.properties(localTypeProperty(field).build()));
+
+
+
     return integrationConfiguration.setProperties(
-        localTypeProperty(reqBody)
+        localTypeProperty(reqBody.build()).key("SINGLE_QNA").displayHint(DisplayHint.EXPRESSION).isExpressionable(true).label("QnA").build()
+    );
+/*        localTypeProperty(reqBody)
           .key("SINGLE_QNA")
           .isExpressionable(true)
           .label("QnA")
           .displayHint(DisplayHint.EXPRESSION)
           .build()
-    );
+    );*/
 
 
     // TODO: change to jobs once I have access to that schema

@@ -185,7 +185,7 @@ public class ParseOpenAPI extends ConfigurableTemplate implements ConstantKeys {
         .choices(choices.stream().toArray(Choice[]::new));
     }
 
-  public LocalTypeDescriptor buildRequestBodyUI (OpenAPI openAPI,
+  public List<Object> buildRequestBodyUI (OpenAPI openAPI,
       SimpleConfiguration integrationConfiguration,
       String pathName){
     // Working parser of one path at a time
@@ -200,45 +200,48 @@ public class ParseOpenAPI extends ConfigurableTemplate implements ConstantKeys {
         .getProperties()
         .get("data");
 
-    LocalTypeDescriptor.Builder reqBody = localType(REQ_BODY);
+/*    LocalTypeDescriptor.Builder reqBody = localType(REQ_BODY);*/
+    List<Object> reqBodyArr = new ArrayList<>();
     schema.getProperties().get("attributes").getProperties().forEach((key, item) -> {
       List<Object> newParam = parseRequestBody(key, (Schema)item);
       if (newParam != null) {
-        if (newParam.get(0) instanceof TextPropertyDescriptor) {
-          reqBody.properties((TextPropertyDescriptor)newParam.get(0)).build();
+        reqBodyArr.add(newParam.get(0));
+/*        if (newParam.get(0) instanceof TextPropertyDescriptor) {
+          TextPropertyDescriptor textParam = (TextPropertyDescriptor)newParam.get(0);
+          reqBody.add(textParam);
+*//*          reqBody.properties(textParam).build();*//*
 
         } else if (newParam.get(0) instanceof LocalTypeDescriptor) {
 
           LocalTypeDescriptor objParam = (LocalTypeDescriptor)newParam.get(0);
-         /* System.out.println("HERE "+ key.toString() + " " + objParam.toString());*/
+          System.out.println("HERE "+ key.toString() + " " + objParam.toString());
+          reqBody.add(objParam);
 
-
-          reqBody.properties(
+*//*          reqBody.properties(
               localTypeProperty(objParam)
                   .label("PLZ WERK")
                   .isExpressionable(true)
                   .build()
-          ).build();
-
-/*          integrationConfiguration.setProperties(
+          ).build();*//*
+*//*          integrationConfiguration.setProperties(
               localTypeProperty(objParam)
                   .label("PLZ WERK")
                   .isExpressionable(true)
                   .isHidden(true)
-                  .build(),
+                  .build()
               localTypeProperty(reqBody.build())
                   .isHidden(true)
                   .isExpressionable(true)
                   .build()
-          );*/
+          );*//*
 
-        }
+        }*/
       }
 
 
     });
 
-  return reqBody.build();
+  return reqBodyArr;
   }
 
   public List<Object> parseRequestBody(Object key, Schema item){
@@ -277,7 +280,6 @@ public class ParseOpenAPI extends ConfigurableTemplate implements ConstantKeys {
       });
       return ListTypePropertyDescriptor.builder()
  */
-
 
     } else {
       System.out.println(key + " : " + item.getType());
