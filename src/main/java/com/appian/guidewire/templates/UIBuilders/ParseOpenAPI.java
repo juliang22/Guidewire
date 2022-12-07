@@ -176,7 +176,7 @@ public class ParseOpenAPI implements ConstantKeys {
         .choices(choices.stream().toArray(Choice[]::new));
     }
 
-  public static List<Object> buildRequestBodyUI (OpenAPI openAPI,
+  public static List<Map<String,Object>> buildRequestBodyUI (OpenAPI openAPI,
       String pathName){
 
     ObjectSchema schema = (ObjectSchema)openAPI.getPaths()
@@ -190,16 +190,16 @@ public class ParseOpenAPI implements ConstantKeys {
         .get("data");
 
 
-    List<Object> reqBodyArr = new ArrayList<>();
+    List<Map<String,Object>> reqBodyArr = new ArrayList<>();
     schema.getProperties().get("attributes").getProperties().forEach((key, item) -> {
-      List<Object> newParam = parseRequestBody(key, (Schema)item);
-      if (newParam != null) reqBodyArr.add(newParam.get(0));
+      Map<String, Object> newParam = parseRequestBody(key, (Schema)item);
+      if (newParam != null) reqBodyArr.add(newParam);
     });
 
   return reqBodyArr;
   }
 
-  public static List<Object> parseRequestBody(Object key, Schema item){
+  public static Map<String, Object> parseRequestBody(Object key, Schema item){
 
     if (item.getType().equals("object")) {
 
@@ -209,40 +209,56 @@ public class ParseOpenAPI implements ConstantKeys {
       List<Object> objBuilder = new ArrayList<>();
 
       item.getProperties().forEach((innerKey, innerItem) -> {
-        TextPropertyDescriptor newParam = (TextPropertyDescriptor)parseRequestBody(innerKey, (Schema) innerItem).get(0);
+        TextPropertyDescriptor newParam = (TextPropertyDescriptor)parseRequestBody(innerKey,
+            (Schema) innerItem).get(TEXT);
         if (newParam != null && newParam instanceof TextPropertyDescriptor) {
           objBuilder.add(newParam);
         }
       });
 
-      return Arrays.asList(
+      Map<String, Object> objMap = new HashMap<>();
+      objMap.put(OBJECT,
           LocalTypeDescriptor.builder().name(key.toString())
-            .properties(objBuilder.toArray(new PropertyDescriptor[0]))
-            .build()
+          .properties(objBuilder.toArray(new PropertyDescriptor[0]))
+          .build()
       );
+      return objMap;
 
     } else if (item.getType().equals("array")) {
 
-      System.out.println(key + " : " + item.getType());
-      return null;
-/*      List<Object> arr = new ArrayList<>();
+      if (item.getItems() == null && item.getItems().getProperties() == null) return null;
+
+      List<Object> arrBuilder = new ArrayList<>();
       item.getItems().getProperties().forEach((innerKey, innerItem) -> {
-        Object newParam = parseRequestBody(innerKey, (Schema) innerItem, innerParams);
-        if (newParam != null) arr.add((PropertyDescriptor)newParam);
+        TextPropertyDescriptor newParam = (TextPropertyDescriptor)parseRequestBody(innerKey,
+            (Schema) innerItem).get(TEXT);
+        if (newParam != null && newParam instanceof TextPropertyDescriptor) {
+          arrBuilder.add(newParam);
+        }
       });
-      return ListTypePropertyDescriptor.builder()
- */
+
+      Map<String, Object> arrMap = new HashMap<>();
+      arrMap.put(ARRAY,
+          LocalTypeDescriptor.builder().name(key.toString())
+              .properties(arrBuilder.toArray(new PropertyDescriptor[0]))
+              .build()
+      );
+      return arrMap;
 
     } else {
       System.out.println(key + " : " + item.getType());
-      return Arrays.asList(TextPropertyDescriptor.builder()
-          .key(key.toString())
-          .instructionText(item.getDescription())
-          .isExpressionable(true)
-          .displayHint(DisplayHint.EXPRESSION)
-          .placeholder(item.getDescription())
-          .build());
 
+      Map<String, Object> textMap = new HashMap<>();
+      textMap.put(TEXT,
+          TextPropertyDescriptor.builder()
+              .key(key.toString())
+              .instructionText(item.getDescription())
+              .isExpressionable(true)
+              .displayHint(DisplayHint.EXPRESSION)
+              .placeholder(item.getDescription())
+              .build()
+          );
+      return textMap;
     }
 
   }

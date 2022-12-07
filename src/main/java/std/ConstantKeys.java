@@ -36,6 +36,10 @@ public interface ConstantKeys {
   String DELETE = "DELETE";
 
   String REQ_BODY = "reqBody";
+
+  String TEXT = "text";
+  String OBJECT = "object";
+  String ARRAY = "array";
   String SEARCH = "search";
   TextPropertyDescriptor SEARCHBAR = new TextPropertyDescriptor.TextPropertyDescriptorBuilder()
       .key(SEARCH)

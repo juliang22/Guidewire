@@ -127,15 +127,24 @@ public class JobsIntegrationTemplate extends SimpleIntegrationTemplate implement
 
 
 
-    List<Object> reqBodyArr = ParseOpenAPI.buildRequestBodyUI(GuidewireCSP.claimsOpenApi,
+    List<Map<String,Object>> reqBodyArr = ParseOpenAPI.buildRequestBodyUI(GuidewireCSP.claimsOpenApi,
         "/claims/{claimId}/service-requests/{serviceRequestId}/invoices");
+
 
     LocalTypeDescriptor.Builder reqBody = localType(REQ_BODY);
     reqBodyArr.forEach(field -> {
-      if (field instanceof TextPropertyDescriptor) {
-        reqBody.properties((TextPropertyDescriptor)field);
-      } else if (field instanceof LocalTypeDescriptor) {
-        reqBody.properties(localTypeProperty((LocalTypeDescriptor)field).build());
+      if (field.containsKey(TEXT) && field.get(TEXT) instanceof TextPropertyDescriptor) {
+        TextPropertyDescriptor textParam = (TextPropertyDescriptor)field.get(TEXT);
+        reqBody.properties(textParam);
+      } else if (field.containsKey(OBJECT) && field.get(OBJECT) instanceof LocalTypeDescriptor) {
+        LocalTypeDescriptor objParam = (LocalTypeDescriptor)field.get(OBJECT);
+        reqBody.properties(localTypeProperty(objParam).build());
+      } else if (field.containsKey(ARRAY) && field.get(ARRAY) instanceof LocalTypeDescriptor) {
+        LocalTypeDescriptor arrParam = (LocalTypeDescriptor)field.get(ARRAY);
+        reqBody.properties(
+            listTypeProperty(arrParam.getName()).itemType(TypeReference.from(arrParam)).build(),
+            localTypeProperty(arrParam).isHidden(true).build()
+        );
       }
     });
 
