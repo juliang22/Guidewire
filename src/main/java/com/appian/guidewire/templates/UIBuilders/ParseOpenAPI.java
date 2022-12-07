@@ -6,22 +6,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.appian.connectedsystems.simplified.sdk.configuration.ConfigurableTemplate;
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.templateframework.sdk.configuration.Choice;
 import com.appian.connectedsystems.templateframework.sdk.configuration.DisplayHint;
-import com.appian.connectedsystems.templateframework.sdk.configuration.ListTypeDescriptor;
-import com.appian.connectedsystems.templateframework.sdk.configuration.ListTypeDescriptor;
-import com.appian.connectedsystems.templateframework.sdk.configuration.ListTypePropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.LocalTypeDescriptor;
-import com.appian.connectedsystems.templateframework.sdk.configuration.LocalTypeDescriptor.Builder;
-import com.appian.connectedsystems.templateframework.sdk.configuration.LocalTypePropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
-import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptorBuilder;
 import com.appian.connectedsystems.templateframework.sdk.configuration.RefreshPolicy;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor.TextPropertyDescriptorBuilder;
-import com.appian.connectedsystems.templateframework.sdk.configuration.TypeReference;
 import com.appian.guidewire.templates.GuidewireCSP;
 import com.appian.guidewire.templates.claims.ClaimsBuilder;
 import com.appian.guidewire.templates.policies.PoliciesBuilder;
@@ -34,9 +26,8 @@ import io.swagger.v3.oas.models.media.Schema;
 import me.xdrop.fuzzywuzzy.FuzzySearch;
 import me.xdrop.fuzzywuzzy.model.ExtractedResult;
 import std.ConstantKeys;
-import std.Util;
 
-public class ParseOpenAPI extends ConfigurableTemplate implements ConstantKeys {
+public class ParseOpenAPI implements ConstantKeys {
 
   public static SimpleConfiguration buildRootDropdown(
       SimpleConfiguration integrationConfiguration,
@@ -185,13 +176,11 @@ public class ParseOpenAPI extends ConfigurableTemplate implements ConstantKeys {
         .choices(choices.stream().toArray(Choice[]::new));
     }
 
-  public List<Object> buildRequestBodyUI (OpenAPI openAPI,
-      SimpleConfiguration integrationConfiguration,
+  public static List<Object> buildRequestBodyUI (OpenAPI openAPI,
       String pathName){
-    // Working parser of one path at a time
 
     ObjectSchema schema = (ObjectSchema)openAPI.getPaths()
-        .get("/claims/{claimId}/service-requests/{serviceRequestId}/invoices")
+        .get(pathName)
         .getPost()
         .getRequestBody()
         .getContent()
@@ -200,56 +189,19 @@ public class ParseOpenAPI extends ConfigurableTemplate implements ConstantKeys {
         .getProperties()
         .get("data");
 
-/*    LocalTypeDescriptor.Builder reqBody = localType(REQ_BODY);*/
+
     List<Object> reqBodyArr = new ArrayList<>();
     schema.getProperties().get("attributes").getProperties().forEach((key, item) -> {
       List<Object> newParam = parseRequestBody(key, (Schema)item);
-      if (newParam != null) {
-        reqBodyArr.add(newParam.get(0));
-/*        if (newParam.get(0) instanceof TextPropertyDescriptor) {
-          TextPropertyDescriptor textParam = (TextPropertyDescriptor)newParam.get(0);
-          reqBody.add(textParam);
-*//*          reqBody.properties(textParam).build();*//*
-
-        } else if (newParam.get(0) instanceof LocalTypeDescriptor) {
-
-          LocalTypeDescriptor objParam = (LocalTypeDescriptor)newParam.get(0);
-          System.out.println("HERE "+ key.toString() + " " + objParam.toString());
-          reqBody.add(objParam);
-
-*//*          reqBody.properties(
-              localTypeProperty(objParam)
-                  .label("PLZ WERK")
-                  .isExpressionable(true)
-                  .build()
-          ).build();*//*
-*//*          integrationConfiguration.setProperties(
-              localTypeProperty(objParam)
-                  .label("PLZ WERK")
-                  .isExpressionable(true)
-                  .isHidden(true)
-                  .build()
-              localTypeProperty(reqBody.build())
-                  .isHidden(true)
-                  .isExpressionable(true)
-                  .build()
-          );*//*
-
-        }*/
-      }
-
-
+      if (newParam != null) reqBodyArr.add(newParam.get(0));
     });
 
   return reqBodyArr;
   }
 
-  public List<Object> parseRequestBody(Object key, Schema item){
+  public static List<Object> parseRequestBody(Object key, Schema item){
 
     if (item.getType().equals("object")) {
-
-/*      System.out.println(key + " : " + item.getType());
-      return null;*/
 
       if (item.getProperties() == null) return null;
 
@@ -264,7 +216,7 @@ public class ParseOpenAPI extends ConfigurableTemplate implements ConstantKeys {
       });
 
       return Arrays.asList(
-          localType(key.toString())
+          LocalTypeDescriptor.builder().name(key.toString())
             .properties(objBuilder.toArray(new PropertyDescriptor[0]))
             .build()
       );

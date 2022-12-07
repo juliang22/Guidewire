@@ -126,36 +126,23 @@ public class JobsIntegrationTemplate extends SimpleIntegrationTemplate implement
 
 
 
-    ParseOpenAPI p = new ParseOpenAPI();
-    List<Object> reqBodyArr = p.buildRequestBodyUI(GuidewireCSP.claimsOpenApi, integrationConfiguration,
-        "");
 
-    List<PropertyDescriptor> textFields = new ArrayList<>();
-    List<LocalTypeDescriptor> objFields = new ArrayList<>();
+    List<Object> reqBodyArr = ParseOpenAPI.buildRequestBodyUI(GuidewireCSP.claimsOpenApi,
+        "/claims/{claimId}/service-requests/{serviceRequestId}/invoices");
+
+    LocalTypeDescriptor.Builder reqBody = localType(REQ_BODY);
     reqBodyArr.forEach(field -> {
       if (field instanceof TextPropertyDescriptor) {
-        textFields.add((TextPropertyDescriptor)field);
+        reqBody.properties((TextPropertyDescriptor)field);
       } else if (field instanceof LocalTypeDescriptor) {
-        objFields.add((LocalTypeDescriptor)field);
+        reqBody.properties(localTypeProperty((LocalTypeDescriptor)field).build());
       }
     });
-
-    LocalTypeDescriptor.Builder reqBody = localType("reqd");
-    reqBody.properties(textFields.toArray(new PropertyDescriptor[1]));
-    objFields.forEach(field -> reqBody.properties(localTypeProperty(field).build()));
-
 
 
     return integrationConfiguration.setProperties(
         localTypeProperty(reqBody.build()).key("SINGLE_QNA").displayHint(DisplayHint.EXPRESSION).isExpressionable(true).label("QnA").build()
     );
-/*        localTypeProperty(reqBody)
-          .key("SINGLE_QNA")
-          .isExpressionable(true)
-          .label("QnA")
-          .displayHint(DisplayHint.EXPRESSION)
-          .build()
-    );*/
 
 
     // TODO: change to jobs once I have access to that schema
