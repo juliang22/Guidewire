@@ -17,6 +17,7 @@ import std.ConstantKeys;
 
 import com.appian.guidewire.templates.GuidewireCSP;
 import com.appian.guidewire.templates.UIBuilders.ParseOpenAPI;
+import com.appian.guidewire.templates.UIBuilders.RestParamsBuilder;
 
 @TemplateId(name = "ClaimsIntegrationTemplate")
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.WRITE)
@@ -29,8 +30,11 @@ public class ClaimsIntegrationTemplate extends SimpleIntegrationTemplate impleme
       PropertyPath propertyPath,
       ExecutionContext executionContext) {
 
+    ParseOpenAPI params = new ParseOpenAPI();
+    params.buildRootDropdown(integrationConfiguration, CLAIMS, GuidewireCSP.claimPathsForSearch);
 
-    return ParseOpenAPI.buildRootDropdown(integrationConfiguration, CLAIMS, GuidewireCSP.claimPathsForSearch);
+    return integrationConfiguration;
+
     /*return RootDropdownBuilder.buildRestDropdownType(integrationConfiguration, CLAIMS);*/
    }
 

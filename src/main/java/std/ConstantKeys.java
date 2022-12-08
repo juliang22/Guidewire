@@ -22,7 +22,7 @@ public interface ConstantKeys {
 
 
   // API Types
-  String API_CALL_TYPE = "apiCallType";
+  String CHOSEN_ENDPOINT = "apiCallType";
   String JOBS = "jobs";
   String CLAIMS = "claims";
   String POLICIES = "policies";
@@ -61,7 +61,8 @@ public interface ConstantKeys {
       .refresh(RefreshPolicy.ALWAYS)
       .build();
 
-  TextPropertyDescriptor API_CALL_TYPE_HIDDEN = TextPropertyDescriptor.builder().isHidden(true).key(API_CALL_TYPE).build();
+  TextPropertyDescriptor API_CALL_TYPE_HIDDEN = TextPropertyDescriptor.builder().isHidden(true).key(
+      CHOSEN_ENDPOINT).build();
 
   // Get Policies
   String GET_POLICIES_DROPDOWN = "getPoliciesDropdown";

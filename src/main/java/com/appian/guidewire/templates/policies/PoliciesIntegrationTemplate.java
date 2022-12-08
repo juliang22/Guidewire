@@ -1,6 +1,7 @@
 package com.appian.guidewire.templates.policies;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.appian.connectedsystems.simplified.sdk.SimpleIntegrationTemplate;
@@ -8,15 +9,15 @@ import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfigurat
 import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.TemplateId;
+import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
-
-import std.ConstantKeys;
-
 import com.appian.guidewire.templates.GuidewireCSP;
 import com.appian.guidewire.templates.UIBuilders.ParseOpenAPI;
+
+import std.ConstantKeys;
 
 @TemplateId(name="PoliciesIntegrationTemplate")
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.WRITE)
@@ -29,10 +30,24 @@ public class PoliciesIntegrationTemplate extends SimpleIntegrationTemplate imple
       PropertyPath propertyPath,
       ExecutionContext executionContext) {
 
-    return ParseOpenAPI.buildRootDropdown(integrationConfiguration, POLICIES, GuidewireCSP.policyPathsForSearch);
 
-/*    return RootDropdownBuilder.buildRestDropdownType(integrationConfiguration, POLICIES);*/
+    ParseOpenAPI params = new ParseOpenAPI();
+    params.buildRootDropdown(integrationConfiguration, POLICIES, GuidewireCSP.policyPathsForSearch);
 
+
+/*    if (params.getRestParamsBuilder() != null && params.getRestParamsBuilder().getReqBodyProperties() != null) {
+      integrationConfiguration.getProperties()
+          .add(localTypeProperty(params.getRestParamsBuilder().getReqBodyProperties()).key("SINGLE_QNA")
+              .displayHint(DisplayHint.EXPRESSION)
+              .isExpressionable(true)
+              .label("QnA")
+              .build());
+      integrationConfiguration.setProperties(integrationConfiguration.getProperties().toArray(new PropertyDescriptor[0]));
+    }*/
+
+
+
+    return integrationConfiguration;
   }
 
 

@@ -7,8 +7,8 @@ import com.appian.guidewire.templates.UIBuilders.RestParamsBuilder;
 
 public class ClaimsBuilder extends RestParamsBuilder {
 
-  public ClaimsBuilder(String pathName) {
-    super(pathName);
+  public ClaimsBuilder(String api) {
+    super(api);
   }
   public List<PropertyDescriptor> buildGet() {
 
@@ -25,10 +25,9 @@ public class ClaimsBuilder extends RestParamsBuilder {
         .build();*/
   }
 
-  public List<PropertyDescriptor>  buildPost() {
+  public void  buildPost() {
 
-    return super.buildPost();
-
+    super.buildPost();
 
   }
 

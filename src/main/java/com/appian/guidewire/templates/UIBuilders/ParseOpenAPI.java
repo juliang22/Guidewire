@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.appian.connectedsystems.simplified.sdk.configuration.ConfigurableTemplate;
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.templateframework.sdk.configuration.Choice;
 import com.appian.connectedsystems.templateframework.sdk.configuration.DisplayHint;
@@ -15,8 +16,6 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.RefreshPo
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor.TextPropertyDescriptorBuilder;
 import com.appian.guidewire.templates.GuidewireCSP;
-import com.appian.guidewire.templates.claims.ClaimsBuilder;
-import com.appian.guidewire.templates.policies.PoliciesBuilder;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
@@ -27,40 +26,33 @@ import me.xdrop.fuzzywuzzy.FuzzySearch;
 import me.xdrop.fuzzywuzzy.model.ExtractedResult;
 import std.ConstantKeys;
 
-public class ParseOpenAPI implements ConstantKeys {
+public class ParseOpenAPI extends ConfigurableTemplate implements ConstantKeys {
 
-  public static SimpleConfiguration buildRootDropdown(
+
+  public void buildRootDropdown(
       SimpleConfiguration integrationConfiguration,
       String api,
       List<String> choicesForSearch
   ) {
 
-    TextPropertyDescriptorBuilder chosenApi = null;
-    switch (api) {
-      case POLICIES:
-        chosenApi = GuidewireCSP.policies;
-        break;
-      case CLAIMS:
-        chosenApi = GuidewireCSP.claims;
-        break;
-/*      case JOBS:
-        chosenApi = GuidewireCSP.jobs;
-        break;*/
-    }
+    RestParamsBuilder params = new RestParamsBuilder(api);
 
     // If there is a search query, sort the dropdown with the query
     String searchQuery = integrationConfiguration.getValue(SEARCH);
-    chosenApi = (searchQuery == null || searchQuery.equals("")) ?
-        chosenApi :
-        endpointChoiceBuilder(api, searchQuery, choicesForSearch);
+    TextPropertyDescriptorBuilder endpointChoices = (searchQuery == null || searchQuery.equals("")) ?
+        params.getEndpointChoices() :
+        params.setEndpointChoices(
+            endpointChoiceBuilder(api, searchQuery, choicesForSearch)
+        );
 
     // If no endpoint is selected, just build the api dropdown
     // If a user switched to another api after they selected an endpoint, set the endpoint and search to null
     // If a user selects api then a corresponding endpoint, update label and description accordingly
-    String selectedEndpoint = integrationConfiguration.getValue(API_CALL_TYPE);
-    List<PropertyDescriptor> result = new ArrayList<>(Arrays.asList(SEARCHBAR, chosenApi.build()));
+    String selectedEndpoint = integrationConfiguration.getValue(CHOSEN_ENDPOINT);
+    List<PropertyDescriptor> result = new ArrayList<>(Arrays.asList(SEARCHBAR, endpointChoices.build()));
     if (selectedEndpoint == null) {
-      return integrationConfiguration.setProperties(result.toArray(new PropertyDescriptor[1]));
+      integrationConfiguration.setProperties(result.toArray(new PropertyDescriptor[1]));
+      return;
     }
     String[] selectedEndpointStr = selectedEndpoint.split(":");
     String apiType = selectedEndpointStr[0];
@@ -68,47 +60,25 @@ public class ParseOpenAPI implements ConstantKeys {
     String pathName = selectedEndpointStr[2];
     String pathSummary = selectedEndpointStr[3];
     if (!apiType.equals(api)) {
-      return integrationConfiguration.setProperties(result.toArray(new PropertyDescriptor[1]))
-          .setValue(API_CALL_TYPE, null)
+
+      integrationConfiguration.setProperties(result.toArray(new PropertyDescriptor[1]))
+          .setValue(CHOSEN_ENDPOINT, null)
           .setValue(SEARCH, "");
+
+      return;
     } else {
+/*      RestParamsBuilder(apiType, restOperation, pathName);*/
 
-      List<PropertyDescriptor> restParams = getRestParams(apiType, restOperation, pathName);
-      result.addAll(restParams);
-      return integrationConfiguration.setProperties(result.toArray(new PropertyDescriptor[1]));
-    }
-  }
+      params.setPathName(pathName);
+      result.addAll(params.getPathVarsUI());
 
-  public static List<PropertyDescriptor> getRestParams(String api, String restOperation, String pathName) {
-    RestParamsBuilder restParams = null;
-    switch (api) {
-      case POLICIES:
-        restParams = new PoliciesBuilder(pathName);
-        break;
-      case CLAIMS:
-        restParams = new ClaimsBuilder(pathName);
-        break;
-/*       case JOBS:
-          restParams = new JobsBuilder(pathName);
-         break;*/
-    }
+/*      return integrationConfiguration.setProperties(
+          localTypeProperty(restParamsBuilder.getReqBodyProperties()).key("SINGLE_QNA").displayHint(DisplayHint.EXPRESSION).isExpressionable(true).label("QnA").build()
+      );*/
 
-    List<PropertyDescriptor> builtParams = null;
-    switch (restOperation) {
-      case GET:
-        builtParams = restParams.buildGet();
-        break;
-      case POST:
-        builtParams = restParams.buildPost();
-        break;
-      case PATCH:
-        builtParams = restParams.buildPatch();
-        break;
-      case DELETE:
-        builtParams = restParams.buildDelete();
-        break;
+      integrationConfiguration.setProperties(result.toArray(new PropertyDescriptor[1]));
+      return;
     }
-    return builtParams;
   }
 
 
@@ -130,7 +100,6 @@ public class ParseOpenAPI implements ConstantKeys {
         choicesForSearch = GuidewireCSP.jobPathsForSearch;
           break;*/
     }
-
 
       ArrayList<Choice> choices = new ArrayList<>();
       // Build search choices when search query has been entered
@@ -168,7 +137,7 @@ public class ParseOpenAPI implements ConstantKeys {
         });
       }
       return TextPropertyDescriptor.builder()
-        .key(API_CALL_TYPE)
+        .key(CHOSEN_ENDPOINT)
         .isRequired(true)
         .refresh(RefreshPolicy.ALWAYS)
         .label("Select Endpoint")

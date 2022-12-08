@@ -8,8 +8,8 @@ import com.appian.guidewire.templates.UIBuilders.RestParamsBuilder;
 
 public class PoliciesBuilder extends RestParamsBuilder  {
 
-  public PoliciesBuilder(String pathName) {
-    super(pathName);
+  public PoliciesBuilder(String api) {
+    super(api);
   }
 
   public List<PropertyDescriptor> buildGet() {
@@ -27,9 +27,9 @@ public class PoliciesBuilder extends RestParamsBuilder  {
         .build();*/
   }
 
-  public List<PropertyDescriptor>  buildPost() {
+  public void buildPost() {
 
-    return super.buildPost();
+    super.buildPost();
 
   }
 

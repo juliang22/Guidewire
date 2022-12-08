@@ -25,7 +25,7 @@ public class GuidewireCSP extends SimpleConnectedSystemTemplate implements Const
 
   public static final OpenAPI policiesOpenApi = Util.getOpenApi("com/appian/guidewire/templates/policies" +
       ".yaml");
-  public static List<String> policyPathsForSearch = new ArrayList<>();;
+  public static List<String> policyPathsForSearch = new ArrayList<>();
   public static TextPropertyDescriptorBuilder policies = ParseOpenAPI.endpointChoiceBuilder(POLICIES, "", policyPathsForSearch);
 
 /*

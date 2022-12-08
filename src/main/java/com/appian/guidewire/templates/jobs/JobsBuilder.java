@@ -2,16 +2,13 @@ package com.appian.guidewire.templates.jobs;
 
 import java.util.List;
 
-import com.appian.connectedsystems.templateframework.sdk.configuration.LocalTypeDescriptor;
-import com.appian.connectedsystems.templateframework.sdk.configuration.LocalTypePropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
-import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
 import com.appian.guidewire.templates.UIBuilders.RestParamsBuilder;
 
 public class JobsBuilder extends RestParamsBuilder {
 
-  public JobsBuilder(String pathName) {
-    super(pathName);
+  public JobsBuilder(String api) {
+    super(api);
   }
   public List<PropertyDescriptor> buildGet() {
 
@@ -29,9 +26,9 @@ public class JobsBuilder extends RestParamsBuilder {
         .build();*/
   }
 
-  public List<PropertyDescriptor>  buildPost() {
+  public void buildPost() {
 
-    return super.buildPost();
+    super.buildPost();
 
 
   }
