@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.appian.connectedsystems.simplified.sdk.SimpleIntegrationTemplate;
 import com.appian.connectedsystems.simplified.sdk.configuration.ConfigurableTemplate;
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.templateframework.sdk.configuration.DisplayHint;
@@ -20,6 +21,7 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.TextPrope
 import com.appian.connectedsystems.templateframework.sdk.configuration.TypeReference;
 import com.appian.guidewire.templates.GuidewireCSP;
 
+import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Paths;
 import std.ConstantKeys;
 
@@ -30,8 +32,9 @@ public class RestParamsBuilder extends ConfigurableTemplate implements ConstantK
   protected String pathName;
   protected TextPropertyDescriptorBuilder endpointChoices;
   protected List<PropertyDescriptor> pathVarsUI = new ArrayList<>();
-  protected LocalTypeDescriptor reqBodyProperties = null;
+  protected PropertyDescriptor reqBodyProperties = null;
   protected Paths openAPIPaths = null;
+  protected OpenAPI openAPI = null;
 
 
   public RestParamsBuilder(String api) {
@@ -39,10 +42,12 @@ public class RestParamsBuilder extends ConfigurableTemplate implements ConstantK
 
     switch (api) {
       case POLICIES:
+        this.openAPI = GuidewireCSP.policiesOpenApi;
         this.openAPIPaths = GuidewireCSP.policiesOpenApi.getPaths();
         this.endpointChoices = GuidewireCSP.policies;
         break;
       case CLAIMS:
+        this.openAPI = GuidewireCSP.claimsOpenApi;
         this.openAPIPaths = GuidewireCSP.claimsOpenApi.getPaths();
         this.endpointChoices = GuidewireCSP.claims;
         break;
@@ -70,11 +75,11 @@ public class RestParamsBuilder extends ConfigurableTemplate implements ConstantK
   public TextPropertyDescriptorBuilder getEndpointChoices() {return this.endpointChoices; };
 
 
-  public void setReqBodyProperties(LocalTypeDescriptor reqBodyProperties) {
+  public void setReqBodyProperties(PropertyDescriptor reqBodyProperties) {
     this.reqBodyProperties = reqBodyProperties;
   }
 
-  public LocalTypeDescriptor getReqBodyProperties() {
+  public PropertyDescriptor getReqBodyProperties() {
     return reqBodyProperties;
   }
 
@@ -89,7 +94,7 @@ public class RestParamsBuilder extends ConfigurableTemplate implements ConstantK
     return pathVars;
   }
 
-  protected List<PropertyDescriptor> setPathVarsUI() {
+  protected void setPathVarsUI() {
     // Find all occurrences of variables inside path (ex. {claimId})
 
     List<String> pathVars = getPathVarsStr(pathName);
@@ -103,7 +108,6 @@ public class RestParamsBuilder extends ConfigurableTemplate implements ConstantK
           .build();
       pathVarsUI.add(ui);
     });
-    return pathVarsUI;
   }
 
   public List<PropertyDescriptor> getPathVarsUI() { return pathVarsUI; }
@@ -118,27 +122,40 @@ public class RestParamsBuilder extends ConfigurableTemplate implements ConstantK
 
   }
 
-  public void buildPost() {
-    List<Map<String,Object>> reqBodyArr = ParseOpenAPI.buildRequestBodyUI(GuidewireCSP.claimsOpenApi,
-        "/claims/{claimId}/service-requests/{serviceRequestId}/invoices");
+  public void buildPost(SimpleIntegrationTemplate simpleIntegrationTemplate) {
 
-    LocalTypeDescriptor.Builder reqBody = localType(REQ_BODY);
+    List<Map<String,Object>> reqBodyArr = ParseOpenAPI.buildRequestBodyUI(this.openAPI, this.pathName);
+
+    if (reqBodyArr == null) {
+      setReqBodyProperties(null);
+      return;
+    }
+
+    LocalTypeDescriptor.Builder reqBody = simpleIntegrationTemplate.localType(REQ_BODY_PROPERTIES);
     reqBodyArr.forEach(field -> {
       if (field.containsKey(TEXT) && field.get(TEXT) instanceof TextPropertyDescriptor) {
         TextPropertyDescriptor textParam = (TextPropertyDescriptor)field.get(TEXT);
         reqBody.properties(textParam);
       } else if (field.containsKey(OBJECT) && field.get(OBJECT) instanceof LocalTypeDescriptor) {
         LocalTypeDescriptor objParam = (LocalTypeDescriptor)field.get(OBJECT);
-        reqBody.properties(localTypeProperty(objParam).isExpressionable(true).build());
+        reqBody.properties(simpleIntegrationTemplate.localTypeProperty(objParam).build());
       } else if (field.containsKey(ARRAY) && field.get(ARRAY) instanceof LocalTypeDescriptor) {
         LocalTypeDescriptor arrParam = (LocalTypeDescriptor)field.get(ARRAY);
         reqBody.properties(
-            listTypeProperty(arrParam.getName()).itemType(TypeReference.from(arrParam)).build(),
-            localTypeProperty(arrParam).isExpressionable(true).isHidden(true).build()
+            simpleIntegrationTemplate.listTypeProperty(arrParam.getName()).itemType(TypeReference.from(arrParam)).build(),
+            simpleIntegrationTemplate.localTypeProperty(arrParam).isHidden(true).build()
         );
       }
     });
-    setReqBodyProperties(reqBody.build());
+    setReqBodyProperties(
+        simpleIntegrationTemplate.localTypeProperty(reqBody.build()).
+            key(REQ_BODY).
+            isHidden(false).
+            displayHint(DisplayHint.EXPRESSION).
+            isExpressionable(true)
+            .label("QnA")
+            .build()
+    );
   }
 
   public List<PropertyDescriptor> buildPatch() {

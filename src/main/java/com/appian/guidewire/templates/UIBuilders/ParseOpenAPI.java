@@ -108,39 +108,28 @@ public class ParseOpenAPI extends ConfigurableTemplate implements ConstantKeys {
     } else {
 
       params.setPathName(pathName);
-      result.addAll(params.getPathVarsUI());
-/*      return result.toArray(new PropertyDescriptor[0]);*/
 
+      if (params.getPathVarsUI().size() > 0) {
+        result.addAll(params.getPathVarsUI());
+      }
 
-/*      return integrationConfiguration.setProperties(
-          result.toArray(new PropertyDescriptor[0])
-      );*/
+      if (restOperation.equals(POST)) {
 
-      List<Map<String,Object>> reqBodyArr = ParseOpenAPI.buildRequestBodyUI(GuidewireCSP.claimsOpenApi,
-          "/claims/{claimId}/service-requests/{serviceRequestId}/invoices");
-
-
-      LocalTypeDescriptor.Builder reqBody = simpleIntegrationTemplate.localType(REQ_BODY);
-      reqBodyArr.forEach(field -> {
-        if (field.containsKey(TEXT) && field.get(TEXT) instanceof TextPropertyDescriptor) {
-          TextPropertyDescriptor textParam = (TextPropertyDescriptor)field.get(TEXT);
-          reqBody.properties(textParam);
-        } else if (field.containsKey(OBJECT) && field.get(OBJECT) instanceof LocalTypeDescriptor) {
-          LocalTypeDescriptor objParam = (LocalTypeDescriptor)field.get(OBJECT);
-          reqBody.properties(simpleIntegrationTemplate.localTypeProperty(objParam).build());
-        } else if (field.containsKey(ARRAY) && field.get(ARRAY) instanceof LocalTypeDescriptor) {
-          LocalTypeDescriptor arrParam = (LocalTypeDescriptor)field.get(ARRAY);
-          reqBody.properties(
-              simpleIntegrationTemplate.listTypeProperty(arrParam.getName()).itemType(TypeReference.from(arrParam)).build(),
-              simpleIntegrationTemplate.localTypeProperty(arrParam).isHidden(true).build()
-          );
+/*        integrationConfiguration.setValue(REQ_BODY,
+            simpleIntegrationTemplate.localTypeProperty(
+                simpleIntegrationTemplate.localType(REQ_BODY_PROPERTIES).property(
+                    simpleIntegrationTemplate.textProperty("text").isHidden(true).build()
+                ).build()
+            ).isExpressionable(true).key(REQ_BODY).build()
+        );*/
+        
+        params.buildPost(simpleIntegrationTemplate);
+        if (params.getReqBodyProperties() != null) {
+          result.add(params.getReqBodyProperties());
         }
-      });
+      }
 
 
-/*      result.add(integrationConfiguration.getProperty(SEARCH));
-      result.add(integrationConfiguration.getProperty(CHOSEN_ENDPOINT));*/
-      result.add(simpleIntegrationTemplate.localTypeProperty(reqBody.build()).key("SINGLE_QNA").isHidden(false).displayHint(DisplayHint.EXPRESSION).isExpressionable(true).label("QnA").build());
       return result.toArray(new PropertyDescriptor[0]);
 
     }
@@ -212,6 +201,8 @@ public class ParseOpenAPI extends ConfigurableTemplate implements ConstantKeys {
 
   public static List<Map<String,Object>> buildRequestBodyUI(OpenAPI openAPI,
       String pathName){
+
+    if (openAPI.getPaths().get(pathName).getPost().getRequestBody() == null) return null;
 
     ObjectSchema schema = (ObjectSchema)openAPI.getPaths()
         .get(pathName)

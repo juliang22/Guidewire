@@ -2,6 +2,7 @@ package com.appian.guidewire.templates.policies;
 
 import java.util.List;
 
+import com.appian.connectedsystems.simplified.sdk.SimpleIntegrationTemplate;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
 import com.appian.guidewire.templates.UIBuilders.RestParamsBuilder;
 
@@ -27,9 +28,9 @@ public class PoliciesBuilder extends RestParamsBuilder  {
         .build();*/
   }
 
-  public void buildPost() {
+  public void buildPost(SimpleIntegrationTemplate simpleIntegrationTemplate) {
 
-    super.buildPost();
+    super.buildPost(simpleIntegrationTemplate);
 
   }
 

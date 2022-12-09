@@ -36,6 +36,9 @@ public interface ConstantKeys {
   String DELETE = "DELETE";
 
   String REQ_BODY = "reqBody";
+  String REQ_BODY_PROPERTIES = "reqBody";
+
+
 
   String TEXT = "text";
   String OBJECT = "object";
