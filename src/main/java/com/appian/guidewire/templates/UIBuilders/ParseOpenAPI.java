@@ -6,15 +6,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.appian.connectedsystems.simplified.sdk.SimpleIntegrationTemplate;
 import com.appian.connectedsystems.simplified.sdk.configuration.ConfigurableTemplate;
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.templateframework.sdk.configuration.Choice;
 import com.appian.connectedsystems.templateframework.sdk.configuration.DisplayHint;
 import com.appian.connectedsystems.templateframework.sdk.configuration.LocalTypeDescriptor;
+import com.appian.connectedsystems.templateframework.sdk.configuration.LocalTypePropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.RefreshPolicy;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor.TextPropertyDescriptorBuilder;
+import com.appian.connectedsystems.templateframework.sdk.configuration.TypeReference;
 import com.appian.guidewire.templates.GuidewireCSP;
 
 import io.swagger.v3.oas.models.OpenAPI;
@@ -29,8 +32,42 @@ import std.ConstantKeys;
 public class ParseOpenAPI extends ConfigurableTemplate implements ConstantKeys {
 
 
-  public void buildRootDropdown(
+  public static List<PropertyDescriptor> testbs(SimpleIntegrationTemplate t) {
+    List<Map<String,Object>> reqBodyArr = ParseOpenAPI.buildRequestBodyUI(GuidewireCSP.claimsOpenApi,
+        "/claims/{claimId}/service-requests/{serviceRequestId}/invoices");
+
+    List<PropertyDescriptor> result = new ArrayList<>(Arrays.asList(SEARCHBAR));
+    LocalTypeDescriptor.Builder reqBody = t.localType(REQ_BODY);
+    reqBodyArr.forEach(field -> {
+      if (field.containsKey(TEXT) && field.get(TEXT) instanceof TextPropertyDescriptor) {
+        TextPropertyDescriptor textParam = (TextPropertyDescriptor)field.get(TEXT);
+        reqBody.properties(textParam);
+      } else if (field.containsKey(OBJECT) && field.get(OBJECT) instanceof LocalTypeDescriptor) {
+        LocalTypeDescriptor objParam = (LocalTypeDescriptor)field.get(OBJECT);
+        reqBody.properties(
+            t.localTypeProperty(objParam).build()
+        );
+      } else if (field.containsKey(ARRAY) && field.get(ARRAY) instanceof LocalTypeDescriptor) {
+        LocalTypeDescriptor arrParam = (LocalTypeDescriptor)field.get(ARRAY);
+        reqBody.properties(
+            t.listTypeProperty(arrParam.getName()).itemType(TypeReference.from(arrParam)).build(),
+            t.localTypeProperty(arrParam).isHidden(true).build()
+        );
+      }
+    });
+
+    result.add(t.localTypeProperty(reqBody.build()).key("SINGLE_QNA").displayHint(DisplayHint.EXPRESSION).isExpressionable(true).label("QnA").build());
+    return result;
+
+  }
+
+
+
+
+
+  public static PropertyDescriptor[] buildRootDropdown(
       SimpleConfiguration integrationConfiguration,
+      SimpleIntegrationTemplate simpleIntegrationTemplate,
       String api,
       List<String> choicesForSearch
   ) {
@@ -51,8 +88,9 @@ public class ParseOpenAPI extends ConfigurableTemplate implements ConstantKeys {
     String selectedEndpoint = integrationConfiguration.getValue(CHOSEN_ENDPOINT);
     List<PropertyDescriptor> result = new ArrayList<>(Arrays.asList(SEARCHBAR, endpointChoices.build()));
     if (selectedEndpoint == null) {
-      integrationConfiguration.setProperties(result.toArray(new PropertyDescriptor[1]));
-      return;
+/*      return integrationConfiguration.setProperties(result.toArray(new PropertyDescriptor[0]));*/
+      return result.toArray(new PropertyDescriptor[0]);
+
     }
     String[] selectedEndpointStr = selectedEndpoint.split(":");
     String apiType = selectedEndpointStr[0];
@@ -61,23 +99,50 @@ public class ParseOpenAPI extends ConfigurableTemplate implements ConstantKeys {
     String pathSummary = selectedEndpointStr[3];
     if (!apiType.equals(api)) {
 
-      integrationConfiguration.setProperties(result.toArray(new PropertyDescriptor[1]))
+/*      return integrationConfiguration.setProperties(result.toArray(new PropertyDescriptor[0]))
           .setValue(CHOSEN_ENDPOINT, null)
-          .setValue(SEARCH, "");
+          .setValue(SEARCH, "");*/
+      integrationConfiguration.setValue(CHOSEN_ENDPOINT, null).setValue(SEARCH, "");
+      return result.toArray(new PropertyDescriptor[0]);
 
-      return;
     } else {
-/*      RestParamsBuilder(apiType, restOperation, pathName);*/
 
       params.setPathName(pathName);
       result.addAll(params.getPathVarsUI());
+/*      return result.toArray(new PropertyDescriptor[0]);*/
+
 
 /*      return integrationConfiguration.setProperties(
-          localTypeProperty(restParamsBuilder.getReqBodyProperties()).key("SINGLE_QNA").displayHint(DisplayHint.EXPRESSION).isExpressionable(true).label("QnA").build()
+          result.toArray(new PropertyDescriptor[0])
       );*/
 
-      integrationConfiguration.setProperties(result.toArray(new PropertyDescriptor[1]));
-      return;
+      List<Map<String,Object>> reqBodyArr = ParseOpenAPI.buildRequestBodyUI(GuidewireCSP.claimsOpenApi,
+          "/claims/{claimId}/service-requests/{serviceRequestId}/invoices");
+
+
+      LocalTypeDescriptor.Builder reqBody = simpleIntegrationTemplate.localType(REQ_BODY);
+      reqBodyArr.forEach(field -> {
+        if (field.containsKey(TEXT) && field.get(TEXT) instanceof TextPropertyDescriptor) {
+          TextPropertyDescriptor textParam = (TextPropertyDescriptor)field.get(TEXT);
+          reqBody.properties(textParam);
+        } else if (field.containsKey(OBJECT) && field.get(OBJECT) instanceof LocalTypeDescriptor) {
+          LocalTypeDescriptor objParam = (LocalTypeDescriptor)field.get(OBJECT);
+          reqBody.properties(simpleIntegrationTemplate.localTypeProperty(objParam).build());
+        } else if (field.containsKey(ARRAY) && field.get(ARRAY) instanceof LocalTypeDescriptor) {
+          LocalTypeDescriptor arrParam = (LocalTypeDescriptor)field.get(ARRAY);
+          reqBody.properties(
+              simpleIntegrationTemplate.listTypeProperty(arrParam.getName()).itemType(TypeReference.from(arrParam)).build(),
+              simpleIntegrationTemplate.localTypeProperty(arrParam).isHidden(true).build()
+          );
+        }
+      });
+
+
+/*      result.add(integrationConfiguration.getProperty(SEARCH));
+      result.add(integrationConfiguration.getProperty(CHOSEN_ENDPOINT));*/
+      result.add(simpleIntegrationTemplate.localTypeProperty(reqBody.build()).key("SINGLE_QNA").isHidden(false).displayHint(DisplayHint.EXPRESSION).isExpressionable(true).label("QnA").build());
+      return result.toArray(new PropertyDescriptor[0]);
+
     }
   }
 
@@ -145,7 +210,7 @@ public class ParseOpenAPI extends ConfigurableTemplate implements ConstantKeys {
         .choices(choices.stream().toArray(Choice[]::new));
     }
 
-  public static List<Map<String,Object>> buildRequestBodyUI (OpenAPI openAPI,
+  public static List<Map<String,Object>> buildRequestBodyUI(OpenAPI openAPI,
       String pathName){
 
     ObjectSchema schema = (ObjectSchema)openAPI.getPaths()

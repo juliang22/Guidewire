@@ -1,14 +1,20 @@
 package com.appian.guidewire.templates.UIBuilders;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.appian.connectedsystems.simplified.sdk.configuration.ConfigurableTemplate;
+import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
+import com.appian.connectedsystems.templateframework.sdk.configuration.DisplayHint;
+import com.appian.connectedsystems.templateframework.sdk.configuration.ListTypePropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.LocalTypeDescriptor;
+import com.appian.connectedsystems.templateframework.sdk.configuration.LocalTypePropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
+import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptorBuilder;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor.TextPropertyDescriptorBuilder;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TypeReference;
@@ -18,6 +24,9 @@ import io.swagger.v3.oas.models.Paths;
 import std.ConstantKeys;
 
 public class RestParamsBuilder extends ConfigurableTemplate implements ConstantKeys {
+
+
+
   protected String pathName;
   protected TextPropertyDescriptorBuilder endpointChoices;
   protected List<PropertyDescriptor> pathVarsUI = new ArrayList<>();

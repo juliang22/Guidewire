@@ -8,14 +8,17 @@ import java.util.List;
 import java.util.Map;
 
 import com.appian.connectedsystems.simplified.sdk.SimpleIntegrationTemplate;
+import com.appian.connectedsystems.simplified.sdk.configuration.ConfigurableTemplate;
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.TemplateId;
 import com.appian.connectedsystems.templateframework.sdk.configuration.DisplayHint;
+import com.appian.connectedsystems.templateframework.sdk.configuration.ListTypePropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.LocalTypeDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.LocalTypePropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
+import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptorBuilder;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
 import com.appian.connectedsystems.templateframework.sdk.configuration.RefreshPolicy;
 import com.appian.connectedsystems.templateframework.sdk.configuration.SystemType;
@@ -26,6 +29,8 @@ import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTem
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
 import com.appian.guidewire.templates.GuidewireCSP;
 import com.appian.guidewire.templates.UIBuilders.ParseOpenAPI;
+import com.appian.guidewire.templates.UIBuilders.RestParamsBuilder;
+import com.fasterxml.jackson.databind.annotation.JsonAppend;
 
 import std.ConstantKeys;
 
@@ -125,11 +130,10 @@ public class JobsIntegrationTemplate extends SimpleIntegrationTemplate implement
     );*/
 
 
-
-
+/*
+    // Req body working code in isolation
     List<Map<String,Object>> reqBodyArr = ParseOpenAPI.buildRequestBodyUI(GuidewireCSP.claimsOpenApi,
         "/claims/{claimId}/service-requests/{serviceRequestId}/invoices");
-
 
     LocalTypeDescriptor.Builder reqBody = localType(REQ_BODY);
     reqBodyArr.forEach(field -> {
@@ -148,10 +152,51 @@ public class JobsIntegrationTemplate extends SimpleIntegrationTemplate implement
       }
     });
 
+    return integrationConfiguration.setProperties(
+        SEARCHBAR,
+        localTypeProperty(reqBody.build()).key("SINGLE_QNA").displayHint(DisplayHint.EXPRESSION).isExpressionable(true).label("QnA").build()
+    );*/
+
+
+
+//Woerking with this
+/*    List<Map<String,Object>> reqBodyArr = ParseOpenAPI.buildRequestBodyUI(GuidewireCSP.claimsOpenApi,
+        "/claims/{claimId}/service-requests/{serviceRequestId}/invoices");
+    LocalTypeDescriptor.Builder reqBody = this.localType(REQ_BODY);
+    reqBodyArr.forEach(field -> {
+      if (field.containsKey(TEXT) && field.get(TEXT) instanceof TextPropertyDescriptor) {
+        TextPropertyDescriptor textParam = (TextPropertyDescriptor)field.get(TEXT);
+        reqBody.properties(textParam);
+      } else if (field.containsKey(OBJECT) && field.get(OBJECT) instanceof LocalTypeDescriptor) {
+        LocalTypeDescriptor objParam = (LocalTypeDescriptor)field.get(OBJECT);
+        reqBody.properties(
+           this.localTypeProperty(objParam).build()
+        );
+      } else if (field.containsKey(ARRAY) && field.get(ARRAY) instanceof LocalTypeDescriptor) {
+        LocalTypeDescriptor arrParam = (LocalTypeDescriptor)field.get(ARRAY);
+        reqBody.properties(
+            this.listTypeProperty(arrParam.getName()).itemType(TypeReference.from(arrParam)).build(),
+            this.localTypeProperty(arrParam).isHidden(true).build()
+        );
+      }
+    });
+
 
     return integrationConfiguration.setProperties(
-        localTypeProperty(reqBody.build()).key("SINGLE_QNA").displayHint(DisplayHint.EXPRESSION).isExpressionable(true).label("QnA").build()
+        this.localTypeProperty(reqBody.build()).key("SINGLE_QNA").displayHint(DisplayHint.EXPRESSION).isExpressionable(true).label("QnA").build()
+
+    );*/
+
+
+    return integrationConfiguration.setProperties(
+        ParseOpenAPI.testbs(this).toArray(new PropertyDescriptor[0])
     );
+
+/*    return integrationConfiguration.setProperties(
+        ParseOpenAPI.buildRootDropdown(integrationConfiguration, this, POLICIES, GuidewireCSP.policyPathsForSearch)
+    );*/
+
+
 
 
     // TODO: change to jobs once I have access to that schema

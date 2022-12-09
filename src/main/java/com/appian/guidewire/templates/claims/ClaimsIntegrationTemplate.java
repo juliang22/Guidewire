@@ -8,6 +8,7 @@ import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfigurat
 import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.TemplateId;
+import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
@@ -30,10 +31,11 @@ public class ClaimsIntegrationTemplate extends SimpleIntegrationTemplate impleme
       PropertyPath propertyPath,
       ExecutionContext executionContext) {
 
-    ParseOpenAPI params = new ParseOpenAPI();
-    params.buildRootDropdown(integrationConfiguration, CLAIMS, GuidewireCSP.claimPathsForSearch);
 
-    return integrationConfiguration;
+    PropertyDescriptor[] res = ParseOpenAPI.buildRootDropdown(integrationConfiguration, this, CLAIMS,
+        GuidewireCSP.claimPathsForSearch);
+
+    return integrationConfiguration.setProperties(res);
 
     /*return RootDropdownBuilder.buildRestDropdownType(integrationConfiguration, CLAIMS);*/
    }

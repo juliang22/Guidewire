@@ -31,8 +31,9 @@ public class PoliciesIntegrationTemplate extends SimpleIntegrationTemplate imple
       ExecutionContext executionContext) {
 
 
-    ParseOpenAPI params = new ParseOpenAPI();
-    params.buildRootDropdown(integrationConfiguration, POLICIES, GuidewireCSP.policyPathsForSearch);
+    PropertyDescriptor[] params = ParseOpenAPI.buildRootDropdown(integrationConfiguration,this, POLICIES,
+        GuidewireCSP.policyPathsForSearch);
+    return integrationConfiguration.setProperties(params);
 
 
 /*    if (params.getRestParamsBuilder() != null && params.getRestParamsBuilder().getReqBodyProperties() != null) {
@@ -47,7 +48,7 @@ public class PoliciesIntegrationTemplate extends SimpleIntegrationTemplate imple
 
 
 
-    return integrationConfiguration;
+/*    return integrationConfiguration;*/
   }
 
 
