@@ -53,36 +53,4 @@ public interface ConstantKeys {
               "Example query for the Claims API: 'injury incidents'")
       .build();
 
-  TextPropertyDescriptor REST_DROPDOWN = TextPropertyDescriptor.builder()
-      .key(REST_CALL)
-      .label("Select Endpoint")
-      .choices(Choice.builder().name("Get").value(GET).build(),
-          Choice.builder().name("Post").value(POST).build(),
-          Choice.builder().name("Patch").value(PATCH).build(),
-          Choice.builder().name("Delete").value(DELETE).build())
-      .isExpressionable(true)
-      .refresh(RefreshPolicy.ALWAYS)
-      .build();
-
-  TextPropertyDescriptor API_CALL_TYPE_HIDDEN = TextPropertyDescriptor.builder().isHidden(true).key(
-      CHOSEN_ENDPOINT).build();
-
-  // Get Policies
-  String GET_POLICIES_DROPDOWN = "getPoliciesDropdown";
-  String GET_POLICIES = "getPolicies";
-  String GET_POLICY_BY_ID = "getPolicyByID";
-  String GET_RESOURCE_ON_POLICY = "getResourceOnPolicy";
-
-  // Get Claims
-  String GET_CLAIMS_DROPDOWN = "getClaimsDropdown";
-  String GET_CLAIMS = "getClaims";
-  String GET_CLAIM_BY_ID = "getClaimByID";
-  String GET_RESOURCE_ON_CLAIM = "getResourceOnClaim";
-
-  // Get Jobs
-  String GET_JOBS_DROPDOWN = "getJobsDropdown";
-  String GET_JOBS = "getJobs";
-  String GET_JOB_BY_ID = "getJobByID";
-  String GET_RESOURCE_ON_JOB = "getResourceOnJob";
-
 }

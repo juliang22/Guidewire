@@ -188,15 +188,11 @@ public class JobsIntegrationTemplate extends SimpleIntegrationTemplate implement
     );*/
 
 
+
+
     return integrationConfiguration.setProperties(
-        ParseOpenAPI.testbs(this).toArray(new PropertyDescriptor[0])
-    );
-
-/*    return integrationConfiguration.setProperties(
         ParseOpenAPI.buildRootDropdown(integrationConfiguration, this, POLICIES, GuidewireCSP.policyPathsForSearch)
-    );*/
-
-
+    );
 
 
     // TODO: change to jobs once I have access to that schema

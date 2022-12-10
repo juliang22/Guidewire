@@ -1,5 +1,7 @@
 package com.appian.guidewire.templates.claims;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -8,8 +10,11 @@ import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfigurat
 import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.TemplateId;
+import com.appian.connectedsystems.templateframework.sdk.configuration.ConfigurationDescriptor;
+import com.appian.connectedsystems.templateframework.sdk.configuration.LocalTypeDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
+import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyState;
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
@@ -32,12 +37,12 @@ public class ClaimsIntegrationTemplate extends SimpleIntegrationTemplate impleme
       ExecutionContext executionContext) {
 
 
+
     PropertyDescriptor[] res = ParseOpenAPI.buildRootDropdown(integrationConfiguration, this, CLAIMS,
         GuidewireCSP.claimPathsForSearch);
 
     return integrationConfiguration.setProperties(res);
 
-    /*return RootDropdownBuilder.buildRestDropdownType(integrationConfiguration, CLAIMS);*/
    }
 
   @Override

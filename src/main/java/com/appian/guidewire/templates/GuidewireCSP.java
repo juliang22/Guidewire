@@ -49,10 +49,6 @@ public static TextPropertyDescriptorBuilder jobs = ParseOpenAPI.initializePaths(
             .description("Enter your GuideWire password")
             .masked(true)
             .build()
-/*        textProperty(PATIENCE)
-            .label("The initial load of this plugin will take ~1 minute.")
-            .isReadOnly(true)
-            .build()*/
     );
   }
 }

@@ -35,20 +35,6 @@ public class PoliciesIntegrationTemplate extends SimpleIntegrationTemplate imple
         GuidewireCSP.policyPathsForSearch);
     return integrationConfiguration.setProperties(params);
 
-
-/*    if (params.getRestParamsBuilder() != null && params.getRestParamsBuilder().getReqBodyProperties() != null) {
-      integrationConfiguration.getProperties()
-          .add(localTypeProperty(params.getRestParamsBuilder().getReqBodyProperties()).key("SINGLE_QNA")
-              .displayHint(DisplayHint.EXPRESSION)
-              .isExpressionable(true)
-              .label("QnA")
-              .build());
-      integrationConfiguration.setProperties(integrationConfiguration.getProperties().toArray(new PropertyDescriptor[0]));
-    }*/
-
-
-
-/*    return integrationConfiguration;*/
   }
 
 
