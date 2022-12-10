@@ -1,7 +1,6 @@
 package com.appian.guidewire.templates.UIBuilders;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,14 +8,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.appian.connectedsystems.simplified.sdk.SimpleIntegrationTemplate;
-import com.appian.connectedsystems.simplified.sdk.configuration.ConfigurableTemplate;
-import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.templateframework.sdk.configuration.DisplayHint;
-import com.appian.connectedsystems.templateframework.sdk.configuration.ListTypePropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.LocalTypeDescriptor;
-import com.appian.connectedsystems.templateframework.sdk.configuration.LocalTypePropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
-import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptorBuilder;
 import com.appian.connectedsystems.templateframework.sdk.configuration.RefreshPolicy;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor.TextPropertyDescriptorBuilder;
@@ -190,7 +184,7 @@ public class RestParamsBuilder implements ConstantKeys {
       return arrMap;
 
     } else {
-      System.out.println(key + " : " + item.getType());
+/*      System.out.println(key + " : " + item.getType());*/
 
       Map<String, Object> textMap = new HashMap<>();
       textMap.put(TEXT,
@@ -238,7 +232,7 @@ public class RestParamsBuilder implements ConstantKeys {
         LocalTypeDescriptor arrParam = (LocalTypeDescriptor)field.get(ARRAY);
         reqBody.properties(
             simpleIntegrationTemplate.listTypeProperty(arrParam.getName()).refresh(RefreshPolicy.ALWAYS).itemType(TypeReference.from(arrParam)).build(),
-            simpleIntegrationTemplate.localTypeProperty(arrParam).isHidden(true).refresh(RefreshPolicy.ALWAYS).build()
+            simpleIntegrationTemplate.localTypeProperty(arrParam).key(arrParam.getName()+"hidden").isHidden(true).refresh(RefreshPolicy.ALWAYS).build()
         );
       }
     });

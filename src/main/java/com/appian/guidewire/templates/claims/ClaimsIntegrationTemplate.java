@@ -1,7 +1,5 @@
 package com.appian.guidewire.templates.claims;
 
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -10,20 +8,15 @@ import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfigurat
 import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.TemplateId;
-import com.appian.connectedsystems.templateframework.sdk.configuration.ConfigurationDescriptor;
-import com.appian.connectedsystems.templateframework.sdk.configuration.LocalTypeDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
-import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyState;
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
-
-import std.ConstantKeys;
-
 import com.appian.guidewire.templates.GuidewireCSP;
 import com.appian.guidewire.templates.UIBuilders.ParseOpenAPI;
-import com.appian.guidewire.templates.UIBuilders.RestParamsBuilder;
+
+import std.ConstantKeys;
 
 @TemplateId(name = "ClaimsIntegrationTemplate")
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.WRITE)
@@ -50,12 +43,21 @@ public class ClaimsIntegrationTemplate extends SimpleIntegrationTemplate impleme
       SimpleConfiguration integrationConfiguration,
       SimpleConfiguration connectedSystemConfiguration,
       ExecutionContext executionContext) {
+
+
+    String key = integrationConfiguration.getProperty(REQ_BODY).getLabel();
+    System.out.println(
+        integrationConfiguration.getValue(key).toString()
+    );
+
+
     Map<String,Object> requestDiagnostic = new HashMap<>();
     String csValue = connectedSystemConfiguration.getValue("");
     requestDiagnostic.put("csValue", csValue);
     String integrationValue = integrationConfiguration.getValue("");
     requestDiagnostic.put("integrationValue", integrationValue);
     Map<String,Object> result = new HashMap<>();
+
 
     // Important for debugging to capture the amount of time it takes to interact
     // with the external system. Since this integration doesn't interact
@@ -72,5 +74,6 @@ public class ClaimsIntegrationTemplate extends SimpleIntegrationTemplate impleme
         .build();
 
     return IntegrationResponse.forSuccess(result).withDiagnostic(diagnostic).build();
+
   }
 }
