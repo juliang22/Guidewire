@@ -1,5 +1,7 @@
 package com.appian.guidewire.templates.claims;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -8,13 +10,20 @@ import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfigurat
 import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.TemplateId;
+import com.appian.connectedsystems.templateframework.sdk.configuration.ConfigurationDescriptor;
+import com.appian.connectedsystems.templateframework.sdk.configuration.LocalTypeDescriptor;
+import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
+import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyState;
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
 
-import std.RootDropdownBuilder;
 import std.ConstantKeys;
+
+import com.appian.guidewire.templates.GuidewireCSP;
+import com.appian.guidewire.templates.UIBuilders.ParseOpenAPI;
+import com.appian.guidewire.templates.UIBuilders.RestParamsBuilder;
 
 @TemplateId(name = "ClaimsIntegrationTemplate")
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.WRITE)
@@ -27,7 +36,13 @@ public class ClaimsIntegrationTemplate extends SimpleIntegrationTemplate impleme
       PropertyPath propertyPath,
       ExecutionContext executionContext) {
 
-    return RootDropdownBuilder.buildRestDropdownType(integrationConfiguration, CLAIMS);
+
+
+    PropertyDescriptor[] res = ParseOpenAPI.buildRootDropdown(integrationConfiguration, this, CLAIMS,
+        GuidewireCSP.claimPathsForSearch);
+
+    return integrationConfiguration.setProperties(res);
+
    }
 
   @Override

@@ -12,7 +12,8 @@ dependencies {
 
   implementation 'com.appian:connected-systems-client:1.1.0'
   implementation 'com.google.guava:guava:31.1-jre'
-  implementation(group: 'io.swagger.parser.v3', name: 'swagger-parser', version: '2.1.8') {
+  implementation 'me.xdrop:fuzzywuzzy:1.4.0'
+  implementation(group: 'io.swagger.parser.v3', name: 'swagger-parser', version: '2.1.9') {
     exclude group: 'org.slf4j'
   }
 
