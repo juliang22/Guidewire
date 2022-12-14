@@ -30,40 +30,43 @@ public class ParseOpenAPIsTests {
 
   OpenAPI claimsOpenApi = Util.getOpenApi("com/appian/guidewire/templates/claims.yaml");
   /*String pathName = "/claim-infos";*/
-  String pathName = "/claims/{claimId}/activities";
+  String pathName = "/claim-infos/{claimInfoId}";
   Operation get = claimsOpenApi.getPaths().get(pathName).getGet();
 
-  get.getParameters().forEach((queryParam) -> {
-    if (queryParam.getName().equals("pageSize")) {
-      System.out.println(queryParam.getSchema().getItems());
-    }
-  });
-
-
-
-  Map returnedFields = ((Schema)((Schema)get.getResponses()
+  Map returnedFieldProperties = get.getResponses()
       .get("200")
       .getContent()
       .get("application/json")
       .getSchema()
-      .getProperties()
-      .get("data")).getItems().getProperties().get("attributes")).getProperties();
+      .getProperties();
 
-  returnedFields.forEach((key, val) -> {
-    Map extensions = ((Schema)val).getExtensions();
-    if (extensions != null && extensions.get("x-gw-extensions") instanceof LinkedHashMap) {
-      Object isFilterable = ((LinkedHashMap<?,?>)extensions.get("x-gw-extensions")).get("filterable");
-      Object isSortable = ((LinkedHashMap<?,?>)extensions.get("x-gw-extensions")).get("sortable");
-      if (isFilterable != null) {
-        System.out.println(key + " is filterable");
-      }
-      if (isSortable != null) {
-        System.out.println(key + " is sortable");
-      } else {
-        System.out.println("KEY "+ key);
-      }
+  if (returnedFieldProperties != null) {
+    Schema returnedFieldItems= ((Schema)returnedFieldProperties.get("data")).getItems();
+    if (returnedFieldItems!= null) {
+      Map returnedFields = ((Schema)returnedFieldItems
+          .getProperties()
+          .get("attributes"))
+          .getProperties();
+
+      returnedFields.forEach((key, val) -> {
+        Map extensions = ((Schema)val).getExtensions();
+        if (extensions != null && extensions.get("x-gw-extensions") instanceof LinkedHashMap) {
+          Object isFilterable = ((LinkedHashMap<?,?>)extensions.get("x-gw-extensions")).get("filterable");
+          Object isSortable = ((LinkedHashMap<?,?>)extensions.get("x-gw-extensions")).get("sortable");
+          if (isFilterable != null) {
+            System.out.println(key + " is filterable");
+          }
+          if (isSortable != null) {
+            System.out.println(key + " is sortable");
+          } else {
+            System.out.println("KEY "+ key);
+          }
+        }
+      });
     }
-  });
+
+  }
+
 
   Schema hasIncludedResources = ((Schema)get.getResponses()
       .get("200")
@@ -78,6 +81,7 @@ public class ParseOpenAPIsTests {
   }
   // TODO: directions for pageOffset with the next keyword in links (for data source queries for sync)
   // TODO: set includeTotal to true
+  // TODO: Maximum pageSize doesn't seem to exist anywhere
 
 
 

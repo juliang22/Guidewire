@@ -12,10 +12,10 @@ public class JobsBuilder extends RestParamsBuilder {
   {
     super(api, simpleIntegrationTemplate);
   }
-  public List<PropertyDescriptor> buildGet() {
+  public void buildGet(List<PropertyDescriptor> result) {
 
 
-    return super.buildGet();
+    super.buildGet(result);
 
    /* return TextPropertyDescriptor.builder()
         .key(GET_JOBS_DROPDOWN)
@@ -28,25 +28,25 @@ public class JobsBuilder extends RestParamsBuilder {
         .build();*/
   }
 
-  public void buildPost() {
+  public void buildPost(List<PropertyDescriptor> result) {
 
-    super.buildPost();
-
-
-  }
-
-
-  public List<PropertyDescriptor>  buildPatch() {
-
-    return super.buildPatch();
+    super.buildPost(result);
 
 
   }
 
 
-  public List<PropertyDescriptor>  buildDelete() {
+  public void buildPatch(List<PropertyDescriptor> result) {
 
-    return super.buildDelete();
+    super.buildPatch(result);
+
+
+  }
+
+
+  public void buildDelete(List<PropertyDescriptor> result) {
+
+    super.buildDelete(result);
 
   }
 }

@@ -14,9 +14,9 @@ public class PoliciesBuilder extends RestParamsBuilder  {
     super(api, simpleIntegrationTemplate);
   }
 
-  public List<PropertyDescriptor> buildGet() {
+  public void buildGet(List<PropertyDescriptor> result) {
 
-    return super.buildGet();
+    super.buildGet(result);
 
 /*    return TextPropertyDescriptor.builder()
         .key(GET_POLICIES_DROPDOWN)
@@ -29,23 +29,23 @@ public class PoliciesBuilder extends RestParamsBuilder  {
         .build();*/
   }
 
-  public void buildPost(SimpleIntegrationTemplate simpleIntegrationTemplate) {
+  public void buildPost(List<PropertyDescriptor> result) {
 
-    super.buildPost();
-
-  }
-
-
-  public List<PropertyDescriptor>  buildPatch() {
-
-    return super.buildPatch();
-
+    super.buildPost(result);
 
   }
 
-  public List<PropertyDescriptor>  buildDelete() {
 
-    return super.buildDelete();
+  public void buildPatch(List<PropertyDescriptor> result) {
+
+    super.buildPatch(result);
+
+
+  }
+
+  public void buildDelete(List<PropertyDescriptor> result) {
+
+    super.buildDelete(result);
 
   }
 }

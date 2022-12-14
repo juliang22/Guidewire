@@ -2,12 +2,16 @@ package com.appian.guidewire.templates.UIBuilders;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.appian.connectedsystems.simplified.sdk.SimpleIntegrationTemplate;
+import com.appian.connectedsystems.templateframework.sdk.configuration.BooleanDisplayMode;
+import com.appian.connectedsystems.templateframework.sdk.configuration.Choice;
 import com.appian.connectedsystems.templateframework.sdk.configuration.DisplayHint;
 import com.appian.connectedsystems.templateframework.sdk.configuration.LocalTypeDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
@@ -18,17 +22,16 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.TypeRefer
 import com.appian.guidewire.templates.GuidewireCSP;
 
 import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.Paths;
 import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
 import std.ConstantKeys;
 
 public class RestParamsBuilder implements ConstantKeys {
-
   protected String pathName;
   protected TextPropertyDescriptorBuilder endpointChoices;
   protected List<PropertyDescriptor> pathVarsUI = new ArrayList<>();
-  protected PropertyDescriptor reqBodyProperties = null;
   protected Paths openAPIPaths = null;
   protected OpenAPI openAPI = null;
 
@@ -72,14 +75,6 @@ public class RestParamsBuilder implements ConstantKeys {
 
   public TextPropertyDescriptorBuilder getEndpointChoices() {
     return this.endpointChoices;
-  }
-
-  public void setReqBodyProperties(PropertyDescriptor reqBodyProperties) {
-    this.reqBodyProperties = reqBodyProperties;
-  }
-
-  public PropertyDescriptor getReqBodyProperties() {
-    return reqBodyProperties;
   }
 
   public static List<String> getPathVarsStr(String pathName) {
@@ -204,29 +199,117 @@ public class RestParamsBuilder implements ConstantKeys {
 
     switch (restOperation) {
       case (POST):
-        buildPost();
-        if (getReqBodyProperties() != null) {
-          result.add(getReqBodyProperties());
-        }
+        buildPost(result);
         break;
       case (GET):
+        buildGet(result);
         break;
     }
 
   }
 
-  public List<PropertyDescriptor> buildGet() {
-    return pathVarsUI;
+  public void buildGet(List<PropertyDescriptor> result) {
+
+    Operation get = openAPIPaths.get(pathName).getGet();
+
+    // Filtering and Sorting
+    Map returnedFieldProperties = get.getResponses()
+        .get("200")
+        .getContent()
+        .get("application/json")
+        .getSchema()
+        .getProperties();
+
+    result.add(
+        simpleIntegrationTemplate
+            .integerProperty(PAGESIZE)
+            .instructionText("Return 'n' number of items in the response")
+            .label("Pagination")
+            .placeholder("25")
+            .build()
+    );
+
+    if (returnedFieldProperties != null) {
+      Schema returnedFieldItems= ((Schema)returnedFieldProperties.get("data")).getItems();
+      if (returnedFieldItems!= null) {
+
+        TextPropertyDescriptorBuilder sorted = simpleIntegrationTemplate.textProperty(SORT)
+            .label("Sort Response")
+            .instructionText("Sort response by selecting a field in the dropdown. If the dropdown is empty," +
+                " there are no sortable fields available.")
+            .refresh(RefreshPolicy.ALWAYS);
+        Map returnedFields = ((Schema)returnedFieldItems
+            .getProperties()
+            .get("attributes"))
+            .getProperties();
+        returnedFields.forEach((key, val) -> {
+          Map extensions = ((Schema)val).getExtensions();
+          if (extensions != null && extensions.get("x-gw-extensions") instanceof LinkedHashMap) {
+            Object isFilterable = ((LinkedHashMap<?,?>)extensions.get("x-gw-extensions")).get("filterable");
+            Object isSortable = ((LinkedHashMap<?,?>)extensions.get("x-gw-extensions")).get("sortable");
+            if (isFilterable != null) {
+              System.out.println(key + " is filterable");
+            }
+            if (isSortable != null) {
+              sorted.choice(
+                  Choice.builder().name(key.toString()).value(key.toString()).build()
+              );
+              System.out.println(key + " is sortable");
+            } else {
+              System.out.println("KEY "+ key);
+            }
+          }
+        });
+        result.add(sorted.build());
+      }
+
+    }
+
+    // Included resources
+    Schema hasIncludedResources = ((Schema)get.getResponses()
+        .get("200")
+        .getContent()
+        .get("application/json")
+        .getSchema()
+        .getProperties()
+        .get("included"));
+    if (hasIncludedResources != null) {
+      Set included = hasIncludedResources.getProperties().keySet();
+      System.out.println(included);
+
+      result.add(
+          simpleIntegrationTemplate
+              .textProperty("IncludedResourcesTitle")
+              .isReadOnly(true)
+              .refresh(RefreshPolicy.ALWAYS)
+              .label("Included Resources")
+              .instructionText("The resource you are requesting may have relationships to other resources. " +
+                  "Select the related resources below that you would like to be attached to the call. If " +
+                  "they exist, they will be returned alongside the root resource.")
+              .build()
+          );
+      included.forEach(includedName -> {
+            result.add(
+                simpleIntegrationTemplate
+                    .booleanProperty(includedName.toString())
+                    .refresh(RefreshPolicy.ALWAYS)
+                    .displayMode(BooleanDisplayMode.RADIO_BUTTON)
+                    .label(includedName.toString())
+                    .description("Related Resource")
+                    .build()
+            );
+          }
+      );
+    }
+
+
   }
 
-  public void buildPost() {
+  public void buildPost(List<PropertyDescriptor> result) {
 
     List<Map<String,Object>> reqBodyArr = buildRequestBodyUI();
 
-    if (reqBodyArr == null) {
-      setReqBodyProperties(null);
-      return;
-    }
+    if (reqBodyArr == null) return;
 
     LocalTypeDescriptor.Builder reqBody = simpleIntegrationTemplate.localType(REQ_BODY_PROPERTIES);
     reqBodyArr.forEach(field -> {
@@ -249,22 +332,27 @@ public class RestParamsBuilder implements ConstantKeys {
             .build());
       }
     });
+
+    // Key can't have any special characters so to get reqBody key, get it from integrationTemplate.get
+    // (REQ_BODY).getLabel()
     String key = pathName.replace("/", "").replace("{", "").replace("}", "");
-    setReqBodyProperties(simpleIntegrationTemplate.localTypeProperty(reqBody.build())
-        .key(key)
-        .isHidden(false)
-        .displayHint(DisplayHint.EXPRESSION)
-        .isExpressionable(true)
-        .label("Request Body")
-        .refresh(RefreshPolicy.ALWAYS)
-        .build());
+    result.add(
+        simpleIntegrationTemplate.localTypeProperty(reqBody.build())
+            .key(key)
+            .isHidden(false)
+            .displayHint(DisplayHint.EXPRESSION)
+            .isExpressionable(true)
+            .label("Request Body")
+            .refresh(RefreshPolicy.ALWAYS)
+            .build()
+    );
   }
 
-  public List<PropertyDescriptor> buildPatch() {
-    return pathVarsUI;
+  public void buildPatch(List<PropertyDescriptor> result) {
+
   }
 
-  public List<PropertyDescriptor> buildDelete() {
-    return pathVarsUI;
+  public void buildDelete(List<PropertyDescriptor> result) {
+
   }
 }

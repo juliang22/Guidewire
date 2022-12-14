@@ -37,6 +37,8 @@ public interface ConstantKeys {
 
   String REQ_BODY = "reqBody";
   String REQ_BODY_PROPERTIES = "reqBody";
+  String PAGESIZE = "pagesize";
+  String SORT = "sort";
 
 
 
@@ -46,11 +48,10 @@ public interface ConstantKeys {
   String SEARCH = "search";
   TextPropertyDescriptor SEARCHBAR = new TextPropertyDescriptor.TextPropertyDescriptorBuilder()
       .key(SEARCH)
-      .label("Sort Endpoints")
+      .label("Sort Endpoints Dropdown")
       .refresh(RefreshPolicy.ALWAYS)
       .instructionText(
-          "Sort the endpoints below with a relevant search query. " +
-              "Example query for the Claims API: 'injury incidents'")
+          "Sort the endpoints dropdown below with a relevant search query.")
+      .placeholder("Example query for the Claims API: 'injury incidents.'")
       .build();
-
 }
