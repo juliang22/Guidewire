@@ -9,8 +9,9 @@ import com.appian.guidewire.templates.UIBuilders.RestParamsBuilder;
 
 public class PoliciesBuilder extends RestParamsBuilder  {
 
-  public PoliciesBuilder(String api) {
-    super(api);
+  public PoliciesBuilder(String api,SimpleIntegrationTemplate simpleIntegrationTemplate) {
+
+    super(api, simpleIntegrationTemplate);
   }
 
   public List<PropertyDescriptor> buildGet() {
@@ -30,7 +31,7 @@ public class PoliciesBuilder extends RestParamsBuilder  {
 
   public void buildPost(SimpleIntegrationTemplate simpleIntegrationTemplate) {
 
-    super.buildPost(simpleIntegrationTemplate);
+    super.buildPost();
 
   }
 

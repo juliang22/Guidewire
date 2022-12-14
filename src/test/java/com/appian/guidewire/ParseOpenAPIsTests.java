@@ -2,7 +2,10 @@ package com.appian.guidewire;
 
 import static org.junit.Assert.assertNotNull;
 
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.junit.Test;
 
@@ -10,16 +13,113 @@ import com.appian.guidewire.templates.GuidewireCSP;
 import com.appian.guidewire.templates.UIBuilders.ParseOpenAPI;
 
 import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.PathItem;
 import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
+import io.swagger.v3.oas.models.parameters.Parameter;
 import std.ConstantKeys;
 import std.Util;
 
 public class ParseOpenAPIsTests {
 
-  private static final String OPENAPI_SAMPLE = "openapis/petstore3.json";
-  private static final String OPENAPI_SAMPLE_YAML = "openapis/petstore3.yaml";
+
+
+@Test
+  public void getGetOptions() {
+
+  OpenAPI claimsOpenApi = Util.getOpenApi("com/appian/guidewire/templates/claims.yaml");
+  /*String pathName = "/claim-infos";*/
+  String pathName = "/claims/{claimId}/activities";
+  Operation get = claimsOpenApi.getPaths().get(pathName).getGet();
+
+  get.getParameters().forEach((queryParam) -> {
+    if (queryParam.getName().equals("pageSize")) {
+      System.out.println(queryParam.getSchema().getItems());
+    }
+  });
+
+
+
+  Map returnedFields = ((Schema)((Schema)get.getResponses()
+      .get("200")
+      .getContent()
+      .get("application/json")
+      .getSchema()
+      .getProperties()
+      .get("data")).getItems().getProperties().get("attributes")).getProperties();
+
+  returnedFields.forEach((key, val) -> {
+    Map extensions = ((Schema)val).getExtensions();
+    if (extensions != null && extensions.get("x-gw-extensions") instanceof LinkedHashMap) {
+      Object isFilterable = ((LinkedHashMap<?,?>)extensions.get("x-gw-extensions")).get("filterable");
+      Object isSortable = ((LinkedHashMap<?,?>)extensions.get("x-gw-extensions")).get("sortable");
+      if (isFilterable != null) {
+        System.out.println(key + " is filterable");
+      }
+      if (isSortable != null) {
+        System.out.println(key + " is sortable");
+      } else {
+        System.out.println("KEY "+ key);
+      }
+    }
+  });
+
+  Schema hasIncludedResources = ((Schema)get.getResponses()
+      .get("200")
+      .getContent()
+      .get("application/json")
+      .getSchema()
+      .getProperties()
+      .get("included"));
+  if (hasIncludedResources != null) {
+    Set included = hasIncludedResources.getProperties().keySet();
+    System.out.println(included);
+  }
+  // TODO: directions for pageOffset with the next keyword in links (for data source queries for sync)
+  // TODO: set includeTotal to true
+
+
+
+
+ /* get.getParameters().forEach((queryParam) -> {
+*//*        System.out.println("HERE"+queryParams.getIn() +queryParams.getName());*//*
+
+        if (queryParam.getName().equals("include")) {          System.out.println("INLCUDES"+((Schema)get
+              .getResponses()
+              .get("200")
+              .getContent()
+              .get("application/json")
+              .getSchema()
+              .getProperties()
+              .get("included")));
+
+          Map included = ((Schema)get
+              .getResponses()
+              .get("200")
+              .getContent()
+              .get("application/json")
+              .getSchema()
+              .getProperties()
+              .get("included")).getProperties();
+          System.out.println("Param "+ queryParam.getName() + " "+ included.keySet());
+        } else if (queryParam.getName().equals("filter")) {
+          // TODO: only when x-gw-extensions: filterable: true
+          System.out.println("Param "+ queryParam.getName());
+        } else if (queryParam.getName().equals("pageSize")) {
+          System.out.println("Param "+ queryParam.getName());
+        } else if (queryParam.getName().equals("sort")) {
+          // TODO: only when x-gw-extensions: sortable: true
+          System.out.println("Param "+ queryParam.getName());
+        } else if (queryParam.getName().equals("fields")) {
+          // TODO: only when x-gw-extensions: sortable: true
+
+          System.out.println("Param "+ queryParam.getName());
+        }
+      }
+  );*/
+
+}
 
 
 
@@ -145,48 +245,6 @@ public class ParseOpenAPIsTests {
       System.out.println("        " + innerKey + " : " + innerItemSchema.getType());
     });
   }
-
-  @Test
-  public void test_ParseResourcesOpenAPI() throws Exception {
-
-    // Working parser of one path at a time
-    OpenAPI openAPI = Util.getOpenApi("com/appian/guidewire/templates/claims.yaml");
-
-    ObjectSchema schema = (ObjectSchema)openAPI.getPaths()
-        .get("/claims/{claimId}/service-requests/{serviceRequestId}/invoices")
-        .getPost()
-        .getRequestBody()
-        .getContent()
-        .get("application/json")
-        .getSchema()
-        .getProperties()
-        .get("data");
-
-
-    schema.getProperties().get("attributes").getProperties().forEach((key, item) -> {
-      Schema itemSchema = ((Schema)item);
-
-
-      if (itemSchema.getType().equals("object")) {
-        isObj(key, (Schema)item);
-      } else if (itemSchema.getType().equals("array")) {
-
-          System.out.println(key + " : " + itemSchema.getType());
-
-          itemSchema.getItems().getProperties().forEach((innerKey, innerItem) -> {
-              Schema innerItemSchema = ((Schema)innerItem);
-
-
-              if (innerItemSchema.getType().equals("object")) {
-                isObj(innerKey, (Schema)innerItem);
-              } else {
-                System.out.println("        " + innerKey + " : " + innerItemSchema.getType());
-              }
-          });
-      } else {
-        System.out.println(key + " : " + itemSchema.getType());
-      }
-    });
 
 
     *//*        System.out.println(ParseOpenAPI.initializePaths(ConstantKeys.CLAIMS));*//*

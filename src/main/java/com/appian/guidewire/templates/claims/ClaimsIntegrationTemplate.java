@@ -15,6 +15,7 @@ import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTem
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
 import com.appian.guidewire.templates.GuidewireCSP;
 import com.appian.guidewire.templates.UIBuilders.ParseOpenAPI;
+import com.google.gson.Gson;
 
 import std.ConstantKeys;
 
@@ -44,10 +45,10 @@ public class ClaimsIntegrationTemplate extends SimpleIntegrationTemplate impleme
       SimpleConfiguration connectedSystemConfiguration,
       ExecutionContext executionContext) {
 
-
+    Gson gson = new Gson();
     String key = integrationConfiguration.getProperty(REQ_BODY).getLabel();
     System.out.println(
-        integrationConfiguration.getValue(key).toString()
+        gson.toJson(integrationConfiguration.getValue(key))
     );
 
 

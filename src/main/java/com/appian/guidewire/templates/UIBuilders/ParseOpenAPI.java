@@ -31,7 +31,7 @@ public class ParseOpenAPI implements ConstantKeys {
       List<String> choicesForSearch
   ) {
 
-    RestParamsBuilder params = new RestParamsBuilder(api);
+    RestParamsBuilder params = new RestParamsBuilder(api, simpleIntegrationTemplate);
 
     // If there is a search query, sort the dropdown with the query
     String searchQuery = integrationConfiguration.getValue(SEARCH);
@@ -57,37 +57,21 @@ public class ParseOpenAPI implements ConstantKeys {
     String pathName = selectedEndpointStr[2];
     String pathSummary = selectedEndpointStr[3];
     if (!apiType.equals(api)) {
-
       integrationConfiguration.setValue(CHOSEN_ENDPOINT, null).setValue(SEARCH, "");
-      return result.toArray(new PropertyDescriptor[0]);
-
     } else {
-
       // The key of the request body is dynamic so when I need to get it in the execute function:
       // key = integrationConfiguration.getProperty(REQ_BODY).getLabel();
       // integrationConfiguration.getProperty(key)
+      // TODO: put below in buildRestCall()
       params.setPathName(pathName);
       String KEY_OF_REQ_BODY = pathName.replace("/", "").replace("{", "").replace("}", "");
       result.add(simpleIntegrationTemplate.textProperty(REQ_BODY).label(KEY_OF_REQ_BODY).isHidden(true).build());
 
-
-      if (params.getPathVarsUI().size() > 0) {
-        result.addAll(params.getPathVarsUI());
-      }
-
-      if (restOperation.equals(POST)) {
-
-        params.buildPost(simpleIntegrationTemplate);
-
-        if (params.getReqBodyProperties() != null) {
-          result.add(params.getReqBodyProperties());
-
-        }
-      }
-
-      return result.toArray(new PropertyDescriptor[0]);
-
+      // Building the result with path variables, request body, and other functionality needed to make the
+      // request
+      params.buildRestCall(restOperation, result);
     }
+    return result.toArray(new PropertyDescriptor[0]);
   }
 
 

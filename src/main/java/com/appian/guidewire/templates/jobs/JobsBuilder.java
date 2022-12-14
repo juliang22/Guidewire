@@ -8,8 +8,9 @@ import com.appian.guidewire.templates.UIBuilders.RestParamsBuilder;
 
 public class JobsBuilder extends RestParamsBuilder {
 
-  public JobsBuilder(String api) {
-    super(api);
+  public JobsBuilder(String api, SimpleIntegrationTemplate simpleIntegrationTemplate)
+  {
+    super(api, simpleIntegrationTemplate);
   }
   public List<PropertyDescriptor> buildGet() {
 
@@ -27,9 +28,9 @@ public class JobsBuilder extends RestParamsBuilder {
         .build();*/
   }
 
-  public void buildPost(SimpleIntegrationTemplate simpleIntegrationTemplate) {
+  public void buildPost() {
 
-    super.buildPost(simpleIntegrationTemplate);
+    super.buildPost();
 
 
   }
