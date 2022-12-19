@@ -45,9 +45,16 @@ public class JobsIntegrationTemplate extends SimpleIntegrationTemplate implement
       PropertyPath propertyPath,
       ExecutionContext executionContext) {
 
+    // Logic for Posts simplified
+   /* LocalTypeDescriptor innerOne = localType("innerOne").properties(
+        textProperty("textOne").label("textOne").build())
+        .build();
 
-/*
-*//*    LocalTypeDescriptor metaDataType = localType("METADATA_TYPE")
+    LocalTypeDescriptor innerTwo = localType("innerTwo").properties(
+            textProperty("textTwo").label("textTwo").build())
+        .build();
+
+    LocalTypeDescriptor metaDataType = localType("METADATA_TYPE")
         .properties(
             textProperty("METADATA_NAME")
                 .label("Metadata Name")
@@ -61,142 +68,29 @@ public class JobsIntegrationTemplate extends SimpleIntegrationTemplate implement
                 .placeholder("api")
                 .isExpressionable(true)
                 .build()
-        ).build();*//*
-
-    LocalTypeDescriptor.Builder meta2 = localType("METADATA_TYPEZ");
-    List<String> arr = Arrays.asList("hello", "world");
-    arr.forEach(el -> {
-      meta2.properties(
-          TextPropertyDescriptor.builder()
-              .key(el)
-              .instructionText(el)
-              .isExpressionable(true)
-              .displayHint(DisplayHint.EXPRESSION)
-              .placeholder(el)
-              .build()
-      );
-    });
-    LocalTypeDescriptor builtMeta = meta2.build();
-
-    LocalTypeDescriptor layered = localType("stoppid")
-        .properties(builtMeta).build();
-
-    LocalTypeDescriptor qnaType = localType("QNA_TYPE")
-        .properties(
-            textProperty("QNA_ANSWER")
-                .label("Answer")
-                .description("The answer to the question.")
-                .placeholder("You can change the default message if you use the QnAMakerDialog. See this for details: https://docs.botframework.com/en-us/azure-bot-service/templates/qnamaker/#navtitle")
-                .instructionText("Max length 25000")
-                .isExpressionable(true)
-                .isRequired(true)
-                .build(),
-            textProperty("QNA_SOURCE")
-                .label("Source")
-                .description("Source from which Q-A was indexed. eg. https://docs.microsoft.com/en-us/azure/cognitive-services/QnAMaker/FAQs")
-                .placeholder("QnA Maker FAQ")
-                .instructionText("Max length 300")
-                .isExpressionable(true)
-                .build(),
-            listTypeProperty("QNA_QUESTIONS")
-                .label("Questions")
-                .itemType(SystemType.STRING)
-                .description("List of questions associated with the answer.")
-                .instructionText("Answers can have more than one question associated with it. Max length 1000")
-                .isExpressionable(true)
-                .isRequired(true)
-                .build(),
-*//*            listTypeProperty("metadata")
-                .label("Metadata")
-                .itemType(TypeReference.from(builtMeta))
-                .isExpressionable(true)
-                .instructionText("Fill out the name - value pairs of the metadata. Up to 10 metadata objects are allowed.")
-                .description("List of metadata associated with the answer.")
-                .build(),*//*
-
-            localTypeProperty(layered)
-                .label("Metadataddd")
-                .isExpressionable(true)
-                .instructionText("Fill out the name - value pairs of the metadata. Up to 10 metadata objects are allowed.")
-                .description("List of metadata associated with the answer.")
-                .build()
         ).build();
-
-    return integrationConfiguration.setProperties(
-*//*        localTypeProperty(builtMeta).label("Meta").isHidden(true).isExpressionable(true).build(),*//*
-
-        localTypeProperty(qnaType).key("SINGLE_QNA").displayHint(DisplayHint.EXPRESSION).isExpressionable(true).label("QnA").build()
-
-    );*/
+    LocalTypeDescriptor nested = localType("layered").properties(
+        localTypeProperty(innerTwo).build()
+*//*        listTypeProperty("lsity").itemType(TypeReference.from(metaDataType)).build()*//*
+    ).build();
 
 
-/*
-    // Req body working code in isolation
-    List<Map<String,Object>> reqBodyArr = ParseOpenAPI.buildRequestBodyUI(GuidewireCSP.claimsOpenApi,
-        "/claims/{claimId}/service-requests/{serviceRequestId}/invoices");
-
-    LocalTypeDescriptor.Builder reqBody = localType(REQ_BODY);
-    reqBodyArr.forEach(field -> {
-      if (field.containsKey(TEXT) && field.get(TEXT) instanceof TextPropertyDescriptor) {
-        TextPropertyDescriptor textParam = (TextPropertyDescriptor)field.get(TEXT);
-        reqBody.properties(textParam);
-      } else if (field.containsKey(OBJECT) && field.get(OBJECT) instanceof LocalTypeDescriptor) {
-        LocalTypeDescriptor objParam = (LocalTypeDescriptor)field.get(OBJECT);
-        reqBody.properties(localTypeProperty(objParam).build());
-      } else if (field.containsKey(ARRAY) && field.get(ARRAY) instanceof LocalTypeDescriptor) {
-        LocalTypeDescriptor arrParam = (LocalTypeDescriptor)field.get(ARRAY);
-        reqBody.properties(
-            listTypeProperty(arrParam.getName()).itemType(TypeReference.from(arrParam)).build(),
-            localTypeProperty(arrParam).isHidden(true).build()
-        );
-      }
-    });
-
-    return integrationConfiguration.setProperties(
-        SEARCHBAR,
-        localTypeProperty(reqBody.build()).key("SINGLE_QNA").displayHint(DisplayHint.EXPRESSION).isExpressionable(true).label("QnA").build()
-    );*/
+    List<PropertyDescriptor> innerOneProperties = new ArrayList<>(innerOne.getProperties());
+*//*    innerOneProperties.addAll(innerTwo.getProperties());*//*
+    innerOneProperties.addAll(nested.getProperties());
+    LocalTypeDescriptor merged = localType("merged").properties(innerOneProperties).build();
 
 
-
-//Woerking with this
-/*    List<Map<String,Object>> reqBodyArr = ParseOpenAPI.buildRequestBodyUI(GuidewireCSP.claimsOpenApi,
-        "/claims/{claimId}/service-requests/{serviceRequestId}/invoices");
-    LocalTypeDescriptor.Builder reqBody = this.localType(REQ_BODY);
-    reqBodyArr.forEach(field -> {
-      if (field.containsKey(TEXT) && field.get(TEXT) instanceof TextPropertyDescriptor) {
-        TextPropertyDescriptor textParam = (TextPropertyDescriptor)field.get(TEXT);
-        reqBody.properties(textParam);
-      } else if (field.containsKey(OBJECT) && field.get(OBJECT) instanceof LocalTypeDescriptor) {
-        LocalTypeDescriptor objParam = (LocalTypeDescriptor)field.get(OBJECT);
-        reqBody.properties(
-           this.localTypeProperty(objParam).build()
-        );
-      } else if (field.containsKey(ARRAY) && field.get(ARRAY) instanceof LocalTypeDescriptor) {
-        LocalTypeDescriptor arrParam = (LocalTypeDescriptor)field.get(ARRAY);
-        reqBody.properties(
-            this.listTypeProperty(arrParam.getName()).itemType(TypeReference.from(arrParam)).build(),
-            this.localTypeProperty(arrParam).isHidden(true).build()
-        );
-      }
-    });
-
-
-    return integrationConfiguration.setProperties(
-        this.localTypeProperty(reqBody.build()).key("SINGLE_QNA").displayHint(DisplayHint.EXPRESSION).isExpressionable(true).label("QnA").build()
-
-    );*/
-
-
-
-
-    return integrationConfiguration.setProperties(
-        ParseOpenAPI.buildRootDropdown(integrationConfiguration, this, POLICIES, GuidewireCSP.policyPathsForSearch)
+    List<PropertyDescriptor> propertyDescriptors = Arrays.asList(
+        localTypeProperty(merged).isExpressionable(true).displayHint(DisplayHint.EXPRESSION).build()
     );
 
+    return integrationConfiguration.setProperties(propertyDescriptors.toArray(new PropertyDescriptor[0]));
+*/
 
-    // TODO: change to jobs once I have access to that schema
-
+    return integrationConfiguration.setProperties(
+        ParseOpenAPI.buildRootDropdown(integrationConfiguration,this, JOBS, GuidewireCSP.jobPathsForSearch)
+    );
 
   }
 

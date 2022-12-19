@@ -88,10 +88,12 @@ public class ParseOpenAPI implements ConstantKeys {
       case CLAIMS:
         paths = GuidewireCSP.claimsOpenApi.getPaths();
         break;
-/*        case JOBS:
+      case JOBS:
         paths = GuidewireCSP.jobsOpenApi.getPaths();
-        choicesForSearch = GuidewireCSP.jobPathsForSearch;
-          break;*/
+        break;
+      case ACCOUNTS:
+        paths = GuidewireCSP.accountsOpenApi.getPaths();
+        break;
     }
 
       ArrayList<Choice> choices = new ArrayList<>();

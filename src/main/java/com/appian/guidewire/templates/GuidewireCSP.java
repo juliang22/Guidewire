@@ -23,15 +23,19 @@ public class GuidewireCSP extends SimpleConnectedSystemTemplate implements Const
   public static TextPropertyDescriptorBuilder claims = ParseOpenAPI.endpointChoiceBuilder(CLAIMS, "", claimPathsForSearch);
 
 
-  public static final OpenAPI policiesOpenApi = Util.getOpenApi("com/appian/guidewire/templates/policies" +
-      ".yaml");
+  public static final OpenAPI policiesOpenApi = Util.getOpenApi("com/appian/guidewire/templates/policies.yaml");
   public static List<String> policyPathsForSearch = new ArrayList<>();
   public static TextPropertyDescriptorBuilder policies = ParseOpenAPI.endpointChoiceBuilder(POLICIES, "", policyPathsForSearch);
 
-/*
-  public static OpenAPI claimsOpenApi = Util.getOpenApi("com/appian/guidewire/templates/jobs.yaml");
-public static TextPropertyDescriptorBuilder jobs = ParseOpenAPI.initializePaths(JOBS);*/
-/*public static Collection<String> jobPathsForSearch = new ArrayList<>();;*/
+  public static final OpenAPI jobsOpenApi = Util.getOpenApi("com/appian/guidewire/templates/jobs.yaml");
+  public static List<String> jobPathsForSearch = new ArrayList<>();
+  public static TextPropertyDescriptorBuilder jobs = ParseOpenAPI.endpointChoiceBuilder(JOBS, "", jobPathsForSearch);
+
+  public static final OpenAPI accountsOpenApi = Util.getOpenApi("com/appian/guidewire/templates/accounts" +
+      ".yaml");
+  public static List<String> accountPathsForSearch = new ArrayList<>();
+  public static TextPropertyDescriptorBuilder accounts = ParseOpenAPI.endpointChoiceBuilder(ACCOUNTS, "",
+      accountPathsForSearch);
 
 
   @Override

@@ -26,6 +26,7 @@ public interface ConstantKeys {
   String JOBS = "jobs";
   String CLAIMS = "claims";
   String POLICIES = "policies";
+  String ACCOUNTS = "accounts";
 
   //Rest call types
   String REST_CALL = "restCall";

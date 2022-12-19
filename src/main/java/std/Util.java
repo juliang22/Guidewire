@@ -11,6 +11,7 @@ import org.apache.commons.io.IOUtils;
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationError;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
+import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
 import com.appian.guidewire.templates.claims.GetClaimsIntegrationTemplate;
 
@@ -73,6 +74,17 @@ public class Util {
                 .build();
     }
 
+    public static String camelCaseToTitleCase(String str) {
+        return str.replaceAll(
+            String.format("%s|%s|%s",
+                "(?<=[A-Z])(?=[A-Z][a-z])",
+                "(?<=[^A-Z])(?=[A-Z])",
+                "(?<=[A-Za-z])(?=[^A-Za-z])"
+            ),
+            " "
+        );
+    }
+
     public static OpenAPI getOpenApi(String api) {
         try (InputStream input = GetClaimsIntegrationTemplate.class.getClassLoader().getResourceAsStream(api)) {
             String content = IOUtils.toString(input, "utf-8");
@@ -86,6 +98,7 @@ public class Util {
             throw new RuntimeException(e);
         }
     }
+
 
 
 }

@@ -22,6 +22,10 @@
                             name="Jobs"
                             class="com.appian.guidewire.templates.jobs.JobsIntegrationTemplate"
                             request-policy="write" />
+      <integration-template key="AccountsIntegrationTemplate"
+                            name="Accounts"
+                            class="com.appian.guidewire.templates.accounts.AccountsIntegrationTemplate"
+                            request-policy="write" />
     </version>
   </connected-system>
 </appian-plugin>

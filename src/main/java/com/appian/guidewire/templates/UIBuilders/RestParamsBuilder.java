@@ -1,11 +1,12 @@
 package com.appian.guidewire.templates.UIBuilders;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -27,6 +28,7 @@ import io.swagger.v3.oas.models.Paths;
 import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
 import std.ConstantKeys;
+import std.Util;
 
 public class RestParamsBuilder implements ConstantKeys {
   protected String pathName;
@@ -52,10 +54,16 @@ public class RestParamsBuilder implements ConstantKeys {
         this.openAPIPaths = GuidewireCSP.claimsOpenApi.getPaths();
         this.endpointChoices = GuidewireCSP.claims;
         break;
-/*        case JOBS:
+      case JOBS:
+        this.openAPI = GuidewireCSP.jobsOpenApi;
         this.openAPIPaths = GuidewireCSP.jobsOpenApi.getPaths();
         this.endpointChoices = GuidewireCSP.jobs;
-          break;*/
+        break;
+      case ACCOUNTS:
+        this.openAPI = GuidewireCSP.accountsOpenApi;
+        this.openAPIPaths = GuidewireCSP.accountsOpenApi.getPaths();
+        this.endpointChoices = GuidewireCSP.accounts;
+        break;
     }
   }
 
@@ -103,91 +111,72 @@ public class RestParamsBuilder implements ConstantKeys {
     });
   }
 
-  public List<PropertyDescriptor> getPathVarsUI() { return pathVarsUI; }
-
-  public List<Map<String,Object>> buildRequestBodyUI() {
-
-    if (openAPI.getPaths().get(pathName).getPost().getRequestBody() == null)
-      return null;
-
-    ObjectSchema schema = (ObjectSchema)openAPI.getPaths()
-        .get(pathName)
-        .getPost()
-        .getRequestBody()
-        .getContent()
-        .get("application/json")
-        .getSchema()
-        .getProperties()
-        .get("data");
-
-    List<Map<String,Object>> reqBodyArr = new ArrayList<>();
-    schema.getProperties().get("attributes").getProperties().forEach((key, item) -> {
-      Map<String,Object> newParam = parseRequestBody(key, (Schema)item);
-      if (newParam != null)
-        reqBodyArr.add(newParam);
-    });
-
-    return reqBodyArr;
+  public List<PropertyDescriptor> getPathVarsUI() {
+    return pathVarsUI;
   }
 
-  public Map<String,Object> parseRequestBody(Object key, Schema item) {
+  public LocalTypeDescriptor parseRequestBody(String key, Schema item, Set requiredProperties) {
 
     if (item.getType().equals("object")) {
 
-      if (item.getProperties() == null)
-        return null;
+      if (item.getProperties() == null) return null;
 
-      List<Object> objBuilder = new ArrayList<>();
-
+      LocalTypeDescriptor.Builder builder = simpleIntegrationTemplate.localType(key);
       item.getProperties().forEach((innerKey, innerItem) -> {
-        TextPropertyDescriptor newParam = (TextPropertyDescriptor)parseRequestBody(innerKey,
-            (Schema)innerItem).get(TEXT);
-        if (newParam != null && newParam instanceof TextPropertyDescriptor) {
-          objBuilder.add(newParam);
+        String innerKeyStr = innerKey.toString();
+        Schema innerItemSchema = (Schema)innerItem;
+        Set innerRequiredProperties = innerItemSchema.getRequired() != null ?
+            new HashSet<>(innerItemSchema.getRequired()) :
+            requiredProperties;
+        LocalTypeDescriptor nested = parseRequestBody(innerKeyStr, innerItemSchema, innerRequiredProperties);
+        if (nested != null) {
+          builder.properties(nested.getProperties());
         }
       });
 
-      Map<String,Object> objMap = new HashMap<>();
-      objMap.put(OBJECT, simpleIntegrationTemplate.localType(key.toString())
-          .properties(objBuilder.toArray(new PropertyDescriptor[0]))
-          .build());
-      return objMap;
+      return simpleIntegrationTemplate.localType(key + "Builder").properties(
+          simpleIntegrationTemplate.localTypeProperty(builder.build()).build()
+      ).build();
 
     } else if (item.getType().equals("array")) {
 
-      if (item.getItems() == null && item.getItems().getProperties() == null)
-        return null;
+      if (item.getItems() == null && item.getItems().getProperties() == null) return null;
 
-      List<Object> arrBuilder = new ArrayList<>();
+      LocalTypeDescriptor.Builder builder = simpleIntegrationTemplate.localType(key);
       item.getItems().getProperties().forEach((innerKey, innerItem) -> {
-        TextPropertyDescriptor newParam = (TextPropertyDescriptor)parseRequestBody(innerKey,
-            (Schema)innerItem).get(TEXT);
-        if (newParam != null && newParam instanceof TextPropertyDescriptor) {
-          arrBuilder.add(newParam);
+        String innerKeyStr = innerKey.toString();
+        Schema innerItemSchema = (Schema)innerItem;
+        Set innerRequiredProperties = innerItemSchema.getRequired() != null ?
+            new HashSet<>(innerItemSchema.getRequired()) :
+            requiredProperties;
+        LocalTypeDescriptor nested = parseRequestBody(innerKeyStr, innerItemSchema, innerRequiredProperties);
+        if (nested != null) {
+          builder.properties(nested.getProperties());
         }
       });
 
-      Map<String,Object> arrMap = new HashMap<>();
-      arrMap.put(ARRAY, this.simpleIntegrationTemplate.localType(key.toString())
-          .properties(arrBuilder.toArray(new PropertyDescriptor[0]))
-          .build()
-
-      );
-      return arrMap;
+      return simpleIntegrationTemplate.localType(key + "Builder").properties(
+          // The listProperty needs a typeReference to a localProperty -> Below a localProperty is created
+          // and hidden for use by the listProperty
+          simpleIntegrationTemplate.localTypeProperty(builder.build()).key(key+"hidden").isHidden(true).build(),
+          simpleIntegrationTemplate.listTypeProperty(key).itemType(TypeReference.from(builder.build())).build()
+      ).build();
 
     } else {
-      /*      System.out.println(key + " : " + item.getType());*/
+      System.out.println(key + " : " + item.getType());
 
-      Map<String,Object> textMap = new HashMap<>();
-      textMap.put(TEXT, this.simpleIntegrationTemplate.textProperty(key.toString())
-          .instructionText(item.getDescription())
-          .isExpressionable(true)
-          .displayHint(DisplayHint.EXPRESSION)
-          .refresh(RefreshPolicy.ALWAYS)
-          .placeholder(item.getDescription())
-          .isRequired(true)
-          .build());
-      return textMap;
+      return simpleIntegrationTemplate.localType(key + "Container")
+          .property(
+              simpleIntegrationTemplate.textProperty(key)
+                  .isExpressionable(true)
+                  .displayHint(DisplayHint.EXPRESSION)
+                  .refresh(RefreshPolicy.ALWAYS)
+                  .placeholder(requiredProperties != null && requiredProperties.contains(key) ?
+                      "(Required) " + item.getDescription() :
+                      item.getDescription()
+                  )
+                  .build()
+          ).build();
     }
 
   }
@@ -212,6 +201,13 @@ public class RestParamsBuilder implements ConstantKeys {
 
     Operation get = openAPIPaths.get(pathName).getGet();
 
+    // Pagination
+    result.add(simpleIntegrationTemplate.integerProperty(PAGESIZE)
+        .instructionText("Return 'n' number of items in the response")
+        .label("Pagination")
+        .placeholder("25")
+        .build());
+
     // Filtering and Sorting
     Map returnedFieldProperties = get.getResponses()
         .get("200")
@@ -219,48 +215,35 @@ public class RestParamsBuilder implements ConstantKeys {
         .get("application/json")
         .getSchema()
         .getProperties();
-
-    result.add(
-        simpleIntegrationTemplate
-            .integerProperty(PAGESIZE)
-            .instructionText("Return 'n' number of items in the response")
-            .label("Pagination")
-            .placeholder("25")
-            .build()
-    );
-
+    AtomicBoolean hasSorting = new AtomicBoolean(false);
     if (returnedFieldProperties != null) {
-      Schema returnedFieldItems= ((Schema)returnedFieldProperties.get("data")).getItems();
-      if (returnedFieldItems!= null) {
+      Schema returnedFieldItems = ((Schema)returnedFieldProperties.get("data")).getItems();
+      if (returnedFieldItems != null) {
 
         TextPropertyDescriptorBuilder sorted = simpleIntegrationTemplate.textProperty(SORT)
             .label("Sort Response")
             .instructionText("Sort response by selecting a field in the dropdown. If the dropdown is empty," +
                 " there are no sortable fields available.")
             .refresh(RefreshPolicy.ALWAYS);
-        Map returnedFields = ((Schema)returnedFieldItems
-            .getProperties()
-            .get("attributes"))
-            .getProperties();
+        Map returnedFields = ((Schema)returnedFieldItems.getProperties().get("attributes")).getProperties();
         returnedFields.forEach((key, val) -> {
           Map extensions = ((Schema)val).getExtensions();
           if (extensions != null && extensions.get("x-gw-extensions") instanceof LinkedHashMap) {
             Object isFilterable = ((LinkedHashMap<?,?>)extensions.get("x-gw-extensions")).get("filterable");
             Object isSortable = ((LinkedHashMap<?,?>)extensions.get("x-gw-extensions")).get("sortable");
             if (isFilterable != null) {
+
+              // TODO: filtering
               System.out.println(key + " is filterable");
             }
             if (isSortable != null) {
-              sorted.choice(
-                  Choice.builder().name(key.toString()).value(key.toString()).build()
-              );
-              System.out.println(key + " is sortable");
-            } else {
-              System.out.println("KEY "+ key);
+              sorted.choice(Choice.builder().name(key.toString()).value(key.toString()).build());
+              hasSorting.set(true);
             }
           }
         });
-        result.add(sorted.build());
+        if (hasSorting.get())
+          result.add(sorted.build());
       }
 
     }
@@ -277,75 +260,64 @@ public class RestParamsBuilder implements ConstantKeys {
       Set included = hasIncludedResources.getProperties().keySet();
       System.out.println(included);
 
-      result.add(
-          simpleIntegrationTemplate
-              .textProperty("IncludedResourcesTitle")
-              .isReadOnly(true)
-              .refresh(RefreshPolicy.ALWAYS)
-              .label("Included Resources")
-              .instructionText("The resource you are requesting may have relationships to other resources. " +
-                  "Select the related resources below that you would like to be attached to the call. If " +
-                  "they exist, they will be returned alongside the root resource.")
-              .build()
-          );
+      result.add(simpleIntegrationTemplate.textProperty("IncludedResourcesTitle")
+          .isReadOnly(true)
+          .refresh(RefreshPolicy.ALWAYS)
+          .label("Included Resources")
+          .instructionText("The resource you are requesting may have relationships to other resources. " +
+              "Select the related resources below that you would like to be attached to the call. If " +
+              "they exist, they will be returned alongside the root resource.")
+          .build());
       included.forEach(includedName -> {
-            result.add(
-                simpleIntegrationTemplate
-                    .booleanProperty(includedName.toString())
-                    .refresh(RefreshPolicy.ALWAYS)
-                    .displayMode(BooleanDisplayMode.RADIO_BUTTON)
-                    .label(includedName.toString())
-                    .description("Related Resource")
-                    .build()
-            );
-          }
-      );
+        result.add(simpleIntegrationTemplate.booleanProperty(includedName.toString())
+            .refresh(RefreshPolicy.ALWAYS)
+            .displayMode(BooleanDisplayMode.RADIO_BUTTON)
+            .label(Util.camelCaseToTitleCase(includedName.toString()))
+            .description("Related Resource")
+            .build());
+      });
     }
-
 
   }
 
   public void buildPost(List<PropertyDescriptor> result) {
 
-    List<Map<String,Object>> reqBodyArr = buildRequestBodyUI();
+    if (openAPI.getPaths().get(pathName).getPost().getRequestBody() == null) return;
 
-    if (reqBodyArr == null) return;
+    ObjectSchema schema = (ObjectSchema)openAPI.getPaths()
+        .get(pathName)
+        .getPost()
+        .getRequestBody()
+        .getContent()
+        .get("application/json")
+        .getSchema()
+        .getProperties()
+        .get("data");
 
-    LocalTypeDescriptor.Builder reqBody = simpleIntegrationTemplate.localType(REQ_BODY_PROPERTIES);
-    reqBodyArr.forEach(field -> {
-      if (field.containsKey(TEXT) && field.get(TEXT) instanceof TextPropertyDescriptor) {
-        TextPropertyDescriptor textParam = (TextPropertyDescriptor)field.get(TEXT);
-        reqBody.properties(textParam);
-      } else if (field.containsKey(OBJECT) && field.get(OBJECT) instanceof LocalTypeDescriptor) {
-        LocalTypeDescriptor objParam = (LocalTypeDescriptor)field.get(OBJECT);
-        reqBody.properties(
-            simpleIntegrationTemplate.localTypeProperty(objParam).refresh(RefreshPolicy.ALWAYS).build());
-      } else if (field.containsKey(ARRAY) && field.get(ARRAY) instanceof LocalTypeDescriptor) {
-        LocalTypeDescriptor arrParam = (LocalTypeDescriptor)field.get(ARRAY);
-        reqBody.properties(simpleIntegrationTemplate.listTypeProperty(arrParam.getName())
-            .refresh(RefreshPolicy.ALWAYS)
-            .itemType(TypeReference.from(arrParam))
-            .build(), simpleIntegrationTemplate.localTypeProperty(arrParam)
-            .key(arrParam.getName() + "hidden")
-            .isHidden(true)
-            .refresh(RefreshPolicy.ALWAYS)
-            .build());
+    LocalTypeDescriptor.Builder builder = simpleIntegrationTemplate.localType("REQBODYBUILDER");
+    schema.getProperties().get("attributes").getProperties().forEach((key, item) -> {
+      Schema itemSchema = (Schema)item;
+      String keyStr = key.toString();
+
+      // Set for determining which properties to mark as required
+      Set requiredProperties = itemSchema.getRequired() != null ? new HashSet<>(itemSchema.getRequired()) : null;
+      LocalTypeDescriptor property = parseRequestBody(keyStr, itemSchema, requiredProperties);
+      if (property != null) {
+        builder.properties(property.getProperties());
       }
     });
 
-    // Key can't have any special characters so to get reqBody key, get it from integrationTemplate.get
-    // (REQ_BODY).getLabel()
+
     String key = pathName.replace("/", "").replace("{", "").replace("}", "");
-    result.add(
-        simpleIntegrationTemplate.localTypeProperty(reqBody.build())
-            .key(key)
-            .isHidden(false)
-            .displayHint(DisplayHint.EXPRESSION)
-            .isExpressionable(true)
-            .label("Request Body")
-            .refresh(RefreshPolicy.ALWAYS)
-            .build()
-    );
+    result.add(simpleIntegrationTemplate.localTypeProperty(builder.build())
+        .key(key)
+        .isHidden(false)
+        .displayHint(DisplayHint.EXPRESSION)
+        .isExpressionable(true)
+        .label("Request Body")
+        .refresh(RefreshPolicy.ALWAYS)
+        .build());
+
   }
 
   public void buildPatch(List<PropertyDescriptor> result) {
@@ -355,4 +327,6 @@ public class RestParamsBuilder implements ConstantKeys {
   public void buildDelete(List<PropertyDescriptor> result) {
 
   }
+
+
 }

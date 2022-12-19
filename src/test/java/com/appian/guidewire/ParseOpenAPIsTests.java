@@ -2,6 +2,8 @@ package com.appian.guidewire;
 
 import static org.junit.Assert.assertNotNull;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,6 +11,7 @@ import java.util.Set;
 
 import org.junit.Test;
 
+import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
 import com.appian.guidewire.templates.GuidewireCSP;
 import com.appian.guidewire.templates.UIBuilders.ParseOpenAPI;
 
@@ -22,6 +25,37 @@ import std.ConstantKeys;
 import std.Util;
 
 public class ParseOpenAPIsTests {
+
+
+
+  @Test
+  public void testJobs() {
+    OpenAPI openAPI = Util.getOpenApi("com/appian/guidewire/templates/claims.yaml");
+    String pathName = "/claims/{claimId}/activities";
+
+    ObjectSchema schema = (ObjectSchema)openAPI.getPaths()
+        .get(pathName)
+        .getPost()
+        .getRequestBody()
+        .getContent()
+        .get("application/json")
+        .getSchema()
+        .getProperties()
+        .get("data");
+
+/*    System.out.println(schema.getProperties().get("attributes").getProperties().entrySet());*/
+
+/*    List<Map<String,Object>> reqBodyArr = new ArrayList<>();
+    schema.getProperties().get("attributes").getProperties().forEach((key, item) -> {
+      Schema itemSchema = (Schema)item;
+      if (itemSchema.getRequired() != null) {
+        Set set = new HashSet(itemSchema.getRequired());
+        System.out.println("set" + set.contains("code"));
+        System.out.println(key+" "+ set.contains(key.toString()));
+      }
+    });*/
+
+  }
 
 
 
