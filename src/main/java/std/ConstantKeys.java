@@ -36,6 +36,7 @@ public interface ConstantKeys {
   String PATCH = "PATCH";
   String DELETE = "DELETE";
 
+  String NO_REQ_BODY = "noReqBody";
   String REQ_BODY = "reqBody";
   String REQ_BODY_PROPERTIES = "reqBody";
   String PAGESIZE = "pagesize";

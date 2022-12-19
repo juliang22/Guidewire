@@ -115,6 +115,32 @@ public class RestParamsBuilder implements ConstantKeys {
     return pathVarsUI;
   }
 
+  public void ReqBodyUIBuilder(List<PropertyDescriptor> result, ObjectSchema schema) {
+    LocalTypeDescriptor.Builder builder = simpleIntegrationTemplate.localType(REQ_BODY_PROPERTIES);
+    schema.getProperties().get("attributes").getProperties().forEach((key, item) -> {
+      Schema itemSchema = (Schema)item;
+      String keyStr = key.toString();
+
+      // Set for determining which properties to mark as required
+      Set requiredProperties = itemSchema.getRequired() != null ? new HashSet<>(itemSchema.getRequired()) : null;
+      LocalTypeDescriptor property = parseRequestBody(keyStr, itemSchema, requiredProperties);
+      if (property != null) {
+        builder.properties(property.getProperties());
+      }
+    });
+
+    String key = pathName.replace("/", "").replace("{", "").replace("}", "");
+    result.add(simpleIntegrationTemplate.localTypeProperty(builder.build())
+        .key(key)
+        .displayHint(DisplayHint.EXPRESSION)
+        .isExpressionable(true)
+        .label("Request Body")
+        .description("description")
+        .instructionText("instruction text")
+        .refresh(RefreshPolicy.ALWAYS)
+        .build());
+  }
+
   public LocalTypeDescriptor parseRequestBody(String key, Schema item, Set requiredProperties) {
 
     if (item.getType().equals("object")) {
@@ -140,7 +166,7 @@ public class RestParamsBuilder implements ConstantKeys {
 
     } else if (item.getType().equals("array")) {
 
-      if (item.getItems() == null && item.getItems().getProperties() == null) return null;
+      if (item.getItems() == null || item.getItems().getProperties() == null) return null;
 
       LocalTypeDescriptor.Builder builder = simpleIntegrationTemplate.localType(key);
       item.getItems().getProperties().forEach((innerKey, innerItem) -> {
@@ -192,6 +218,9 @@ public class RestParamsBuilder implements ConstantKeys {
         break;
       case (GET):
         buildGet(result);
+        break;
+      case (PATCH):
+        buildPatch(result);
         break;
     }
 
@@ -294,34 +323,25 @@ public class RestParamsBuilder implements ConstantKeys {
         .getProperties()
         .get("data");
 
-    LocalTypeDescriptor.Builder builder = simpleIntegrationTemplate.localType("REQBODYBUILDER");
-    schema.getProperties().get("attributes").getProperties().forEach((key, item) -> {
-      Schema itemSchema = (Schema)item;
-      String keyStr = key.toString();
-
-      // Set for determining which properties to mark as required
-      Set requiredProperties = itemSchema.getRequired() != null ? new HashSet<>(itemSchema.getRequired()) : null;
-      LocalTypeDescriptor property = parseRequestBody(keyStr, itemSchema, requiredProperties);
-      if (property != null) {
-        builder.properties(property.getProperties());
-      }
-    });
-
-
-    String key = pathName.replace("/", "").replace("{", "").replace("}", "");
-    result.add(simpleIntegrationTemplate.localTypeProperty(builder.build())
-        .key(key)
-        .isHidden(false)
-        .displayHint(DisplayHint.EXPRESSION)
-        .isExpressionable(true)
-        .label("Request Body")
-        .refresh(RefreshPolicy.ALWAYS)
-        .build());
+    ReqBodyUIBuilder(result, schema);
 
   }
 
   public void buildPatch(List<PropertyDescriptor> result) {
 
+    if (openAPI.getPaths().get(pathName).getPatch().getRequestBody() == null) return;
+
+    ObjectSchema schema = (ObjectSchema)openAPI.getPaths()
+        .get(pathName)
+        .getPatch()
+        .getRequestBody()
+        .getContent()
+        .get("application/json")
+        .getSchema()
+        .getProperties()
+        .get("data");
+
+    ReqBodyUIBuilder(result, schema);
   }
 
   public void buildDelete(List<PropertyDescriptor> result) {

@@ -57,7 +57,26 @@ public class ParseOpenAPIsTests {
 
   }
 
+@Test
+public void patch() {
+  OpenAPI claimsOpenApi = Util.getOpenApi("com/appian/guidewire/templates/claims.yaml");
+  String pathName = "/claims/{claimId}";
 
+
+
+  ObjectSchema schema = (ObjectSchema)claimsOpenApi.getPaths()
+      .get(pathName)
+      .getPatch()
+      .getRequestBody()
+      .getContent()
+      .get("application/json")
+      .getSchema()
+      .getProperties()
+      .get("data");
+
+  System.out.println(schema.getProperties().get("attributes"));
+
+}
 
 @Test
   public void getGetOptions() {
