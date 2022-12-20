@@ -13,6 +13,7 @@ import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfigurat
 import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.TemplateId;
+import com.appian.connectedsystems.templateframework.sdk.configuration.BooleanDisplayMode;
 import com.appian.connectedsystems.templateframework.sdk.configuration.DisplayHint;
 import com.appian.connectedsystems.templateframework.sdk.configuration.ListTypePropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.LocalTypeDescriptor;
@@ -88,9 +89,28 @@ public class JobsIntegrationTemplate extends SimpleIntegrationTemplate implement
     return integrationConfiguration.setProperties(propertyDescriptors.toArray(new PropertyDescriptor[0]));
 */
 
-    return integrationConfiguration.setProperties(
+
+    LocalTypeDescriptor metaDataType = localType("weboolin")
+        .properties(
+            booleanProperty("bool")
+                .label("Metadata Value")
+                .description("The value of the metadata")
+                .placeholder("api")
+                .isExpressionable(true)
+                .placeholder("placeholder")
+                .instructionText("instrujction")
+                .displayMode(BooleanDisplayMode.RADIO_BUTTON)
+                .isRequired(false)
+                .displayHint(DisplayHint.NORMAL)
+                .refresh(RefreshPolicy.ALWAYS)
+                .build()
+        ).build();
+    return integrationConfiguration.setProperties(localTypeProperty(metaDataType).key("boooool").build()).setValue("bool", false);
+
+
+/*    return integrationConfiguration.setProperties(
         ParseOpenAPI.buildRootDropdown(integrationConfiguration,this, JOBS, GuidewireCSP.jobPathsForSearch)
-    );
+    );*/
 
   }
 

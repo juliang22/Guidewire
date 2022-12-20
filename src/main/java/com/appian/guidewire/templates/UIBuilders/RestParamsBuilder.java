@@ -100,15 +100,16 @@ public class RestParamsBuilder implements ConstantKeys {
     // Find all occurrences of variables inside path (ex. {claimId})
     List<String> pathVars = getPathVarsStr(pathName);
     pathVars.forEach(key -> {
-      TextPropertyDescriptor ui = TextPropertyDescriptor.builder()
-          .key(key)
+      TextPropertyDescriptor ui = simpleIntegrationTemplate.textProperty(key)
           .instructionText("")
           .isRequired(true)
           .isExpressionable(true)
-          .label(key)
+          .placeholder("1")
+          .label(Util.camelCaseToTitleCase(key))
           .build();
       pathVarsUI.add(ui);
     });
+    pathVarsUI.add(simpleIntegrationTemplate.textProperty("padding").isReadOnly(true).label("").build());
   }
 
   public List<PropertyDescriptor> getPathVarsUI() {
@@ -245,34 +246,70 @@ public class RestParamsBuilder implements ConstantKeys {
         .getSchema()
         .getProperties();
     AtomicBoolean hasSorting = new AtomicBoolean(false);
+    AtomicBoolean hasFiltering = new AtomicBoolean(false);
     if (returnedFieldProperties != null) {
       Schema returnedFieldItems = ((Schema)returnedFieldProperties.get("data")).getItems();
       if (returnedFieldItems != null) {
 
-        TextPropertyDescriptorBuilder sorted = simpleIntegrationTemplate.textProperty(SORT)
+        // Building up sorting and filtering options
+        TextPropertyDescriptorBuilder sortedChoices = simpleIntegrationTemplate.textProperty(SORT)
             .label("Sort Response")
             .instructionText("Sort response by selecting a field in the dropdown. If the dropdown is empty," +
                 " there are no sortable fields available.")
+            .isExpressionable(true)
             .refresh(RefreshPolicy.ALWAYS);
+        TextPropertyDescriptorBuilder filteredChoices = simpleIntegrationTemplate.textProperty(FILTER_FIELD)
+            .label("Filter Response")
+            .instructionText("Filter response by selecting a field in the dropdown. If the dropdown is " +
+                "empty, there are no filterable fields available.")
+            .isExpressionable(true)
+            .refresh(RefreshPolicy.ALWAYS);
+
+        // Parsing to find filtering and sorting options available on the call
         Map returnedFields = ((Schema)returnedFieldItems.getProperties().get("attributes")).getProperties();
         returnedFields.forEach((key, val) -> {
           Map extensions = ((Schema)val).getExtensions();
           if (extensions != null && extensions.get("x-gw-extensions") instanceof LinkedHashMap) {
-            Object isFilterable = ((LinkedHashMap<?,?>)extensions.get("x-gw-extensions")).get("filterable");
-            Object isSortable = ((LinkedHashMap<?,?>)extensions.get("x-gw-extensions")).get("sortable");
-            if (isFilterable != null) {
 
-              // TODO: filtering
+            Object isFilterable = ((LinkedHashMap<?,?>)extensions.get("x-gw-extensions")).get("filterable");
+            if (isFilterable != null) {
               System.out.println(key + " is filterable");
+              filteredChoices.choice(Choice.builder().name(key.toString()).value(key.toString()).build());
+              hasFiltering.set(true);
             }
+
+            Object isSortable = ((LinkedHashMap<?,?>)extensions.get("x-gw-extensions")).get("sortable");
             if (isSortable != null) {
-              sorted.choice(Choice.builder().name(key.toString()).value(key.toString()).build());
+              sortedChoices.choice(Choice.builder().name(key.toString()).value(key.toString()).build());
               hasSorting.set(true);
             }
           }
         });
-        if (hasSorting.get())
-          result.add(sorted.build());
+        // If there are sorting options, add sorting UI
+        if (hasSorting.get()) result.add(sortedChoices.build());
+
+        // If there are filtering options, add filtering UI
+        if (hasFiltering.get()) {
+          TextPropertyDescriptorBuilder filteringOperatorsBuilder = simpleIntegrationTemplate
+              .textProperty(FILTER_OPERATOR)
+              .instructionText("Select an operator to filter the results")
+              .refresh(RefreshPolicy.ALWAYS)
+              .isExpressionable(true);
+          FILTERING_OPTIONS.forEach(option -> {
+            filteringOperatorsBuilder.choice(Choice.builder().name(option).value(option).build());
+          });
+          result.add(filteredChoices.build());
+          result.add(filteringOperatorsBuilder.build());
+          result.add(
+              simpleIntegrationTemplate.textProperty(FILTER_VALUE)
+                  .instructionText("Insert the query to filter the chosen field")
+                  .refresh(RefreshPolicy.ALWAYS)
+                  .isExpressionable(true)
+                  .refresh(RefreshPolicy.ALWAYS)
+                  .placeholder("22")
+                  .build()
+          );
+        }
       }
 
     }
@@ -287,24 +324,32 @@ public class RestParamsBuilder implements ConstantKeys {
         .get("included"));
     if (hasIncludedResources != null) {
       Set included = hasIncludedResources.getProperties().keySet();
-      System.out.println(included);
 
-      result.add(simpleIntegrationTemplate.textProperty("IncludedResourcesTitle")
-          .isReadOnly(true)
-          .refresh(RefreshPolicy.ALWAYS)
-          .label("Included Resources")
-          .instructionText("The resource you are requesting may have relationships to other resources. " +
-              "Select the related resources below that you would like to be attached to the call. If " +
-              "they exist, they will be returned alongside the root resource.")
-          .build());
+      LocalTypeDescriptor.Builder includedBuilder =
+          simpleIntegrationTemplate.localType(Util.removeSpecialCharactersFromPathName(pathName) + INCLUDED_RESOURCES);
       included.forEach(includedName -> {
-        result.add(simpleIntegrationTemplate.booleanProperty(includedName.toString())
+        String includedNameStr = includedName.toString();
+        includedBuilder.property(simpleIntegrationTemplate.booleanProperty(includedNameStr)
             .refresh(RefreshPolicy.ALWAYS)
             .displayMode(BooleanDisplayMode.RADIO_BUTTON)
-            .label(Util.camelCaseToTitleCase(includedName.toString()))
+            .label(Util.camelCaseToTitleCase(includedNameStr))
             .description("Related Resource")
+            .refresh(RefreshPolicy.ALWAYS)
             .build());
       });
+
+      result.add(
+          simpleIntegrationTemplate.localTypeProperty(includedBuilder.build())
+              .label("Included Resources")
+              .displayHint(DisplayHint.NORMAL)
+              .refresh(RefreshPolicy.ALWAYS)
+              .refresh(RefreshPolicy.ALWAYS)
+              .instructionText("The resource you are requesting may have relationships to other resources. " +
+                  "Select the related resources below that you would like to be attached to the call. If " +
+                  "they exist, they will be returned alongside the root resource.")
+              .isExpressionable(true)
+              .build()
+      );
     }
 
   }

@@ -1,5 +1,9 @@
 package std;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import com.appian.connectedsystems.templateframework.sdk.configuration.Choice;
 import com.appian.connectedsystems.templateframework.sdk.configuration.RefreshPolicy;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
@@ -37,10 +41,20 @@ public interface ConstantKeys {
   String DELETE = "DELETE";
 
   String NO_REQ_BODY = "noReqBody";
+  String INCLUDED_RESOURCES = "includedResources";
+
   String REQ_BODY = "reqBody";
   String REQ_BODY_PROPERTIES = "reqBody";
   String PAGESIZE = "pagesize";
   String SORT = "sort";
+  String FILTER_FIELD = "filterField";
+  String FILTER_OPERATOR = "filterOperator";
+  String FILTER_VALUE = "filterComparator";
+
+  List<String> FILTERING_OPTIONS = new ArrayList<>(Arrays.asList("=", "≠", "<", ">", "≤", "≥", "In", "Not " +
+      "In", "Starts With", "Contains"));
+
+
 
 
 

@@ -20,7 +20,7 @@ import io.swagger.v3.oas.models.Paths;
 import me.xdrop.fuzzywuzzy.FuzzySearch;
 import me.xdrop.fuzzywuzzy.model.ExtractedResult;
 import std.ConstantKeys;
-
+import std.Util;
 
 public class ParseOpenAPI implements ConstantKeys {
 
@@ -64,7 +64,7 @@ public class ParseOpenAPI implements ConstantKeys {
       // integrationConfiguration.getProperty(key)
       // TODO: put below in buildRestCall()
       params.setPathName(pathName);
-      String KEY_OF_REQ_BODY = pathName.replace("/", "").replace("{", "").replace("}", "");
+      String KEY_OF_REQ_BODY = Util.removeSpecialCharactersFromPathName(pathName);
       result.add(simpleIntegrationTemplate.textProperty(REQ_BODY).label(KEY_OF_REQ_BODY).isHidden(true).build());
 
       // Building the result with path variables, request body, and other functionality needed to make the
