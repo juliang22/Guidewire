@@ -18,21 +18,24 @@ import std.Util;
 public class GuidewireCSP extends SimpleConnectedSystemTemplate implements ConstantKeys {
 
 
-  public static final OpenAPI claimsOpenApi = Util.getOpenApi("com/appian/guidewire/templates/claims.yaml");
+  public static final ClassLoader classLoader =GuidewireCSP.class.getClassLoader();
+
+  public static final OpenAPI claimsOpenApi = Util.getOpenApi("com/appian/guidewire/templates/claims.yaml", classLoader);
   public static List<String> claimPathsForSearch = new ArrayList<>();
   public static TextPropertyDescriptorBuilder claims = ParseOpenAPI.endpointChoiceBuilder(CLAIMS, "", claimPathsForSearch);
 
 
-  public static final OpenAPI policiesOpenApi = Util.getOpenApi("com/appian/guidewire/templates/policies.yaml");
+  public static final OpenAPI policiesOpenApi = Util.getOpenApi("com/appian/guidewire/templates/policies" +
+      ".yaml", classLoader);
   public static List<String> policyPathsForSearch = new ArrayList<>();
   public static TextPropertyDescriptorBuilder policies = ParseOpenAPI.endpointChoiceBuilder(POLICIES, "", policyPathsForSearch);
 
-  public static final OpenAPI jobsOpenApi = Util.getOpenApi("com/appian/guidewire/templates/jobs.yaml");
+  public static final OpenAPI jobsOpenApi = Util.getOpenApi("com/appian/guidewire/templates/jobs.yaml", classLoader);
   public static List<String> jobPathsForSearch = new ArrayList<>();
   public static TextPropertyDescriptorBuilder jobs = ParseOpenAPI.endpointChoiceBuilder(JOBS, "", jobPathsForSearch);
 
   public static final OpenAPI accountsOpenApi = Util.getOpenApi("com/appian/guidewire/templates/accounts" +
-      ".yaml");
+      ".yaml", classLoader);
   public static List<String> accountPathsForSearch = new ArrayList<>();
   public static TextPropertyDescriptorBuilder accounts = ParseOpenAPI.endpointChoiceBuilder(ACCOUNTS, "",
       accountPathsForSearch);

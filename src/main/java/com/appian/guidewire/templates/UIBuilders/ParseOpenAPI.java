@@ -37,9 +37,7 @@ public class ParseOpenAPI implements ConstantKeys {
     String searchQuery = integrationConfiguration.getValue(SEARCH);
     TextPropertyDescriptorBuilder endpointChoices = (searchQuery == null || searchQuery.equals("")) ?
         params.getEndpointChoices() :
-        params.setEndpointChoices(
-            endpointChoiceBuilder(api, searchQuery, choicesForSearch)
-        );
+        params.setEndpointChoices(endpointChoiceBuilder(api, searchQuery, choicesForSearch));
 
     // If no endpoint is selected, just build the api dropdown
     // If a user switched to another api after they selected an endpoint, set the endpoint and search to null
@@ -47,10 +45,9 @@ public class ParseOpenAPI implements ConstantKeys {
     String selectedEndpoint = integrationConfiguration.getValue(CHOSEN_ENDPOINT);
     List<PropertyDescriptor> result = new ArrayList<>(Arrays.asList(SEARCHBAR, endpointChoices.build()));
     if (selectedEndpoint == null) {
-/*      return integrationConfiguration.setProperties(result.toArray(new PropertyDescriptor[0]));*/
-      return result.toArray(new PropertyDescriptor[0]);
-
+      return result.stream().toArray(PropertyDescriptor[]::new);
     }
+
     String[] selectedEndpointStr = selectedEndpoint.split(":");
     String apiType = selectedEndpointStr[0];
     String restOperation = selectedEndpointStr[1];
@@ -71,7 +68,7 @@ public class ParseOpenAPI implements ConstantKeys {
       // request
       params.buildRestCall(restOperation, result);
     }
-    return result.toArray(new PropertyDescriptor[0]);
+    return result.stream().toArray(PropertyDescriptor[]::new);
   }
 
 

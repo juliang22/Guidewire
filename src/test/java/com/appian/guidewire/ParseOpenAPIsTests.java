@@ -30,7 +30,7 @@ public class ParseOpenAPIsTests {
 
   @Test
   public void testJobs() {
-    OpenAPI openAPI = Util.getOpenApi("com/appian/guidewire/templates/claims.yaml");
+    OpenAPI openAPI = Util.getOpenApi("com/appian/guidewire/templates/claims.yaml", GuidewireCSP.classLoader);
     String pathName = "/claims/{claimId}/activities";
 
     ObjectSchema schema = (ObjectSchema)openAPI.getPaths()
@@ -62,7 +62,7 @@ public class ParseOpenAPIsTests {
 @Test
   public void getGetOptions() {
 
-  OpenAPI claimsOpenApi = Util.getOpenApi("com/appian/guidewire/templates/claims.yaml");
+  OpenAPI claimsOpenApi = Util.getOpenApi("com/appian/guidewire/templates/claims.yaml", GuidewireCSP.classLoader);
   /*String pathName = "/claim-infos";*/
   String pathName = "/claim-infos/{claimInfoId}";
   Operation get = claimsOpenApi.getPaths().get(pathName).getGet();

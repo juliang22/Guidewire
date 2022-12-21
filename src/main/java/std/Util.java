@@ -14,7 +14,6 @@ import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfigurat
 import com.appian.connectedsystems.templateframework.sdk.IntegrationError;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
-import com.appian.guidewire.templates.claims.GetClaimsIntegrationTemplate;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.parser.OpenAPIV3Parser;
@@ -85,8 +84,8 @@ public class Util {
         return pathName.replace("/", "").replace("{", "").replace("}", "");
     }
 
-    public static OpenAPI getOpenApi(String api) {
-        try (InputStream input = GetClaimsIntegrationTemplate.class.getClassLoader().getResourceAsStream(api)) {
+    public static OpenAPI getOpenApi(String api, ClassLoader classLoader) {
+        try (InputStream input = classLoader.getResourceAsStream(api)) {
             String content = IOUtils.toString(input, "utf-8");
             ParseOptions parseOptions = new ParseOptions();
             parseOptions.setResolve(true); // implicit

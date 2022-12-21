@@ -235,6 +235,7 @@ public class RestParamsBuilder implements ConstantKeys {
     result.add(simpleIntegrationTemplate.integerProperty(PAGESIZE)
         .instructionText("Return 'n' number of items in the response")
         .label("Pagination")
+        .isExpressionable(true)
         .placeholder("25")
         .build());
 
