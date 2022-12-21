@@ -1,6 +1,7 @@
 package com.appian.guidewire.templates.UIBuilders;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -11,6 +12,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.appian.connectedsystems.simplified.sdk.SimpleIntegrationTemplate;
+import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.templateframework.sdk.configuration.BooleanDisplayMode;
 import com.appian.connectedsystems.templateframework.sdk.configuration.Choice;
 import com.appian.connectedsystems.templateframework.sdk.configuration.DisplayHint;
@@ -27,6 +29,8 @@ import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.Paths;
 import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
+import me.xdrop.fuzzywuzzy.FuzzySearch;
+import me.xdrop.fuzzywuzzy.model.ExtractedResult;
 import std.ConstantKeys;
 import std.Util;
 
@@ -34,37 +38,33 @@ public class RestParamsBuilder implements ConstantKeys {
   protected String pathName;
   protected TextPropertyDescriptorBuilder endpointChoices;
   protected List<PropertyDescriptor> pathVarsUI = new ArrayList<>();
-  protected Paths openAPIPaths = null;
   protected OpenAPI openAPI = null;
 
+  protected Paths paths = null;
+  protected List<String> choicesForSearch = new ArrayList<>();
+
   protected SimpleIntegrationTemplate simpleIntegrationTemplate;
+  protected SimpleConfiguration integrationConfiguration;
 
-  public RestParamsBuilder(String api, SimpleIntegrationTemplate simpleIntegrationTemplate) {
-    super();
-
-    this.simpleIntegrationTemplate = simpleIntegrationTemplate;
+  public RestParamsBuilder(String api, SimpleIntegrationTemplate simpleIntegrationTemplate, SimpleConfiguration integrationConfiguration) {
     switch (api) {
       case POLICIES:
         this.openAPI = GuidewireCSP.policiesOpenApi;
-        this.openAPIPaths = GuidewireCSP.policiesOpenApi.getPaths();
-        this.endpointChoices = GuidewireCSP.policies;
         break;
       case CLAIMS:
         this.openAPI = GuidewireCSP.claimsOpenApi;
-        this.openAPIPaths = GuidewireCSP.claimsOpenApi.getPaths();
-        this.endpointChoices = GuidewireCSP.claims;
         break;
       case JOBS:
         this.openAPI = GuidewireCSP.jobsOpenApi;
-        this.openAPIPaths = GuidewireCSP.jobsOpenApi.getPaths();
-        this.endpointChoices = GuidewireCSP.jobs;
         break;
       case ACCOUNTS:
         this.openAPI = GuidewireCSP.accountsOpenApi;
-        this.openAPIPaths = GuidewireCSP.accountsOpenApi.getPaths();
-        this.endpointChoices = GuidewireCSP.accounts;
         break;
     }
+    this.paths = openAPI.getPaths();
+    this.simpleIntegrationTemplate = simpleIntegrationTemplate;
+    this.integrationConfiguration = integrationConfiguration;
+    this.endpointChoices = endpointChoiceBuilder(api, "", integrationConfiguration);
   }
 
   public void setPathName(String pathName) {
@@ -95,9 +95,8 @@ public class RestParamsBuilder implements ConstantKeys {
     return pathVars;
   }
 
+  // Find all occurrences of variables inside path (ex. {claimId})
   protected void setPathVarsUI() {
-
-    // Find all occurrences of variables inside path (ex. {claimId})
     List<String> pathVars = getPathVarsStr(pathName);
     pathVars.forEach(key -> {
       TextPropertyDescriptor ui = simpleIntegrationTemplate.textProperty(key)
@@ -109,7 +108,6 @@ public class RestParamsBuilder implements ConstantKeys {
           .build();
       pathVarsUI.add(ui);
     });
-    pathVarsUI.add(simpleIntegrationTemplate.textProperty("padding").isReadOnly(true).label("").build());
   }
 
   public List<PropertyDescriptor> getPathVarsUI() {
@@ -190,7 +188,7 @@ public class RestParamsBuilder implements ConstantKeys {
       ).build();
 
     } else {
-      System.out.println(key + " : " + item.getType());
+/*      System.out.println(key + " : " + item.getType());*/
 
       return simpleIntegrationTemplate.localType(key + "Container")
           .property(
@@ -208,6 +206,85 @@ public class RestParamsBuilder implements ConstantKeys {
 
   }
 
+
+  // Parse through OpenAPI yaml and return all endpoints as Choice for dropdown
+  public TextPropertyDescriptorBuilder endpointChoiceBuilder(
+      String api,
+      String searchQuery,
+      SimpleConfiguration integrationConfiguration
+  ) {
+
+    ArrayList<Choice> choices = new ArrayList<>();
+    // Build search choices when search query has been entered
+    if (!searchQuery.equals("") && choicesForSearch != null && !choicesForSearch.isEmpty()) {
+      List<ExtractedResult> extractedResults = FuzzySearch.extractSorted(searchQuery, choicesForSearch);
+      extractedResults.stream().forEach(choice -> {
+
+        String restType = choice.getString().split(":")[1];
+        String restOperation = choice.getString().split(":")[3];
+        choices.add(Choice.builder()
+            .name(restType + " - " + restOperation)
+            .value(choice.getString())
+            .build());
+      });
+    } else { // Build search choices when no search query has been entered
+      // Check if rest call exists on path and add each rest call of path to list of choices
+      Map<String,Operation> operations = new HashMap<>();
+
+      paths.forEach((pathName, path) -> {
+        operations.put(GET, path.getGet());
+        operations.put(POST, path.getPost());
+        operations.put(PATCH, path.getPatch());
+        operations.put(DELETE, path.getDelete());
+
+        operations.forEach((restType, restOperation) -> {
+          if (restOperation != null) {
+            String name = restType + " - " + restOperation.getSummary();
+            String value = api + ":" + restType + ":" + pathName + ":" + restOperation.getSummary();
+
+            // Builds up choices for search on initial run with all paths
+            choicesForSearch.add(value);
+
+            // Choice UI built
+            choices.add(Choice.builder().name(name).value(value).build());
+          }
+        });
+      });
+    }
+    // If an endpoint is selected, the instructionText will update to the REST call and path name
+    Object chosenEndpoint = integrationConfiguration.getValue(CHOSEN_ENDPOINT);
+    String instructionText = chosenEndpoint != null ?
+        chosenEndpoint.toString().split(":")[1]  + "  " + chosenEndpoint.toString().split(":")[2] :
+        "";
+    return simpleIntegrationTemplate.textProperty(CHOSEN_ENDPOINT)
+        .isRequired(true)
+        .refresh(RefreshPolicy.ALWAYS)
+        .label("Select Endpoint")
+        .transientChoices(true)
+        .instructionText(instructionText)
+        .choices(choices.stream().toArray(Choice[]::new));
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   public void buildRestCall(String restOperation, List<PropertyDescriptor> result) {
     if (getPathVarsUI().size() > 0) {
       result.addAll(getPathVarsUI());
@@ -223,15 +300,18 @@ public class RestParamsBuilder implements ConstantKeys {
       case (PATCH):
         buildPatch(result);
         break;
+      case (DELETE):
+        buildDelete(result);
     }
 
   }
 
   public void buildGet(List<PropertyDescriptor> result) {
 
-    Operation get = openAPIPaths.get(pathName).getGet();
+    Operation get = paths.get(pathName).getGet();
 
     // Pagination
+    pathVarsUI.add(simpleIntegrationTemplate.textProperty(PADDING).isReadOnly(true).label("").build());
     result.add(simpleIntegrationTemplate.integerProperty(PAGESIZE)
         .instructionText("Return 'n' number of items in the response")
         .label("Pagination")
@@ -274,7 +354,7 @@ public class RestParamsBuilder implements ConstantKeys {
 
             Object isFilterable = ((LinkedHashMap<?,?>)extensions.get("x-gw-extensions")).get("filterable");
             if (isFilterable != null) {
-              System.out.println(key + " is filterable");
+/*              System.out.println(key + " is filterable");*/
               filteredChoices.choice(Choice.builder().name(key.toString()).value(key.toString()).build());
               hasFiltering.set(true);
             }
@@ -357,9 +437,17 @@ public class RestParamsBuilder implements ConstantKeys {
 
   public void buildPost(List<PropertyDescriptor> result) {
 
-    if (openAPI.getPaths().get(pathName).getPost().getRequestBody() == null) return;
+    if (paths.get(pathName).getPost().getRequestBody() == null) {
+      result.add(
+          simpleIntegrationTemplate.textProperty(NO_REQ_BODY)
+              .isReadOnly(true)
+              .instructionText("No Request Body is required to execute this POST")
+              .build()
+      );
+      return;
+    }
 
-    ObjectSchema schema = (ObjectSchema)openAPI.getPaths()
+    ObjectSchema schema = (ObjectSchema)paths
         .get(pathName)
         .getPost()
         .getRequestBody()
@@ -375,9 +463,9 @@ public class RestParamsBuilder implements ConstantKeys {
 
   public void buildPatch(List<PropertyDescriptor> result) {
 
-    if (openAPI.getPaths().get(pathName).getPatch().getRequestBody() == null) return;
+    if (paths.get(pathName).getPatch().getRequestBody() == null) return;
 
-    ObjectSchema schema = (ObjectSchema)openAPI.getPaths()
+    ObjectSchema schema = (ObjectSchema)paths
         .get(pathName)
         .getPatch()
         .getRequestBody()

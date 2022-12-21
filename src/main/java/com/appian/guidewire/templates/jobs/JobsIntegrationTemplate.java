@@ -109,7 +109,7 @@ public class JobsIntegrationTemplate extends SimpleIntegrationTemplate implement
 
 
 /*    return integrationConfiguration.setProperties(
-        ParseOpenAPI.buildRootDropdown(integrationConfiguration,this, JOBS, GuidewireCSP.jobPathsForSearch)
+        ParseOpenAPI.buildRootDropdown(integrationConfiguration,this, JOBS)
     );*/
 
   }

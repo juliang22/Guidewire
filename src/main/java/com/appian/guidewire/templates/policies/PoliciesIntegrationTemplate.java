@@ -1,7 +1,6 @@
 package com.appian.guidewire.templates.policies;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import com.appian.connectedsystems.simplified.sdk.SimpleIntegrationTemplate;
@@ -14,7 +13,6 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyP
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
-import com.appian.guidewire.templates.GuidewireCSP;
 import com.appian.guidewire.templates.UIBuilders.ParseOpenAPI;
 
 import std.ConstantKeys;
@@ -31,8 +29,7 @@ public class PoliciesIntegrationTemplate extends SimpleIntegrationTemplate imple
       ExecutionContext executionContext) {
 
 
-    PropertyDescriptor[] params = ParseOpenAPI.buildRootDropdown(integrationConfiguration,this, POLICIES,
-        GuidewireCSP.policyPathsForSearch);
+    PropertyDescriptor[] params = ParseOpenAPI.buildRootDropdown(integrationConfiguration,this, POLICIES);
     return integrationConfiguration.setProperties(params);
 
   }

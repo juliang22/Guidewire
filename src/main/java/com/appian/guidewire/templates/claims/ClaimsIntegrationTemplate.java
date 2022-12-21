@@ -32,8 +32,7 @@ public class ClaimsIntegrationTemplate extends SimpleIntegrationTemplate impleme
 
 
 
-    PropertyDescriptor[] res = ParseOpenAPI.buildRootDropdown(integrationConfiguration, this, CLAIMS,
-        GuidewireCSP.claimPathsForSearch);
+    PropertyDescriptor[] res = ParseOpenAPI.buildRootDropdown(integrationConfiguration, this, CLAIMS);
 
     return integrationConfiguration.setProperties(res);
 

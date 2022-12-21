@@ -31,8 +31,7 @@ public class AccountsIntegrationTemplate extends SimpleIntegrationTemplate imple
 
 
 
-    PropertyDescriptor[] res = ParseOpenAPI.buildRootDropdown(integrationConfiguration, this, ACCOUNTS,
-        GuidewireCSP.accountPathsForSearch);
+    PropertyDescriptor[] res = ParseOpenAPI.buildRootDropdown(integrationConfiguration, this, ACCOUNTS);
 
     return integrationConfiguration.setProperties(res);
 
