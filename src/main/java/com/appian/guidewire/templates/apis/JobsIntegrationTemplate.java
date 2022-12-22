@@ -20,6 +20,8 @@ import std.ConstantKeys;
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.WRITE)
 public class JobsIntegrationTemplate extends SimpleIntegrationTemplate implements ConstantKeys {
 
+  UIBuilder restBuilder = new UIBuilder(this, JOBS);
+
   @Override
   protected SimpleConfiguration getConfiguration(
       SimpleConfiguration integrationConfiguration,
@@ -70,7 +72,7 @@ public class JobsIntegrationTemplate extends SimpleIntegrationTemplate implement
     return integrationConfiguration.setProperties(propertyDescriptors.toArray(new PropertyDescriptor[0]));
 */
 
-    UIBuilder restBuilder = new UIBuilder(integrationConfiguration, this, JOBS);
+    restBuilder.setIntegrationConfiguration(integrationConfiguration);
     return integrationConfiguration.setProperties(restBuilder.build());
 
   }

@@ -21,6 +21,8 @@ import std.ConstantKeys;
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.WRITE)
 public class ClaimsIntegrationTemplate extends SimpleIntegrationTemplate implements ConstantKeys {
 
+  UIBuilder restBuilder = new UIBuilder(this, CLAIMS);
+
   @Override
   protected SimpleConfiguration getConfiguration(
       SimpleConfiguration integrationConfiguration,
@@ -28,8 +30,7 @@ public class ClaimsIntegrationTemplate extends SimpleIntegrationTemplate impleme
       PropertyPath propertyPath,
       ExecutionContext executionContext) {
 
-
-    UIBuilder restBuilder = new UIBuilder(integrationConfiguration, this, CLAIMS);
+    restBuilder.setIntegrationConfiguration(integrationConfiguration);
     return integrationConfiguration.setProperties(restBuilder.build());
 
    }

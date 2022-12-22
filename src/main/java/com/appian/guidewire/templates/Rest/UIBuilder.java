@@ -2,7 +2,6 @@ package com.appian.guidewire.templates.Rest;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -44,12 +43,13 @@ public class UIBuilder implements ConstantKeys {
 
   protected Paths paths;
   protected List<String> choicesForSearch = new ArrayList<>();
+  protected List<Choice> defaultChoices = new ArrayList<>();
+
 
   protected SimpleIntegrationTemplate simpleIntegrationTemplate;
   protected SimpleConfiguration integrationConfiguration;
 
   public UIBuilder(
-      SimpleConfiguration integrationConfiguration,
       SimpleIntegrationTemplate simpleIntegrationTemplate,
       String api) {
     switch (api) {
@@ -68,14 +68,9 @@ public class UIBuilder implements ConstantKeys {
     }
 
     this.paths = openAPI.getPaths();
-    if (paths == null) {
-      integrationConfiguration.setErrors(
-          new ArrayList<>(Collections.singletonList("Problem loading OpenAPI Specification")));
-    }
-
     this.api = api;
     this.simpleIntegrationTemplate = simpleIntegrationTemplate;
-    this.integrationConfiguration = integrationConfiguration;
+    setDefaultEndpoints();
   }
 
   public PropertyDescriptor<?>[] build() {
@@ -94,7 +89,7 @@ public class UIBuilder implements ConstantKeys {
     }
 
     // If a user switched to another api after they selected an endpoint, set the endpoint and search to null
-    // If a user selects api then a corresponding endpoint, update label and description accordingly
+    // Else if a user selects api then a corresponding endpoint, update label and description accordingly
     String[] selectedEndpointStr = selectedEndpoint.split(":");
     String apiType = selectedEndpointStr[0];
     String restOperation = selectedEndpointStr[1];
@@ -110,11 +105,14 @@ public class UIBuilder implements ConstantKeys {
       String KEY_OF_REQ_BODY = Util.removeSpecialCharactersFromPathName(pathName);
       result.add(simpleIntegrationTemplate.textProperty(REQ_BODY).label(KEY_OF_REQ_BODY).isHidden(true).build());
 
-      // Building the result with path variables, request body, and other functionality needed to make the
-      // request
+      // Building the result with path variables, request body, and other functionality needed to make the request
       buildRestCall(restOperation, result, pathName);
     }
-    return result.toArray(new PropertyDescriptor[0]);
+    return result.toArray(new PropertyDescriptor<?>[0]);
+  }
+
+  public void setIntegrationConfiguration(SimpleConfiguration integrationConfiguration){
+    this.integrationConfiguration = integrationConfiguration;
   }
 
   public void setPathName(String pathName) {
@@ -243,50 +241,53 @@ public class UIBuilder implements ConstantKeys {
     }
   }
 
-  // Parse through OpenAPI yaml and return all endpoints as Choice for dropdown
+  // Runs on initialization to set the default paths for the dropdown as well as a list of strings of choices used for
+  // sorting when a query is entered
+  public void setDefaultEndpoints() {
+    // Build search choices when no search query has been entered
+    // Check if rest call exists on path and add each rest call of path to list of choices
+    Map<String,Operation> operations = new HashMap<>();
+
+    paths.forEach((pathName, path) -> {
+      if (PATHS_TO_REMOVE.contains(pathName))
+        return;
+
+      operations.put(GET, path.getGet());
+      operations.put(POST, path.getPost());
+      operations.put(PATCH, path.getPatch());
+      operations.put(DELETE, path.getDelete());
+
+      operations.forEach((restType, restOperation) -> {
+        if (restOperation != null) {
+          String name = restOperation.getSummary();
+          String value = api + ":" + restType + ":" + pathName + ":" + restOperation.getSummary();
+
+          // Builds up choices for search on initial run with all paths
+          choicesForSearch.add(value);
+
+          // Choice UI built
+          defaultChoices.add(Choice.builder().name(name).value(value).build());
+        }
+      });
+    });
+  }
+
+  // Sets the choices for endpoints with either default choices or sorted choices based off of the search query
   public TextPropertyDescriptor endpointChoiceBuilder() {
 
     // If there is a search query, sort the dropdown with the query
     String searchQuery = integrationConfiguration.getValue(SEARCH);
     ArrayList<Choice> choices = new ArrayList<>();
-
-    // Build search choices when search query has been entered
     if (searchQuery != null && !searchQuery.equals("") && !choicesForSearch.isEmpty()) {
       List<ExtractedResult> extractedResults = FuzzySearch.extractSorted(searchQuery, choicesForSearch);
       extractedResults.forEach(choice -> {
-
         String restType = choice.getString().split(":")[1];
         String restOperation = choice.getString().split(":")[3];
         choices.add(
             Choice.builder().name(restType + " - " + restOperation).value(choice.getString()).build());
       });
-    } else { // Build search choices when no search query has been entered
-      // Check if rest call exists on path and add each rest call of path to list of choices
-      Map<String,Operation> operations = new HashMap<>();
-
-      paths.forEach((pathName, path) -> {
-        if (PATHS_TO_REMOVE.contains(pathName))
-          return;
-
-        operations.put(GET, path.getGet());
-        operations.put(POST, path.getPost());
-        operations.put(PATCH, path.getPatch());
-        operations.put(DELETE, path.getDelete());
-
-        operations.forEach((restType, restOperation) -> {
-          if (restOperation != null) {
-            String name = restType + " - " + restOperation.getSummary();
-            String value = api + ":" + restType + ":" + pathName + ":" + restOperation.getSummary();
-
-            // Builds up choices for search on initial run with all paths
-            choicesForSearch.add(value);
-
-            // Choice UI built
-            choices.add(Choice.builder().name(name).value(value).build());
-          }
-        });
-      });
     }
+
     // If an endpoint is selected, the instructionText will update to the REST call and path name
     Object chosenEndpoint = integrationConfiguration.getValue(CHOSEN_ENDPOINT);
     String instructionText = chosenEndpoint != null ?
@@ -298,7 +299,7 @@ public class UIBuilder implements ConstantKeys {
         .label("Select Endpoint")
         .transientChoices(true)
         .instructionText(instructionText)
-        .choices(choices.toArray(new Choice[0]))
+        .choices(choices.size() > 0 ? choices.toArray(new Choice[0]) : defaultChoices.toArray(new Choice[0]))
         .build();
   }
 
