@@ -112,7 +112,7 @@ public class Util {
     public static String filterRules(String str) {
         return str == null ?
             null :
-            str.replace(" ", "%20").replace(":","::");
+            str.replaceAll(" ", "%20").replaceAll(":","::");
     }
 
     public static String removeLastChar(String str) {

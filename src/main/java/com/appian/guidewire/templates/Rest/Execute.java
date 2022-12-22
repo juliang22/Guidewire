@@ -39,7 +39,6 @@ public class Execute implements ConstantKeys {
       String val = integrationConfiguration.getValue(key);
       pathNameModified = pathNameModified.replace("{"+key+"}", val);
     });
-    pathNameModified = pathNameModified + "?";
   }
 
 
@@ -63,6 +62,7 @@ public class Execute implements ConstantKeys {
 
   public void executeGet() {
 
+    pathNameModified += "?";
 
     // Pagination
     // TODO: pagination with next parameter
@@ -99,7 +99,7 @@ public class Execute implements ConstantKeys {
     String filterOperator = Util.filterRules(integrationConfiguration.getValue(FILTER_OPERATOR));
     String filterValue = Util.filterRules(integrationConfiguration.getValue(FILTER_VALUE));
     if (filterField != null && filterOperator  != null && filterValue != null) {
-      pathNameModified += "filter=" + filterField + ":" + filterOperator + ":" + "filterValue&";
+      pathNameModified += "filter=" + filterField + ":" + filterOperator + ":" + filterValue + "&";
     }
 
     // Include Total
