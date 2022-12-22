@@ -12,8 +12,8 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyP
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
+import com.appian.guidewire.templates.Rest.Execute;
 import com.appian.guidewire.templates.Rest.UIBuilder;
-import com.google.gson.Gson;
 
 import std.ConstantKeys;
 
@@ -41,11 +41,8 @@ public class ClaimsIntegrationTemplate extends SimpleIntegrationTemplate impleme
       SimpleConfiguration connectedSystemConfiguration,
       ExecutionContext executionContext) {
 
-    Gson gson = new Gson();
-    String key = integrationConfiguration.getProperty(REQ_BODY).getLabel();
-    System.out.println(
-        gson.toJson(integrationConfiguration.getValue(key))
-    );
+    Execute execute = new Execute(integrationConfiguration);
+    execute.build();
 
 
     Map<String,Object> requestDiagnostic = new HashMap<>();

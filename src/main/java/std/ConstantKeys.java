@@ -2,8 +2,10 @@ package std;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.appian.connectedsystems.templateframework.sdk.configuration.RefreshPolicy;
@@ -46,10 +48,22 @@ public interface ConstantKeys {
   String PAGESIZE = "pagesize";
   String PADDING = "padding";
   String SORT = "sort";
+  String SORT_ORDER = "sortOrder";
   String FILTER_FIELD = "filterField";
   String FILTER_OPERATOR = "filterOperator";
   String FILTER_VALUE = "filterComparator";
-  List<String> FILTERING_OPTIONS = new ArrayList<>(Arrays.asList("=", "≠", "<", ">", "≤", "≥", "In", "Not " +
-      "In", "Starts With", "Contains"));
+  Map<String, String> FILTERING_OPTIONS = new HashMap<String, String>() {{
+    put("=", "eq");
+    put("≠", "ne");
+    put("<", "lt");
+    put(">", "gt");
+    put("≤", "le");
+    put("≥", "ge");
+    put("In", "in");
+    put("Not In", "ni");
+    put("Starts With", "sw");
+    put("Contains", "cn");
+  }};
+
   String SEARCH = "search";
 }

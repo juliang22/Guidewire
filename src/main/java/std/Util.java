@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -75,6 +76,16 @@ public class Util {
                 .build();
     }
 
+    public static List<String> getPathVarsStr(String pathName) {
+        Matcher m = Pattern.compile("[^{*}]+(?=})").matcher(pathName);
+        List<String> pathVars = new ArrayList<>();
+
+        while (m.find()) {
+            pathVars.add(m.group());
+        }
+        return pathVars;
+    }
+
     public static String camelCaseToTitleCase(String str) {
         return Pattern.compile("(?=[A-Z])").splitAsStream(str)
             .map(word -> word.substring(0, 1).toUpperCase() + word.substring(1))
@@ -96,6 +107,16 @@ public class Util {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static String filterRules(String str) {
+        return str == null ?
+            null :
+            str.replace(" ", "%20").replace(":","::");
+    }
+
+    public static String removeLastChar(String str) {
+        return str.substring(0, str.length() - 1);
     }
 
 }

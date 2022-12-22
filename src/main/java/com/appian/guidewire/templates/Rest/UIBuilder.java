@@ -9,8 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import com.appian.connectedsystems.simplified.sdk.SimpleIntegrationTemplate;
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
@@ -119,19 +117,10 @@ public class UIBuilder implements ConstantKeys {
     this.pathName = pathName;
   }
 
-  public static List<String> getPathVarsStr(String pathName) {
-    Matcher m = Pattern.compile("[^{*}]+(?=})").matcher(pathName);
-    List<String> pathVars = new ArrayList<>();
-
-    while (m.find()) {
-      pathVars.add(m.group());
-    }
-    return pathVars;
-  }
 
   // Find all occurrences of variables inside path (ex. {claimId})
   protected void setPathVarsUI() {
-    List<String> pathVars = getPathVarsStr(pathName);
+    List<String> pathVars = Util.getPathVarsStr(pathName);
     pathVars.forEach(key -> {
       TextPropertyDescriptor ui = simpleIntegrationTemplate.textProperty(key)
           .instructionText("")
@@ -163,14 +152,13 @@ public class UIBuilder implements ConstantKeys {
       }
     });
 
-    String key = pathName.replace("/", "").replace("{", "").replace("}", "");
     result.add(simpleIntegrationTemplate.localTypeProperty(builder.build())
-        .key(key)
+        .key(Util.removeSpecialCharactersFromPathName(pathName))
         .displayHint(DisplayHint.EXPRESSION)
         .isExpressionable(true)
         .label("Request Body")
-        .description("description")
-        .instructionText("instruction text")
+        .description("Enter values to the properties below to send new or updated data to Guidewire. Not all properties are " +
+            "required. Make sure to remove default properties before sending the request.")
         .refresh(RefreshPolicy.ALWAYS)
         .build());
   }
@@ -259,7 +247,7 @@ public class UIBuilder implements ConstantKeys {
 
       operations.forEach((restType, restOperation) -> {
         if (restOperation != null) {
-          String name = restOperation.getSummary();
+          String name = restType + " - " + restOperation.getSummary();
           String value = api + ":" + restType + ":" + pathName + ":" + restOperation.getSummary();
 
           // Builds up choices for search on initial run with all paths
@@ -311,11 +299,11 @@ public class UIBuilder implements ConstantKeys {
     }
 
     switch (restOperation) {
-      case (POST):
-        buildPost(result);
-        break;
       case (GET):
         buildGet(result);
+        break;
+      case (POST):
+        buildPost(result);
         break;
       case (PATCH):
         buildPatch(result);
@@ -331,9 +319,10 @@ public class UIBuilder implements ConstantKeys {
     Operation get = paths.get(pathName).getGet();
 
     // Pagination
-    result.add(simpleIntegrationTemplate.textProperty(PADDING).isReadOnly(true).label("").build());
+    // result.add(simpleIntegrationTemplate.textProperty(PADDING).isReadOnly(true).label("").build());
     result.add(simpleIntegrationTemplate.integerProperty(PAGESIZE)
-        .instructionText("Return 'n' number of items in the response")
+        .instructionText("Return 'n' number of items in the response. Default returns maximum number of resources allowed by " +
+            "the endpoint.")
         .label("Pagination")
         .isExpressionable(true)
         .placeholder("25")
@@ -387,22 +376,52 @@ public class UIBuilder implements ConstantKeys {
           }
         });
         // If there are sorting options, add sorting UI
-        if (hasSorting.get())
-          result.add(sortedChoices.build());
+        if (hasSorting.get()) {
+          result.add(sortedChoices
+              .isRequired(integrationConfiguration.getValue(SORT_ORDER) != null ? true : false).build());
+          Choice[] sortOrder = {
+              Choice.builder().name("Ascending").value("+").build(),
+              Choice.builder().name("Descending").value("-").build()
+          };
+          result.add(simpleIntegrationTemplate.textProperty(SORT_ORDER)
+              .label("Sort Order of Response")
+              .choices(sortOrder)
+              .isExpressionable(true)
+              .isRequired(integrationConfiguration.getValue(SORT) != null ? true : false)
+              .displayHint(DisplayHint.NORMAL)
+              .instructionText("Default sort order is ascending.")
+              .refresh(RefreshPolicy.ALWAYS)
+              .build()
+          );
+        }
 
         // If there are filtering options, add filtering UI
         if (hasFiltering.get()) {
-          TextPropertyDescriptorBuilder filteringOperatorsBuilder = simpleIntegrationTemplate.textProperty(
-                  FILTER_OPERATOR)
+          TextPropertyDescriptorBuilder filteringOperatorsBuilder = simpleIntegrationTemplate.textProperty(FILTER_OPERATOR)
               .instructionText("Select an operator to filter the results")
               .refresh(RefreshPolicy.ALWAYS)
               .isExpressionable(true);
-          FILTERING_OPTIONS.forEach(option -> filteringOperatorsBuilder.choice(
-              Choice.builder().name(option).value(option).build()));
-          result.add(filteredChoices.build());
-          result.add(filteringOperatorsBuilder.build());
+          FILTERING_OPTIONS.entrySet().forEach(option -> {
+            filteringOperatorsBuilder.choice(
+                Choice.builder().name(option.getKey()).value(option.getValue()
+            ).build());
+          });
+
+          // If any of the options are selected, the set will have more items than just null and the rest of the fields become
+          // required
+          Set<String> requiredSet = new HashSet<>(Arrays.asList(
+              integrationConfiguration.getValue(FILTER_FIELD),
+              integrationConfiguration.getValue(FILTER_OPERATOR),
+              integrationConfiguration.getValue(FILTER_VALUE)
+          ));
+          boolean isRequired = requiredSet.size() > 1;
+
+          // Add sorting fields to the UI
+          result.add(filteredChoices.isRequired(isRequired).build());
+          result.add(filteringOperatorsBuilder.isRequired(isRequired).build());
           result.add(simpleIntegrationTemplate.textProperty(FILTER_VALUE)
               .instructionText("Insert the query to filter the chosen field")
+              .isRequired(isRequired)
               .refresh(RefreshPolicy.ALWAYS)
               .isExpressionable(true)
               .refresh(RefreshPolicy.ALWAYS)
@@ -430,10 +449,11 @@ public class UIBuilder implements ConstantKeys {
         String includedNameStr = includedName.toString();
         includedBuilder.property(simpleIntegrationTemplate.booleanProperty(includedNameStr)
             .refresh(RefreshPolicy.ALWAYS)
+            .displayHint(DisplayHint.NORMAL)
             .displayMode(BooleanDisplayMode.RADIO_BUTTON)
             .label(Util.camelCaseToTitleCase(includedNameStr))
+            .isExpressionable(false)
             .description("Related Resource")
-            .refresh(RefreshPolicy.ALWAYS)
             .build());
       });
 
@@ -441,11 +461,9 @@ public class UIBuilder implements ConstantKeys {
           .label("Included Resources")
           .displayHint(DisplayHint.NORMAL)
           .refresh(RefreshPolicy.ALWAYS)
-          .refresh(RefreshPolicy.ALWAYS)
           .instructionText("The resource you are requesting may have relationships to other resources. " +
               "Select the related resources below that you would like to be attached to the call. If " +
               "they exist, they will be returned alongside the root resource.")
-          .isExpressionable(true)
           .build());
     }
 
