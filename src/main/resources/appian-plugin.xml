@@ -12,19 +12,19 @@
                                  class="com.appian.guidewire.templates.GuidewireCSP"/>
       <integration-template key="ClaimsIntegrationTemplate"
                             name="Claims"
-                            class="com.appian.guidewire.templates.claims.ClaimsIntegrationTemplate"
+                            class="com.appian.guidewire.templates.apis.ClaimsIntegrationTemplate"
                             request-policy="write" />
       <integration-template key="PoliciesIntegrationTemplate"
                             name="Policies"
-                            class="com.appian.guidewire.templates.policies.PoliciesIntegrationTemplate"
+                            class="com.appian.guidewire.templates.apis.PoliciesIntegrationTemplate"
                             request-policy="write" />
       <integration-template key="JobsIntegrationTemplate"
                             name="Jobs"
-                            class="com.appian.guidewire.templates.jobs.JobsIntegrationTemplate"
+                            class="com.appian.guidewire.templates.apis.JobsIntegrationTemplate"
                             request-policy="write" />
       <integration-template key="AccountsIntegrationTemplate"
                             name="Accounts"
-                            class="com.appian.guidewire.templates.accounts.AccountsIntegrationTemplate"
+                            class="com.appian.guidewire.templates.apis.AccountsIntegrationTemplate"
                             request-policy="write" />
     </version>
   </connected-system>

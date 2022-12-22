@@ -1,37 +1,18 @@
-package com.appian.guidewire.templates.jobs;
+package com.appian.guidewire.templates.apis;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import com.appian.connectedsystems.simplified.sdk.SimpleIntegrationTemplate;
-import com.appian.connectedsystems.simplified.sdk.configuration.ConfigurableTemplate;
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.TemplateId;
-import com.appian.connectedsystems.templateframework.sdk.configuration.BooleanDisplayMode;
-import com.appian.connectedsystems.templateframework.sdk.configuration.DisplayHint;
-import com.appian.connectedsystems.templateframework.sdk.configuration.ListTypePropertyDescriptor;
-import com.appian.connectedsystems.templateframework.sdk.configuration.LocalTypeDescriptor;
-import com.appian.connectedsystems.templateframework.sdk.configuration.LocalTypePropertyDescriptor;
-import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
-import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptorBuilder;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
-import com.appian.connectedsystems.templateframework.sdk.configuration.RefreshPolicy;
-import com.appian.connectedsystems.templateframework.sdk.configuration.SystemType;
-import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
-import com.appian.connectedsystems.templateframework.sdk.configuration.TypeReference;
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
-import com.appian.guidewire.templates.GuidewireCSP;
-import com.appian.guidewire.templates.UIBuilders.ParseOpenAPI;
-import com.appian.guidewire.templates.UIBuilders.RestParamsBuilder;
-import com.fasterxml.jackson.databind.annotation.JsonAppend;
+import com.appian.guidewire.templates.Rest.UIBuilder;
 
 import std.ConstantKeys;
 
@@ -90,27 +71,8 @@ public class JobsIntegrationTemplate extends SimpleIntegrationTemplate implement
 */
 
 
-    LocalTypeDescriptor metaDataType = localType("weboolin")
-        .properties(
-            booleanProperty("bool")
-                .label("Metadata Value")
-                .description("The value of the metadata")
-                .placeholder("api")
-                .isExpressionable(true)
-                .placeholder("placeholder")
-                .instructionText("instrujction")
-                .displayMode(BooleanDisplayMode.RADIO_BUTTON)
-                .isRequired(false)
-                .displayHint(DisplayHint.NORMAL)
-                .refresh(RefreshPolicy.ALWAYS)
-                .build()
-        ).build();
-    return integrationConfiguration.setProperties(localTypeProperty(metaDataType).key("boooool").build()).setValue("bool", false);
-
-
-/*    return integrationConfiguration.setProperties(
-        ParseOpenAPI.buildRootDropdown(integrationConfiguration,this, JOBS)
-    );*/
+    UIBuilder restBuilder = new UIBuilder(integrationConfiguration, this, JOBS);
+    return integrationConfiguration.setProperties(restBuilder.build());
 
   }
 

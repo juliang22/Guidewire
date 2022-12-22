@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import com.appian.connectedsystems.templateframework.sdk.configuration.Choice;
 import com.appian.connectedsystems.templateframework.sdk.configuration.RefreshPolicy;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
 
@@ -41,10 +40,16 @@ public interface ConstantKeys {
   String DELETE = "DELETE";
 
   String NO_REQ_BODY = "noReqBody";
+
+  TextPropertyDescriptor NO_REQ_BODY_UI = new TextPropertyDescriptor.TextPropertyDescriptorBuilder()
+      .key(NO_REQ_BODY)
+      .isReadOnly(true)
+      .instructionText("No Request Body is required to execute this POST")
+      .build();
   String INCLUDED_RESOURCES = "includedResources";
 
   String REQ_BODY = "reqBody";
-  String REQ_BODY_PROPERTIES = "reqBody";
+  String REQ_BODY_PROPERTIES = "reqBodyProperties";
   String PAGESIZE = "pagesize";
   String PADDING = "padding";
   String SORT = "sort";

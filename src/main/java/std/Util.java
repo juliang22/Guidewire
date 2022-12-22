@@ -2,6 +2,7 @@ package std;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -86,13 +87,12 @@ public class Util {
 
     public static OpenAPI getOpenApi(String api, ClassLoader classLoader) {
         try (InputStream input = classLoader.getResourceAsStream(api)) {
-            String content = IOUtils.toString(input, "utf-8");
+            String content = IOUtils.toString(input, StandardCharsets.UTF_8);
             ParseOptions parseOptions = new ParseOptions();
             parseOptions.setResolve(true); // implicit
             parseOptions.setResolveFully(true);
 /*            parseOptions.setResolveCombinators(false);*/
-            OpenAPI openAPI = new OpenAPIV3Parser().readContents(content, null, parseOptions).getOpenAPI();
-            return openAPI;
+            return new OpenAPIV3Parser().readContents(content, null, parseOptions).getOpenAPI();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

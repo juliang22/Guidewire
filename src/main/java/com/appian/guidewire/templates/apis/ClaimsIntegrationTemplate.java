@@ -1,4 +1,4 @@
-package com.appian.guidewire.templates.claims;
+package com.appian.guidewire.templates.apis;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -8,13 +8,11 @@ import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfigurat
 import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.TemplateId;
-import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
-import com.appian.guidewire.templates.GuidewireCSP;
-import com.appian.guidewire.templates.UIBuilders.ParseOpenAPI;
+import com.appian.guidewire.templates.Rest.UIBuilder;
 import com.google.gson.Gson;
 
 import std.ConstantKeys;
@@ -31,10 +29,8 @@ public class ClaimsIntegrationTemplate extends SimpleIntegrationTemplate impleme
       ExecutionContext executionContext) {
 
 
-
-    PropertyDescriptor[] res = ParseOpenAPI.buildRootDropdown(integrationConfiguration, this, CLAIMS);
-
-    return integrationConfiguration.setProperties(res);
+    UIBuilder restBuilder = new UIBuilder(integrationConfiguration, this, CLAIMS);
+    return integrationConfiguration.setProperties(restBuilder.build());
 
    }
 

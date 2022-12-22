@@ -2,26 +2,18 @@ package com.appian.guidewire;
 
 import static org.junit.Assert.assertNotNull;
 
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.junit.Test;
 
-import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
 import com.appian.guidewire.templates.GuidewireCSP;
-import com.appian.guidewire.templates.UIBuilders.ParseOpenAPI;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
-import io.swagger.v3.oas.models.PathItem;
 import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
-import io.swagger.v3.oas.models.parameters.Parameter;
-import std.ConstantKeys;
 import std.Util;
 
 public class ParseOpenAPIsTests {
