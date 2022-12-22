@@ -39,7 +39,6 @@ import std.Util;
 public class UIBuilder implements ConstantKeys {
   protected String api;
   protected String pathName;
-  protected TextPropertyDescriptor endpointChoices;
   protected List<PropertyDescriptor<?>> pathVarsUI = new ArrayList<>();
   protected OpenAPI openAPI = null;
 
@@ -77,14 +76,19 @@ public class UIBuilder implements ConstantKeys {
     this.api = api;
     this.simpleIntegrationTemplate = simpleIntegrationTemplate;
     this.integrationConfiguration = integrationConfiguration;
-    this.endpointChoices = endpointChoiceBuilder();
   }
 
   public PropertyDescriptor<?>[] build() {
 
     // If no endpoint is selected, just build the api dropdown
     String selectedEndpoint = integrationConfiguration.getValue(CHOSEN_ENDPOINT);
-    List<PropertyDescriptor<?>> result = new ArrayList<>(Arrays.asList(SEARCHBAR, endpointChoiceBuilder()));
+    TextPropertyDescriptor searchBar = simpleIntegrationTemplate.textProperty(SEARCH)
+        .label("Sort Endpoints Dropdown")
+        .refresh(RefreshPolicy.ALWAYS)
+        .instructionText("Sort the endpoints dropdown below with a relevant search query.")
+        .placeholder("Example query for the Claims API: 'injury incidents.'")
+        .build();
+    List<PropertyDescriptor<?>> result = new ArrayList<>(Arrays.asList(searchBar, endpointChoiceBuilder()));
     if (selectedEndpoint == null) {
       return result.toArray(new PropertyDescriptor<?>[0]);
     }
@@ -104,8 +108,7 @@ public class UIBuilder implements ConstantKeys {
       // integrationConfiguration.getProperty(key)
       // TODO: put below in buildRestCall()
       String KEY_OF_REQ_BODY = Util.removeSpecialCharactersFromPathName(pathName);
-      result.add(
-          simpleIntegrationTemplate.textProperty(REQ_BODY).label(KEY_OF_REQ_BODY).isHidden(true).build());
+      result.add(simpleIntegrationTemplate.textProperty(REQ_BODY).label(KEY_OF_REQ_BODY).isHidden(true).build());
 
       // Building the result with path variables, request body, and other functionality needed to make the
       // request
@@ -262,6 +265,9 @@ public class UIBuilder implements ConstantKeys {
       Map<String,Operation> operations = new HashMap<>();
 
       paths.forEach((pathName, path) -> {
+        if (PATHS_TO_REMOVE.contains(pathName))
+          return;
+
         operations.put(GET, path.getGet());
         operations.put(POST, path.getPost());
         operations.put(PATCH, path.getPatch());

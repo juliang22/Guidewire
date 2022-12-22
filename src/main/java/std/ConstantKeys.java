@@ -2,7 +2,9 @@ package std;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import com.appian.connectedsystems.templateframework.sdk.configuration.RefreshPolicy;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
@@ -14,30 +16,21 @@ public interface ConstantKeys {
   String PASSWORD = "password";
 
 
-  // API Types enum (clean up below duplication later)
-  public enum APIS {
-    Jobs,
-    Claims,
-    Policies
-  }
-
-  String PATIENCE = "patience";
-
-
+  String CHOSEN_ENDPOINT = "chosenEndpoint";
   // API Types
-  String CHOSEN_ENDPOINT = "apiCallType";
   String JOBS = "jobs";
   String CLAIMS = "claims";
   String POLICIES = "policies";
   String ACCOUNTS = "accounts";
 
   //Rest call types
-  String REST_CALL = "restCall";
   String GET = "GET";
 
   String POST = "POST";
   String PATCH = "PATCH";
   String DELETE = "DELETE";
+
+  Set<String> PATHS_TO_REMOVE = new HashSet<>(Arrays.asList("/swagger.json", "/openapi.json", "/batch"));
 
   String NO_REQ_BODY = "noReqBody";
 
@@ -56,24 +49,7 @@ public interface ConstantKeys {
   String FILTER_FIELD = "filterField";
   String FILTER_OPERATOR = "filterOperator";
   String FILTER_VALUE = "filterComparator";
-
   List<String> FILTERING_OPTIONS = new ArrayList<>(Arrays.asList("=", "≠", "<", ">", "≤", "≥", "In", "Not " +
       "In", "Starts With", "Contains"));
-
-
-
-
-
-  String TEXT = "text";
-  String OBJECT = "object";
-  String ARRAY = "array";
   String SEARCH = "search";
-  TextPropertyDescriptor SEARCHBAR = new TextPropertyDescriptor.TextPropertyDescriptorBuilder()
-      .key(SEARCH)
-      .label("Sort Endpoints Dropdown")
-      .refresh(RefreshPolicy.ALWAYS)
-      .instructionText(
-          "Sort the endpoints dropdown below with a relevant search query.")
-      .placeholder("Example query for the Claims API: 'injury incidents.'")
-      .build();
 }

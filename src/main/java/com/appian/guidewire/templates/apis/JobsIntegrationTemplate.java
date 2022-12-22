@@ -70,7 +70,6 @@ public class JobsIntegrationTemplate extends SimpleIntegrationTemplate implement
     return integrationConfiguration.setProperties(propertyDescriptors.toArray(new PropertyDescriptor[0]));
 */
 
-
     UIBuilder restBuilder = new UIBuilder(integrationConfiguration, this, JOBS);
     return integrationConfiguration.setProperties(restBuilder.build());
 

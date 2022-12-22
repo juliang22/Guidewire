@@ -28,7 +28,6 @@ public class AccountsIntegrationTemplate extends SimpleIntegrationTemplate imple
       ExecutionContext executionContext) {
 
 
-
     UIBuilder restBuilder = new UIBuilder(integrationConfiguration, this, ACCOUNTS);
     return integrationConfiguration.setProperties(restBuilder.build());
 
