@@ -1,5 +1,7 @@
 package com.appian.guidewire.templates.Rest;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -27,7 +29,6 @@ public class Execute implements ConstantKeys {
     this.restOperation = pathData[1];
     this.pathNameUnmodified = pathData[2];
     this.pathNameModified = pathData[2];
-    String ReqBodyKey = integrationConfiguration.getProperty(REQ_BODY).getLabel();
     this.gson = new Gson();
   }
 
@@ -49,10 +50,10 @@ public class Execute implements ConstantKeys {
       case (GET):
         executeGet();
         break;
-/*      case (POST):
+      case (POST):
         executePost();
         break;
-      case (PATCH):
+/*      case (PATCH):
         executePatch();
         break;
       case (DELETE):
@@ -106,14 +107,59 @@ public class Execute implements ConstantKeys {
     pathNameModified = pathNameModified + "includeTotal=true";
 
     // If none of the above options were set or if options have been set and there are no more edits required to the pathName
-    String lastChar = pathNameModified.substring(pathNameModified.length() - 1);
+/*    String lastChar = pathNameModified.substring(pathNameModified.length() - 1);
     if (lastChar.equals("&") || lastChar.equals("?")) {
       pathNameModified = Util.removeLastChar(pathNameModified);
-    }
+    }*/
 
     System.out.println(pathNameModified);
   }
 
+  public Map<String,Object> buildReqBodyJSON(String key, PropertyState val) {
+
+    Map<String, Object> propertyMap = new HashMap<>();
+    boolean noNestedValues = val.getType().getTypeDisplayName().equals("STRING");
+    if (noNestedValues) {
+      propertyMap.put(key, val.getValue().toString());
+    } else {
+      if (val.getValue() instanceof ArrayList) {
+        List<Map<String, Object>> propertyArr = new ArrayList<>();
+        ((ArrayList<?>)val.getValue()).forEach(property -> {
+          propertyArr.add(
+              (Map<String,Object>)buildReqBodyJSON(property.toString(), ((PropertyState)property)).get(property.toString()));
+        });
+        propertyMap.put(key, propertyArr);
+      } else {
+        ((Map<String,PropertyState>)val.getValue()).forEach((innerKey, innerVal) -> {
+          Map<String,Object> newKeyVal = buildReqBodyJSON(innerKey, innerVal);
+          if (propertyMap.containsKey(key)) {
+            ((Map<String, Object>)propertyMap.get(key)).put(innerKey, newKeyVal.get(innerKey));
+          } else {
+            propertyMap.put(key, newKeyVal);
+          }
+        });
+      }
+    }
+    return propertyMap;
+  }
+
+
+  public void executePost() {
+    String reqBodyKey = integrationConfiguration.getProperty(REQ_BODY).getLabel();
+    Map<String, PropertyState> reqBodyProperties = integrationConfiguration.getValue(reqBodyKey);
+    Map<String, Object> reqBodyJsonBuilder = new HashMap<>();
+    reqBodyProperties.entrySet().forEach(property -> {
+      String key = property.getKey();
+      PropertyState val = property.getValue();
+
+      reqBodyJsonBuilder.put(key, val.getType().getTypeDisplayName().equals("STRING") ?
+          val.getValue().toString() :
+          buildReqBodyJSON(key, val).get(key)
+      );
+    });
+    String JSON = gson.toJson(reqBodyJsonBuilder);
+    System.out.println(JSON);
+  }
 
 
 }
