@@ -32,7 +32,7 @@ public interface ConstantKeys {
   String PATCH = "PATCH";
   String DELETE = "DELETE";
 
-  Set<String> PATHS_TO_REMOVE = new HashSet<>(Arrays.asList("/swagger.json", "/openapi.json", "/batch"));
+  Set<String> PATHS_TO_REMOVE = new HashSet<>(Arrays.asList("/swagger.json", "/openapi.json", "/batch", "/graph-schema"));
 
   String NO_REQ_BODY = "noReqBody";
 

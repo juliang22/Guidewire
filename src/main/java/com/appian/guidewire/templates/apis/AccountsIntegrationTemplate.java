@@ -18,7 +18,7 @@ import com.google.gson.Gson;
 import std.ConstantKeys;
 
 @TemplateId(name = "AccountsIntegrationTemplate")
-@IntegrationTemplateType(IntegrationTemplateRequestPolicy.WRITE)
+@IntegrationTemplateType(IntegrationTemplateRequestPolicy.READ_AND_WRITE)
 public class AccountsIntegrationTemplate extends SimpleIntegrationTemplate implements ConstantKeys {
 
   UIBuilder restBuilder = new UIBuilder(this, ACCOUNTS);

@@ -19,7 +19,7 @@ import com.appian.guidewire.templates.Rest.UIBuilder;
 import std.ConstantKeys;
 
 @TemplateId(name = "ClaimsIntegrationTemplate")
-@IntegrationTemplateType(IntegrationTemplateRequestPolicy.WRITE)
+@IntegrationTemplateType(IntegrationTemplateRequestPolicy.READ_AND_WRITE)
 public class ClaimsIntegrationTemplate extends SimpleIntegrationTemplate implements ConstantKeys {
 
   UIBuilder restBuilder = new UIBuilder(this, CLAIMS);
