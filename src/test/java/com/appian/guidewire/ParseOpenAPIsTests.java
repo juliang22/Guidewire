@@ -14,6 +14,7 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
+import io.swagger.v3.oas.models.media.StringSchema;
 import std.Util;
 
 public class ParseOpenAPIsTests {
@@ -21,21 +22,41 @@ public class ParseOpenAPIsTests {
 
 
   @Test
-  public void testJobs() {
+  public void testDocuments() {
     OpenAPI openAPI = Util.getOpenApi("com/appian/guidewire/templates/claims.yaml", GuidewireCSP.classLoader);
-    String pathName = "/claims/{claimId}/activities";
+    String pathName = "/claims/{claimId}/documents";
 
-    ObjectSchema schema = (ObjectSchema)openAPI.getPaths()
+    Object o = ((Schema)openAPI.getPaths()
         .get(pathName)
         .getPost()
-        .getRequestBody()
+        .getResponses()
+        .get("201")
         .getContent()
         .get("application/json")
         .getSchema()
         .getProperties()
-        .get("data");
+        .get("data"))
+        .getProperties()
+        .get("attributes");
 
-/*    System.out.println(schema.getProperties().get("attributes").getProperties().entrySet());*/
+    System.out.println(o);
+
+
+/*    Map properties = openAPI.getPaths()
+        .get(pathName)
+        .getPost()
+        .getRequestBody()
+        .getContent()
+        .get("multipart/form-data")
+        .getSchema()
+        .getProperties();
+
+    properties.forEach((key, val) -> {
+      if (key.equals("metadata")) {
+        System.out.println(((Schema)val).get$ref());
+      }
+    });*/
+
 
 /*    List<Map<String,Object>> reqBodyArr = new ArrayList<>();
     schema.getProperties().get("attributes").getProperties().forEach((key, item) -> {

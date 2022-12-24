@@ -27,6 +27,7 @@ import com.appian.guidewire.templates.GuidewireCSP;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.Paths;
+import io.swagger.v3.oas.models.media.MediaType;
 import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
 import me.xdrop.fuzzywuzzy.FuzzySearch;
@@ -497,14 +498,35 @@ public class UIBuilder implements ConstantKeys {
       return;
     }
 
-    ObjectSchema schema = (ObjectSchema)paths.get(pathName)
-        .getPost()
-        .getRequestBody()
-        .getContent()
-        .get("application/json")
-        .getSchema()
-        .getProperties()
-        .get("data");
+    MediaType documentType = openAPI.getPaths().get(pathName).getPost().getRequestBody().getContent().get("multipart/form-data");
+    if (documentType != null) {
+      result.add(simpleIntegrationTemplate.documentProperty(DOCUMENT)
+          .label("Document")
+          .isRequired(true)
+          .isExpressionable(true)
+          .refresh(RefreshPolicy.ALWAYS)
+          .instructionText("Insert a document to upload")
+          .build());
+    }
+    ObjectSchema schema = (documentType == null) ?
+        (ObjectSchema)paths.get(pathName)
+            .getPost()
+            .getRequestBody()
+            .getContent()
+            .get("application/json")
+            .getSchema()
+            .getProperties()
+            .get("data") :
+        ((ObjectSchema)openAPI.getPaths()
+            .get(pathName)
+            .getPost()
+            .getResponses()
+            .get("201")
+            .getContent()
+            .get("application/json")
+            .getSchema()
+            .getProperties()
+            .get("data"));
 
     ReqBodyUIBuilder(result, schema);
 
@@ -517,14 +539,35 @@ public class UIBuilder implements ConstantKeys {
       return;
     }
 
-    ObjectSchema schema = (ObjectSchema)paths.get(pathName)
-        .getPatch()
-        .getRequestBody()
-        .getContent()
-        .get("application/json")
-        .getSchema()
-        .getProperties()
-        .get("data");
+    MediaType documentType = openAPI.getPaths().get(pathName).getPatch().getRequestBody().getContent().get("multipart/form-data");
+    if (documentType != null) {
+      result.add(simpleIntegrationTemplate.documentProperty(DOCUMENT)
+          .isRequired(true)
+          .isExpressionable(true)
+          .label("Document")
+          .refresh(RefreshPolicy.ALWAYS)
+          .instructionText("Insert a document to upload")
+          .build());
+    }
+    ObjectSchema schema = (documentType == null) ?
+        (ObjectSchema)paths.get(pathName)
+            .getPatch()
+            .getRequestBody()
+            .getContent()
+            .get("application/json")
+            .getSchema()
+            .getProperties()
+            .get("data") :
+        ((ObjectSchema)openAPI.getPaths()
+            .get(pathName)
+            .getPatch()
+            .getResponses()
+            .get("200")
+            .getContent()
+            .get("application/json")
+            .getSchema()
+            .getProperties()
+            .get("data"));
 
     ReqBodyUIBuilder(result, schema);
   }

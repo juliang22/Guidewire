@@ -45,6 +45,7 @@ public interface ConstantKeys {
 
   String REQ_BODY = "reqBody";
   String REQ_BODY_PROPERTIES = "reqBodyProperties";
+  String DOCUMENT = "document";
   String PAGESIZE = "pagesize";
   String PADDING = "padding";
   String SORT = "sort";
