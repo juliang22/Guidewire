@@ -17,7 +17,6 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyD
 import com.appian.connectedsystems.templateframework.sdk.configuration.RefreshPolicy;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TypeReference;
-import com.appian.guidewire.templates.GuidewireCSP;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
@@ -38,45 +37,20 @@ public abstract class UIBuilder implements ConstantKeys {
   protected Paths paths;
   protected List<String> choicesForSearch = new ArrayList<>();
   protected List<Choice> defaultChoices = new ArrayList<>();
-
-
   protected SimpleIntegrationTemplate simpleIntegrationTemplate;
   protected SimpleConfiguration integrationConfiguration;
 
-  public abstract PropertyDescriptor<?>[] build();
-
   // Methods to implement when building out the API specific details of each request
+  public abstract PropertyDescriptor<?>[] build();
   public abstract void buildRestCall(String restOperation, List<PropertyDescriptor<?>> result, String pathName);
   public abstract void buildGet(List<PropertyDescriptor<?>> result);
   public abstract void buildPost(List<PropertyDescriptor<?>> result);
   public abstract void buildPatch(List<PropertyDescriptor<?>> result);
   public abstract void buildDelete(List<PropertyDescriptor<?>> result);
 
-
-  public UIBuilder(
-      SimpleIntegrationTemplate simpleIntegrationTemplate,
-      String api) {
-    switch (api) {
-      case POLICIES:
-        this.openAPI = GuidewireCSP.policiesOpenApi;
-        break;
-      case CLAIMS:
-        this.openAPI = GuidewireCSP.claimsOpenApi;
-        break;
-      case JOBS:
-        this.openAPI = GuidewireCSP.jobsOpenApi;
-        break;
-      case ACCOUNTS:
-        this.openAPI = GuidewireCSP.accountsOpenApi;
-        break;
-    }
-
-    this.paths = openAPI.getPaths();
-    this.api = api;
+  public void setSimpleIntegrationTemplate(SimpleIntegrationTemplate simpleIntegrationTemplate) {
     this.simpleIntegrationTemplate = simpleIntegrationTemplate;
-    setDefaultEndpoints();
   }
-
 
   public void setIntegrationConfiguration(SimpleConfiguration integrationConfiguration){
     this.integrationConfiguration = integrationConfiguration;
@@ -85,7 +59,6 @@ public abstract class UIBuilder implements ConstantKeys {
   public void setPathName(String pathName) {
     this.pathName = pathName;
   }
-
 
   // Find all occurrences of variables inside path (ex. {claimId})
   protected void setPathVarsUI() {

@@ -17,6 +17,7 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.LocalType
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.RefreshPolicy;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
+import com.appian.guidewire.templates.GuidewireCSP;
 
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.media.MediaType;
@@ -25,9 +26,32 @@ import io.swagger.v3.oas.models.media.Schema;
 import std.Util;
 
 public class GuidewireUIBuilder extends UIBuilder{
-  public GuidewireUIBuilder(
-      SimpleIntegrationTemplate simpleIntegrationTemplate, String api) {
-    super(simpleIntegrationTemplate, api);
+  public GuidewireUIBuilder(SimpleIntegrationTemplate simpleIntegrationTemplate, String api) {
+    super();
+    setOpenAPI(api);
+    setSimpleIntegrationTemplate(simpleIntegrationTemplate);
+    setDefaultEndpoints();
+  }
+
+  // Sets the OpenAPI api and the paths. This is stored statically in the CSP so that it is loaded when the plugin is installed
+  // Modify this method and the CSP with relevant API constants and path names
+  public void setOpenAPI(String api) {
+    switch (api) {
+      case POLICIES:
+        this.openAPI = GuidewireCSP.policiesOpenApi;
+        break;
+      case CLAIMS:
+        this.openAPI = GuidewireCSP.claimsOpenApi;
+        break;
+      case JOBS:
+        this.openAPI = GuidewireCSP.jobsOpenApi;
+        break;
+      case ACCOUNTS:
+        this.openAPI = GuidewireCSP.accountsOpenApi;
+        break;
+    }
+    this.paths = openAPI.getPaths();
+    this.api = api;
   }
 
   public PropertyDescriptor<?>[] build() {
@@ -328,6 +352,5 @@ public class GuidewireUIBuilder extends UIBuilder{
     ReqBodyUIBuilder(result, schema);
   }
 
-  public void buildDelete(List<PropertyDescriptor<?>> result) {
-  }
+  public void buildDelete(List<PropertyDescriptor<?>> result) {}
 }
