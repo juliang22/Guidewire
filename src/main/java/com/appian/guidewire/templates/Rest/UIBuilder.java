@@ -44,6 +44,8 @@ public class UIBuilder implements ConstantKeys {
   protected Paths paths;
   protected List<String> choicesForSearch = new ArrayList<>();
   protected List<Choice> defaultChoices = new ArrayList<>();
+
+
   protected SimpleIntegrationTemplate simpleIntegrationTemplate;
   protected SimpleConfiguration integrationConfiguration;
 
@@ -291,7 +293,8 @@ public class UIBuilder implements ConstantKeys {
       extractedResults.forEach(choice -> {
         String restType = choice.getString().split(":")[1];
         String restOperation = choice.getString().split(":")[3];
-        choices.add(Choice.builder().name(restType + " - " + restOperation).value(choice.getString()).build());
+        choices.add(
+            Choice.builder().name(restType + " - " + restOperation).value(choice.getString()).build());
       });
     }
 
@@ -329,7 +332,6 @@ public class UIBuilder implements ConstantKeys {
         break;
       case (DELETE):
         buildDelete(result);
-        break;
     }
 
   }
