@@ -80,9 +80,9 @@ public abstract class UIBuilder implements ConstantKeys {
     return pathVarsUI;
   }
 
-  public void ReqBodyUIBuilder(List<PropertyDescriptor<?>> result, ObjectSchema schema) {
+  public void ReqBodyUIBuilder(List<PropertyDescriptor<?>> result, Map<?,?> properties) {
     LocalTypeDescriptor.Builder builder = simpleIntegrationTemplate.localType(REQ_BODY_PROPERTIES);
-    schema.getProperties().get("attributes").getProperties().forEach((key, item) -> {
+    properties.forEach((key, item) -> {
       Schema<?> itemSchema = (Schema<?>)item;
       String keyStr = key.toString();
 

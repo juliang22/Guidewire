@@ -288,15 +288,18 @@ public class GuidewireUIBuilder extends UIBuilder{
           .instructionText("Insert a document to upload")
           .build());
     }
-    ObjectSchema schema = (documentType == null) ?
-        (ObjectSchema)paths.get(pathName)
+    Map<?,?> properties = (documentType == null) ?
+        ((ObjectSchema)paths.get(pathName)
             .getPost()
             .getRequestBody()
             .getContent()
             .get("application/json")
             .getSchema()
             .getProperties()
-            .get("data") :
+            .get("data"))
+            .getProperties()
+            .get("attributes")
+            .getProperties() :
         ((ObjectSchema)openAPI.getPaths()
             .get(pathName)
             .getPost()
@@ -306,9 +309,12 @@ public class GuidewireUIBuilder extends UIBuilder{
             .get("application/json")
             .getSchema()
             .getProperties()
-            .get("data"));
+            .get("data"))
+            .getProperties()
+            .get("attributes")
+            .getProperties();
 
-    ReqBodyUIBuilder(result, schema);
+    ReqBodyUIBuilder(result, properties);
 
   }
 
@@ -329,15 +335,18 @@ public class GuidewireUIBuilder extends UIBuilder{
           .instructionText("Insert a document to upload")
           .build());
     }
-    ObjectSchema schema = (documentType == null) ?
-        (ObjectSchema)paths.get(pathName)
+    Map<?,?> properties = (documentType == null) ?
+        ((ObjectSchema)paths.get(pathName)
             .getPatch()
             .getRequestBody()
             .getContent()
             .get("application/json")
             .getSchema()
             .getProperties()
-            .get("data") :
+            .get("data"))
+            .getProperties()
+            .get("attributes")
+            .getProperties() :
         ((ObjectSchema)openAPI.getPaths()
             .get(pathName)
             .getPatch()
@@ -347,9 +356,12 @@ public class GuidewireUIBuilder extends UIBuilder{
             .get("application/json")
             .getSchema()
             .getProperties()
-            .get("data"));
+            .get("data"))
+            .getProperties()
+            .get("attributes")
+            .getProperties();
 
-    ReqBodyUIBuilder(result, schema);
+    ReqBodyUIBuilder(result, properties);
   }
 
   public void buildDelete(List<PropertyDescriptor<?>> result) {}
