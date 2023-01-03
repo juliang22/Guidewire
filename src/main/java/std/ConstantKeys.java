@@ -42,7 +42,6 @@ public interface ConstantKeys {
       .instructionText("No Request Body is required to execute this POST")
       .build();
   String INCLUDED_RESOURCES = "includedResources";
-
   String REQ_BODY = "reqBody";
   String REQ_BODY_PROPERTIES = "reqBodyProperties";
   String DOCUMENT = "document";
@@ -65,6 +64,5 @@ public interface ConstantKeys {
     put("Starts With", "sw");
     put("Contains", "cn");
   }};
-
   String SEARCH = "search";
 }

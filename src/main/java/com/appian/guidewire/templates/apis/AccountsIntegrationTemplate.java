@@ -12,7 +12,8 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyP
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
-import com.appian.guidewire.templates.Rest.UIBuilder;
+import com.appian.guidewire.templates.UI.GuidewireUIBuilder;
+import com.appian.guidewire.templates.UI.UIBuilder;
 import com.google.gson.Gson;
 
 import std.ConstantKeys;
@@ -21,7 +22,7 @@ import std.ConstantKeys;
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.READ_AND_WRITE)
 public class AccountsIntegrationTemplate extends SimpleIntegrationTemplate implements ConstantKeys {
 
-  UIBuilder restBuilder = new UIBuilder(this, ACCOUNTS);
+  GuidewireUIBuilder restBuilder = new GuidewireUIBuilder(this, ACCOUNTS);
 
   @Override
   protected SimpleConfiguration getConfiguration(
