@@ -1,0 +1,979 @@
+openapi: 3.0.1
+info:
+  title: Composite API
+  description: API for composite requests that execute multiple API sub-requests in
+    a single database transaction
+  version: 1.5.0
+servers:
+- url: http://se-flaine-au-release-iag.iia-appian-poc.poc.gwdemo.com:443/pc/rest/composite/v1
+security:
+- basicAuth: []
+paths:
+  /composite:
+    post:
+      summary: Composite API
+      description: Composite API
+      operationId: compositeRequest
+      requestBody:
+        description: The body of the request
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompositeRequest'
+        required: true
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompositeResponse'
+      x-codegen-request-body-name: body
+  /openapi.json:
+    get:
+      summary: Retrieve the `OpenAPI 3.0` schema for this API
+      description: Retrieves the `OpenAPI 3.0` schema for this API
+      operationId: getOpenApiSchema
+      parameters:
+      - name: enablePolymorphism
+        in: query
+        description: Whether or not to use the `discriminator`/`oneOf` pattern to
+          output schemas in cases where the valid set of fields can vary based on
+          some attribute of the data such as the country or subtype.  Defaults to
+          `true`. See the documentation for more information.
+        schema:
+          type: boolean
+          default: true
+      - name: filterByUser
+        in: query
+        description: Whether or not to filter endpoints and schema properties by the
+          authorization of the caller. Defaults to `false`.
+        schema:
+          type: boolean
+          default: false
+      - name: omitInclusions
+        in: query
+        description: Whether or not to omit the `included` properties on request and
+          response schemas.  Defaults to `false`. See the documentation for more information.
+          (Since 1.4.0)
+        schema:
+          type: boolean
+          default: false
+          x-gw-sinceVersion: 1.4.0
+        x-gw-sinceVersion: 1.4.0
+      - name: prettyPrint
+        in: query
+        description: Whether or not to pretty-print the returned schema, making it
+          larger but more human readable.  Defaults to `false`.
+        schema:
+          type: boolean
+          default: false
+      responses:
+        200:
+          description: The `OpenAPI 3.0` schema for this API
+          content:
+            application/json:
+              schema:
+                type: string
+      x-gw-extensions:
+        operationType: get-element
+        resourceType: CompositeOpenApiSchema
+  /swagger.json:
+    get:
+      summary: Returns the Swagger schema for this API
+      description: Returns a Swagger 2.0 schema for this API as json
+      operationId: generateDocs
+      responses:
+        200:
+          description: Successful operation
+          content: {}
+      x-gw-authenticated: false
+components:
+  schemas:
+    DataEnvelope:
+      title: Data envelope
+      type: object
+      properties:
+        checksum:
+          title: Checksum
+          type: string
+          description: A checksum for the element that can be used to prevent lost
+            updates by detecting that the element has been updated since the caller
+            last retrieved it. See the documentation for more information about lost
+            update prevention.
+        id:
+          title: ID
+          type: string
+          description: The unique identifier of the element
+        links:
+          $ref: '#/components/schemas/Links'
+        method:
+          title: Method
+          type: string
+          description: The HTTP method that should be used for an included element.
+            Only applicable to requests. See the documentation for more information
+            about request inclusion.
+          enum:
+          - post
+          - patch
+        refid:
+          title: Reference ID
+          type: string
+          description: Used to assign a temporary identifier to an element created
+            using request inclusion. Only applicable to requests. See the documentation
+            for more information about request inclusion.
+        related:
+          $ref: '#/components/schemas/RelatedCollections'
+        type:
+          title: Type
+          type: string
+          description: The type of this element
+          readOnly: true
+        uri:
+          title: URI
+          type: string
+          description: The URI for an included element, representing the parent to
+            create the element on if the `method` is `post` or the element to update
+            if the `method` is `patch`. Only applicable to requests. See the documentation
+            for more information about request inclusion.
+      description: Data envelope for requests and responses for individual elements.
+        The primary data for the element will be in the `attributes` field.
+    DataListEnvelope:
+      title: Data list envelope
+      type: object
+      properties:
+        count:
+          title: Count
+          type: integer
+          description: The number of elements currently being returned. This may be
+            less than the total number of elements. Pagination links under the `links`
+            property can be used to access additional pages of results, if any are
+            available.
+          readOnly: true
+        links:
+          $ref: '#/components/schemas/Links'
+        total:
+          title: Total
+          type: integer
+          description: The total number of elements available, which may be greater
+            than the `count` of elements currently being returned. Only included in
+            responses when the `includeTotal` query parameter is set to `true`. The
+            maximum number of elements counted is 1000. If the response value is 1000,
+            the actual count could be 1000 or greater.
+          readOnly: true
+      description: Data envelope for responses for lists of elements. The primary
+        list of elements will be in the `data` field.
+    CompositeRequest:
+      title: Composite request
+      type: object
+      properties:
+        requestTag:
+          title: Request tag
+          maxLength: 150
+          type: string
+          description: A tag for this composite request that will be added to log
+            entries and request metrics. Composite requests that represent the same
+            high-level action can be given the same tag so that request metrics such
+            as request time can be tracked across all composite requests using that
+            tag.
+        requests:
+          title: Requests
+          type: array
+          description: The list of subrequests
+          xml:
+            wrapped: true
+          items:
+            $ref: '#/components/schemas/CompositeSubRequest'
+        selections:
+          title: Selections
+          type: array
+          description: The list of selections
+          xml:
+            wrapped: true
+          items:
+            $ref: '#/components/schemas/CompositeSelectionRequest'
+      description: The body of a composite request
+    CompositeResponse:
+      title: Composite response
+      type: object
+      properties:
+        requestFailed:
+          title: Request failed
+          type: boolean
+          description: This field will be set to `true` if any subrequest failed or
+            if committing data failed
+        responses:
+          title: Responses
+          type: array
+          description: The list of subresponses, appearing in the same order as the
+            elements in the `requests` field of the request
+          xml:
+            wrapped: true
+          items:
+            $ref: '#/components/schemas/CompositeSubResponse'
+        selections:
+          title: Selections
+          type: array
+          description: The list of selections, appearing in the same order as the
+            elements in the `selections` field of the request
+          xml:
+            wrapped: true
+          items:
+            $ref: '#/components/schemas/CompositeSubResponse'
+      description: The body of a composite response. The `responses` field will have
+        one element for every entry in the `requests` field, and responses will appear
+        in the same order.
+    CompositeSelectionRequest:
+      title: Composite selection request
+      required:
+      - uri
+      type: object
+      properties:
+        parameters:
+          title: Parameters
+          type: object
+          properties: {}
+          description: Query parameters to apply to the selection. Each key in the
+            parameters object should be the name of the query parameter, while the
+            value should be appropriate for the type of parameter.
+        uri:
+          title: URI
+          minLength: 1
+          type: string
+          description: The path to select. The path must start with `/` and cannot
+            contain whitespace.
+        vars:
+          title: Vars
+          maxItems: 25
+          type: array
+          description: A list of variables to extract from the response to this selection,
+            for use in subsequent selections within the same composite request
+          xml:
+            wrapped: true
+          items:
+            $ref: '#/components/schemas/CompositeSubRequestVar'
+      description: An individual selection within the composite request
+    CompositeSubRequest:
+      title: Composite subrequest
+      required:
+      - method
+      - uri
+      type: object
+      properties:
+        body:
+          title: Body
+          type: object
+          properties: {}
+          description: The body of the subrequest
+        includeResponse:
+          title: Include response
+          type: boolean
+          description: Setting this field to `false` will cause the response to this
+            subrequest to be omitted from the composite response. Setting this to
+            false can be useful in cases where intermediate results are not interesting
+            to the caller, saving response time by not sending back those results.
+        method:
+          title: Method
+          type: string
+          description: The HTTP method for the subrequest. Must be one of `DELETE`,
+            `PATCH`, `POST`, or `PUT`, compared case insensitively.
+        parameters:
+          title: Parameters
+          type: object
+          properties: {}
+          description: Query parameters to apply to the subrequest. Each key in the
+            parameters object should be the name of the query parameter, while the
+            value should be appropriate for the type of parameter.
+        uri:
+          title: URI
+          minLength: 1
+          type: string
+          description: The path for the subrequest. The path must start with `/` and
+            cannot contain whitespace.
+        vars:
+          title: Vars
+          maxItems: 25
+          type: array
+          description: A list of variables to extract from the response to this subrequest,
+            for use in subsequent subrequests or selections within the same composite
+            request
+          xml:
+            wrapped: true
+          items:
+            $ref: '#/components/schemas/CompositeSubRequestVar'
+      description: An individual subrequest of the composite request
+    CompositeSubRequestVar:
+      title: Composite subrequest variable
+      required:
+      - name
+      - path
+      type: object
+      properties:
+        name:
+          title: Title
+          minLength: 1
+          type: string
+          description: The name of the variable. This is the name which the variable
+            can be referenced by in subsequent subrequests or selections, using `${name}}`
+            syntax within the `body`, `uri`, or `parameters` of the subsequent subrequest
+            or selection.
+        path:
+          title: Path
+          minLength: 1
+          type: string
+          description: The JsonPath expression to execute against the response in
+            order to produce the value
+      description: A variable used to extract a value from a subrequest or selection
+        response, for use in later subrequests or selections within the same composite
+        request
+    CompositeSubResponse:
+      title: Composite subresponse
+      type: object
+      properties:
+        body:
+          title: Body
+          type: object
+          properties: {}
+          description: The body of the subresponse
+        headers:
+          $ref: '#/components/schemas/Headers'
+        requestError:
+          title: Request error
+          type: object
+          properties: {}
+          description: The details of any error that occurred when processing the
+            associated subrequest or selection
+        responseIncluded:
+          title: Response included
+          type: boolean
+          description: A `false` value indicates that the `includeResponse` property
+            on the corresponding subrequest was set to `false`, and the rest of this
+            subresponse has been omitted
+        responseSerializationFailed:
+          title: Response serialization failed
+          type: boolean
+          description: A `true` value indicates that serializing the response to the
+            corresponding subrequest failed. The error will be logged, but not returned
+            to the caller. Response serialization failures will not cause the overall
+            request to fail and will not prevent data from being committed. This case
+            should rarely, if ever, occur during normal operation.
+        skipped:
+          title: Skipped
+          type: boolean
+          description: A `true` value indicates that the subrequest was skipped due
+            to the failure of an earlier subrequest
+        status:
+          title: Status
+          type: integer
+          description: The HTTP response status code generated by the associated subrequest
+            or selection
+        varsError:
+          title: Vars error
+          type: object
+          properties: {}
+          description: The details of any errors that occurred when attempting to
+            process the `vars` on the associated subrequest or selection
+      description: The response to a composite subrequest or selection
+    Headers:
+      title: Headers
+      type: object
+      additionalProperties:
+        title: Headers
+        type: string
+        description: A set of name/value pairs that correspond to HTTP header names
+          and values
+      description: A set of name/value pairs that correspond to HTTP header names
+        and values
+    GenericRelation:
+      title: Generic relation
+      required:
+      - id
+      - type
+      type: object
+      properties:
+        displayName:
+          title: Display name
+          type: string
+          description: The formatted name of the referenced element
+        id:
+          title: ID
+          type: string
+          description: The unique identifier of the referenced element
+        jsonPath:
+          title: JSON path
+          type: string
+          description: The path to the referenced element within the overall JSON
+            document
+          readOnly: true
+          x-gw-extensions:
+            defaultViews:
+            - none
+        type:
+          title: Type
+          type: string
+          description: The type of the referenced element
+        uri:
+          title: URI
+          type: string
+          description: The canonical URI for the referenced element
+      description: A reference to a related element
+      x-gw-extensions:
+        resourceReference: true
+    LinkObject:
+      title: Linked object
+      type: object
+      properties:
+        href:
+          title: HREF
+          type: string
+          description: The URL of the link
+        methods:
+          title: Methods
+          type: array
+          description: An array of HTTP method names that can be used with the link
+            URL
+          xml:
+            wrapped: true
+          items:
+            type: string
+      description: A standard HTTP link
+    Links:
+      title: Links
+      type: object
+      additionalProperties:
+        $ref: '#/components/schemas/LinkObject'
+      description: A set of named links
+    MetaObject:
+      title: Meta object
+      type: object
+      properties:
+        checksum:
+          title: Checksum
+          type: string
+          description: The checksum of the element
+        id:
+          title: ID
+          type: string
+          description: The unique identifier of the element
+        links:
+          $ref: '#/components/schemas/Links'
+        refid:
+          title: Reference ID
+          type: string
+          description: A unique identifier given to the newly created element in the
+            context of the current request
+        related:
+          $ref: '#/components/schemas/RelatedCollections'
+        type:
+          title: Type
+          type: string
+          description: The type of element
+      description: An element
+    MonetaryAmount:
+      title: Monetary amount
+      required:
+      - amount
+      - currency
+      type: object
+      properties:
+        amount:
+          title: Amount
+          type: string
+          description: The decimal amount
+          format: gw-bigdecimal
+        currency:
+          title: Currency
+          type: string
+          description: The currency for the amount
+          x-gw-type: typekey.Currency
+      description: A monetary amount that combines a decimal amount with a currency
+    PhoneNumber:
+      title: Phone number
+      required:
+      - countryCode
+      - number
+      type: object
+      properties:
+        countryCode:
+          $ref: '#/components/schemas/TypeKeyReference'
+        displayName:
+          title: Display name
+          type: string
+          description: The phone number formatted in a standardized way
+          readOnly: true
+        extension:
+          title: Extension
+          type: string
+          description: The extension for the phone number
+          x-gw-nullable: true
+        number:
+          title: Number
+          type: string
+          description: The actual phone number, including area code, but excluding
+            the country code and extension
+      description: A phone number, with different components of the number broken
+        out as separate fields
+    RelatedCollection:
+      title: Related collection
+      type: object
+      properties:
+        count:
+          title: Count
+          type: integer
+          description: The number of elements included in the `data` array
+        data:
+          title: Data
+          type: array
+          description: The list of references to the related elements
+          xml:
+            wrapped: true
+          items:
+            $ref: '#/components/schemas/SimpleReference'
+        total:
+          title: Total
+          type: integer
+          description: The total number of elements in the related set of elements.
+            Only present if the `includeTotal` query parameter is used to request
+            that the total be calculated for an included collection.
+      description: A set of element references that are related to the element in
+        some way. Used to link elements with their relations when a request is made
+        using the `include` query parameter.
+    RelatedCollections:
+      title: Related collections
+      type: object
+      additionalProperties:
+        $ref: '#/components/schemas/RelatedCollection'
+      description: A set of `RelatedCollection` elements that contain references to
+        elements included using the `include` query parameter on a request
+    SimpleReference:
+      title: Simple reference
+      type: object
+      properties:
+        displayName:
+          title: Display name
+          type: string
+          description: The formatted name of the element
+        id:
+          title: ID
+          type: string
+          description: The unique identifier of the referenced element
+        jsonPath:
+          title: JSON path
+          type: string
+          description: The path to the referenced element within the overall JSON
+            document (Since 1.2.0)
+          readOnly: true
+          x-gw-sinceVersion: 1.2.0
+          x-gw-extensions:
+            defaultViews:
+            - none
+        refid:
+          title: Reference ID
+          type: string
+          description: A unique identifier given to the newly created element in the
+            context of the current request
+        type:
+          title: Type
+          type: string
+          description: The type of the referenced element
+        uri:
+          title: URI
+          type: string
+          description: The canonical URI for the referenced element
+      description: A reference to an element
+      x-gw-extensions:
+        resourceReference: true
+    SpatialPoint:
+      title: Spatial point
+      required:
+      - latitude
+      - longitude
+      type: object
+      properties:
+        latitude:
+          title: Latitude
+          type: string
+          description: The latitude of the spatial point
+          format: gw-bigdecimal
+        longitude:
+          title: Longitude
+          type: string
+          description: The longitude of the spatial point
+          format: gw-bigdecimal
+      description: An object that combines a latitude with a longitude (Since 1.2.0)
+      x-gw-sinceVersion: 1.2.0
+    TypeKeyReference:
+      title: TypeKey reference
+      required:
+      - code
+      type: object
+      properties:
+        code:
+          title: Code
+          type: string
+          description: The `code` of the `TypeKey`
+        name:
+          title: Name
+          type: string
+          description: The `name` of the `TypeKey`
+      description: A reference to a `TypeKey` element that defines an enumerated value
+        from a `TypeList`
+    ErrorCause:
+      title: Error cause
+      type: object
+      properties:
+        message:
+          title: Message
+          type: string
+          description: The exception message
+      description: Basic information of an unexpected server exception
+    ErrorDetail:
+      type: object
+      properties:
+        message:
+          title: Message
+          type: string
+          description: A message associated with this specific error
+        properties:
+          title: Properties
+          type: object
+          properties: {}
+          description: Properties of this specific error.  The specific properties
+            will depend on the specific type of error.
+    ErrorInfo:
+      title: Error info
+      type: object
+      properties:
+        cause:
+          $ref: '#/components/schemas/ErrorCause'
+        details:
+          title: Details
+          type: array
+          description: Additional details of the error. For example, if this overall
+            error response was caused by a schema validation failure, the error details
+            might represent specific validation errors.
+          xml:
+            wrapped: true
+          items:
+            $ref: '#/components/schemas/ErrorDetail'
+        developerMessage:
+          title: Developer message
+          type: string
+          description: An error message that might be more technical than the `userMessage`
+            and is more suitable for use by a developer who built the code that made
+            the API call
+        stackTrace:
+          title: Stack trace
+          type: string
+          description: The stack trace associated with the error, if this error was
+            caused by an internal server error.  Stack traces will not appear if the
+            server is set to production mode.
+        status:
+          title: Status
+          type: integer
+          description: The HTTP status code associated with the error
+        userMessage:
+          title: User message
+          type: string
+          description: An error message suitable for displaying to an end user, such
+            as someone using a UI that made the API call
+      description: Generic schema that REST error responses follow
+  responses:
+    AuthenticationError:
+      description: 401 error that is returned if the request's user cannot be authenticated
+      content:
+        '*/*':
+          schema:
+            $ref: '#/components/schemas/ErrorInfo'
+    BadInput:
+      description: 400 error that is returned if the input to this endpoint is not
+        valid; this can happen because of missing required parameters, malformed json,
+        json that does not validate against the declared schema, etc.
+      content:
+        '*/*':
+          schema:
+            $ref: '#/components/schemas/ErrorInfo'
+    InternalServerError:
+      description: 500 error that is returned if a server-side error prevented this
+        request from being processed
+      content:
+        '*/*':
+          schema:
+            $ref: '#/components/schemas/ErrorInfo'
+    NotAcceptable:
+      description: 406 error that is returned if the Accept header provided by the
+        client does not match any types produced by this endpoint
+      content:
+        '*/*':
+          schema:
+            $ref: '#/components/schemas/ErrorInfo'
+    NotAuthorized:
+      description: 403 error that is returned if the authenticated user is not authorized
+        to access a given resource
+      content:
+        '*/*':
+          schema:
+            $ref: '#/components/schemas/ErrorInfo'
+    NotFound:
+      description: 404 error that is returned if the specified resource does not exist
+      content:
+        '*/*':
+          schema:
+            $ref: '#/components/schemas/ErrorInfo'
+    OperationNotSupported:
+      description: 405 error that is returned if the specified HTTP verb is not allowed
+        on a given resource
+      content:
+        '*/*':
+          schema:
+            $ref: '#/components/schemas/ErrorInfo'
+    ServiceUnavailable:
+      description: 503 error that is returned if the server's runlevel is not adequate
+        to service this request
+      content:
+        '*/*':
+          schema:
+            $ref: '#/components/schemas/ErrorInfo'
+    UnsupportedContentType:
+      description: 415 error that is returned if the Content-Type of the request is
+        not consumable by this endpoint
+      content:
+        '*/*':
+          schema:
+            $ref: '#/components/schemas/ErrorInfo'
+  parameters:
+    enablePolymorphism:
+      name: enablePolymorphism
+      in: query
+      description: Whether or not to use the `discriminator`/`oneOf` pattern to output
+        schemas in cases where the valid set of fields can vary based on some attribute
+        of the data such as the country or subtype.  Defaults to `true`. See the documentation
+        for more information.
+      schema:
+        type: boolean
+        default: true
+    fields:
+      name: fields
+      in: query
+      description: Allows the caller to specify the set of fields that should be included
+        on the response. This can be used to limit the set of fields returned as well
+        as to include optional fields that otherwise wouldn't normally be returned.
+        The parameter is either of the form `fields=<field list>` or `fields=<include>:<field
+        list>`, where `<field list>` consists of a comma-separated list of field or
+        field set names. See the documentation for more information.
+      style: form
+      explode: true
+      schema:
+        type: array
+        items:
+          type: string
+        x-gw-extensions:
+          allowForCompositeApi: true
+      x-gw-extensions:
+        allowForCompositeApi: true
+    filter:
+      name: filter
+      in: query
+      description: Filters the list of results based on the specified field, operator,
+        and value. The parameter is either of the form `filter=<field>:<operator>:<value>`
+        or `filter=<include>:<field>:<operator>:<value>`. See the documentation for
+        more information.
+      style: form
+      explode: true
+      schema:
+        type: array
+        items:
+          type: string
+        x-gw-extensions:
+          allowForCompositeApi: true
+      x-gw-extensions:
+        allowForCompositeApi: true
+    filterByUser:
+      name: filterByUser
+      in: query
+      description: Whether or not to filter endpoints and schema properties by the
+        authorization of the caller. Defaults to `false`.
+      schema:
+        type: boolean
+        default: false
+    gwLanguageHeader:
+      name: GW-Language
+      in: header
+      description: If specified, this header will set the language used when processing
+        the request
+      schema:
+        type: string
+    gwLocaleHeader:
+      name: GW-Locale
+      in: header
+      description: If specified, this header will set the locale used when processing
+        the request
+      schema:
+        type: string
+    gwSchemaProperty:
+      name: GW-IncludeSchemaProperty
+      in: header
+      description: If specified and the operation returns json with a defined schema,
+        this will add a property, '$GW-Schema',  with the fully qualified name of
+        the object's schema.
+      schema:
+        type: boolean
+    gwTraceability:
+      name: X-Correlation-ID
+      in: header
+      description: 'This header permits a customer to trace a request from its initial
+        reception through all of the subsequent applications that were invoked to
+        handle that request. The actual traceability id present in the MDC and logs
+        (and returned in the response), is dependent on the implementation of TraceabilityIDPlugin.
+        The default implementation uses this value, if specified, or a generated UID.  However,
+        another implementation may always generate a unique id and just log  the relationship
+        between these incoming values and the generated UID. Note: that this header
+        can be repeated, but the resulting string will just be the comma separated
+        values.'
+      schema:
+        type: string
+    gwTransactionID:
+      name: GW-DBTransaction-ID
+      in: header
+      description: If specified and this operation results in a database commit, this
+        header's value must not have been submitted before.  This value must be globally
+        unique across all clients, apis and webservices. It is used for those transaction
+        that are not idempotent. Unless this is explicitly referenced for an operation
+        it is not required.
+      required: true
+      schema:
+        type: string
+    gwUnknownPropertyHeader:
+      name: GW-UnknownPropertyHandling
+      in: header
+      description: If specified, this header will drive the behavior for unknown property
+        handling
+      schema:
+        type: string
+        enum:
+        - log
+        - reject
+        - ignore
+    gwUnknownQueryParameterHeader:
+      name: GW-UnknownQueryParamHandling
+      in: header
+      description: If specified, this header will drive the behavior for unknown query
+        parameter handling.  Default is to reject them.
+      schema:
+        type: string
+        enum:
+        - log
+        - reject
+        - ignore
+    gwValidateResponseHandling:
+      name: GW-ValidateResponseHandling
+      in: header
+      description: If specified, this header permits the client to override the behavior
+        around validating response
+      schema:
+        type: boolean
+    include:
+      name: include
+      in: query
+      description: Used to request that additional resources be returned with the
+        API response in the `included` section of the responses. The `include` parameter
+        can appear multiple times, and is a comma-separated list of additional resources
+        to include. See the documentation for more information.
+      style: form
+      explode: true
+      schema:
+        type: array
+        items:
+          type: string
+    includeTotal:
+      name: includeTotal
+      in: query
+      description: Used to request that results should include a count of the total
+        number of results available, which may be more than the total number of results
+        currently being returned. This parameter is of the form `includeTotal=<true|false>`
+        or `includeTotal=<include>:<true|false>`. If not specified, the default is
+        considered to be `false`. See the documentation for more information about
+        response pagination.
+      style: form
+      explode: true
+      schema:
+        type: array
+        items:
+          type: string
+        x-gw-extensions:
+          allowForCompositeApi: true
+      x-gw-extensions:
+        allowForCompositeApi: true
+    omitInclusions:
+      name: omitInclusions
+      in: query
+      description: Whether or not to omit the `included` properties on request and
+        response schemas.  Defaults to `false`. See the documentation for more information.
+        (Since 1.4.0)
+      schema:
+        type: boolean
+        default: false
+        x-gw-sinceVersion: 1.4.0
+      x-gw-sinceVersion: 1.4.0
+    pageOffset:
+      name: pageOffset
+      in: query
+      description: The offset of the first result to fetch when fetching a paginated
+        set of results. The parameter is of the form `pageOffset=<number>` where the
+        first result has an offset of 0. For example, `pageOffset=25` will skip the
+        first 25 results in sorted order. If not specified, the default value is 0.
+        See the documentation for more information about response pagination.
+      schema:
+        type: string
+        x-gw-extensions:
+          allowForCompositeApi: true
+      x-gw-extensions:
+        allowForCompositeApi: true
+    pageSize:
+      name: pageSize
+      in: query
+      description: The maximum number of results to return in the response. The parameter
+        is of the form `pageSize=<size>` or `pageSize=<include>:<size>`. The maximum
+        allowed `pageSize` and the default `pageSize` both depend on the specific
+        API endpoint the request is made to. See the documentation for more information
+        about response pagination.
+      style: form
+      explode: true
+      schema:
+        type: array
+        items:
+          type: string
+        x-gw-extensions:
+          allowForCompositeApi: true
+      x-gw-extensions:
+        allowForCompositeApi: true
+    prettyPrintSchema:
+      name: prettyPrint
+      in: query
+      description: Whether or not to pretty-print the returned schema, making it larger
+        but more human readable.  Defaults to `false`.
+      schema:
+        type: boolean
+        default: false
+    sort:
+      name: sort
+      in: query
+      description: Controls the sorting of elements within a response. The sort parameter
+        is of the form `sort=<fields>` or `sort=<include>:<fields>`, where `<fields>`
+        represents a comma-separated list of field names to sort on. Field names can
+        be prefixed with `-` to request a descending sort, otherwise the sort will
+        be ascending. See the documentation for more information.
+      style: form
+      explode: true
+      schema:
+        type: array
+        items:
+          type: string
+        x-gw-extensions:
+          allowForCompositeApi: true
+      x-gw-extensions:
+        allowForCompositeApi: true
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic

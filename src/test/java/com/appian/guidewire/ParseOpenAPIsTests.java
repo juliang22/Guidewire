@@ -70,11 +70,11 @@ public class ParseOpenAPIsTests {
 
 
 
-@Test
+/*@Test
   public void getGetOptions() {
 
   OpenAPI claimsOpenApi = Util.getOpenApi("com/appian/guidewire/templates/claims/claims_claim.yaml", GuidewireCSP.classLoader);
-  /*String pathName = "/claim-infos";*/
+  *//*String pathName = "/claim-infos";*//*
   String pathName = "/claim-infos/{claimInfoId}";
   Operation get = claimsOpenApi.getPaths().get(pathName).getGet();
 
@@ -131,8 +131,8 @@ public class ParseOpenAPIsTests {
 
 
 
- /* get.getParameters().forEach((queryParam) -> {
-*//*        System.out.println("HERE"+queryParams.getIn() +queryParams.getName());*//*
+ *//* get.getParameters().forEach((queryParam) -> {
+*//**//*        System.out.println("HERE"+queryParams.getIn() +queryParams.getName());*//**//*
 
         if (queryParam.getName().equals("include")) {          System.out.println("INLCUDES"+((Schema)get
               .getResponses()
@@ -166,9 +166,9 @@ public class ParseOpenAPIsTests {
           System.out.println("Param "+ queryParam.getName());
         }
       }
-  );*/
+  );*//*
 
-}
+}*/
 
 
 

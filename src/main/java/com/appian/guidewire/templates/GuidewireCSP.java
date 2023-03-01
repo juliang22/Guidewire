@@ -32,13 +32,31 @@ public class GuidewireCSP extends SimpleConnectedSystemTemplate implements Const
   }};
 
   private static Map<String, OpenAPI> POLICY_SWAGGER_MAP = new HashMap<String, OpenAPI>() {{
-    put(POLICY_POLICIES, Util.getOpenApi("com/appian/guidewire/templates/policy/policy_policies.yaml", classLoader));
+    put(POLICY_ACCOUNT, Util.getOpenApi("com/appian/guidewire/templates/policy/policy_account.yaml", classLoader));
+    put(POLICY_ADMIN, Util.getOpenApi("com/appian/guidewire/templates/policy/policy_admin.yaml", classLoader));
+    put(POLICY_ASYNC, Util.getOpenApi("com/appian/guidewire/templates/policy/policy_async.yaml", classLoader));
+    put(POLICY_COMMON, Util.getOpenApi("com/appian/guidewire/templates/policy/policy_common.yaml", classLoader));
+    put(POLICY_COMPOSITE, Util.getOpenApi("com/appian/guidewire/templates/policy/policy_composite.yaml", classLoader));
     put(POLICY_JOB, Util.getOpenApi("com/appian/guidewire/templates/policy/policy_job.yaml", classLoader));
+    put(POLICY_POLICIES, Util.getOpenApi("com/appian/guidewire/templates/policy/policy_policies.yaml", classLoader));
+    put(POLICY_POLICIES, Util.getOpenApi("com/appian/guidewire/templates/policy/policy_productdefinition.yaml", classLoader));
+    put(POLICY_POLICIES, Util.getOpenApi("com/appian/guidewire/templates/policy/policy_systemtools.yaml", classLoader));
   }};
+
+  private static Map<String, OpenAPI> BILLING_SWAGGER_MAP = new HashMap<String, OpenAPI>() {{
+    put(BILLING_ADMIN, Util.getOpenApi("com/appian/guidewire/templates/billing/billing_admin.yaml", classLoader));
+    put(BILLING_ASYNC, Util.getOpenApi("com/appian/guidewire/templates/billing/billing_async.yaml", classLoader));
+    put(BILLING_BILLING, Util.getOpenApi("com/appian/guidewire/templates/billing/billing_billing.yaml", classLoader));
+    put(BILLING_COMMON, Util.getOpenApi("com/appian/guidewire/templates/billing/billing_common.yaml", classLoader));
+    put(BILLING_COMPOSITE, Util.getOpenApi("com/appian/guidewire/templates/billing/billing_composite.yaml", classLoader));
+    put(BILLING_SYSTEM_TOOLS, Util.getOpenApi("com/appian/guidewire/templates/billing/billing_systemtools.yaml", classLoader));
+  }};
+
 
   private static Map<String, Map<String, OpenAPI>> API_SWAGGER_MAP = new HashMap<String, Map<String, OpenAPI>>() {{
     put(CLAIMS, CLAIMS_SWAGGER_MAP);
     put(POLICIES, POLICY_SWAGGER_MAP);
+    put(BILLING, BILLING_SWAGGER_MAP);
   }};
 
   public static OpenAPI getOpenAPI(String api, String subApi) {

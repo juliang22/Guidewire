@@ -104,8 +104,8 @@ public abstract class Execute implements ConstantKeys {
 
   public void setDiagnostics() {
     Map<String,Object> requestDiagnostic = new HashMap<>();
-    requestDiagnostic.put("Endpoint: ", pathNameUnmodified);
-    requestDiagnostic.put("Endpoint with Path Params: ", pathNameModified);
+    requestDiagnostic.put("Operation: ", pathNameUnmodified);
+    requestDiagnostic.put("Operation with Path Params: ", pathNameModified);
     if (this.reqBodyKey != null) {
       requestDiagnostic.put("Request Body", this.builtRequestBody);
     }

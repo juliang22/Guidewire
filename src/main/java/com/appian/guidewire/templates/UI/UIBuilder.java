@@ -182,7 +182,7 @@ public abstract class UIBuilder implements ConstantKeys {
       return null;
     }
 
-    // Guidewire sometimes sets required properties in their extensions instead of in the required section
+    // For POSTs, gw sets required properties required to create a post in their extensions instead of in the required section
     if (httpCall.equals(POST) &&
         item.getExtensions() != null &&
         item.getExtensions().get("x-gw-extensions") != null &&
@@ -193,6 +193,17 @@ public abstract class UIBuilder implements ConstantKeys {
       }
       requiredProperties.add(key);
     }
+
+    // Fields that are marked as createOnly are allowed in POSTs but not in PATCHes
+    if (httpCall.equals(PATCH) &&
+        item.getExtensions() != null &&
+        item.getExtensions().get("x-gw-extensions") != null &&
+        ((Map<?,?>)item.getExtensions().get("x-gw-extensions")).get("createOnly") != null &&
+        ((Boolean)((Map)item.getExtensions().get("x-gw-extensions")).get("createOnly"))) {
+      return null;
+    }
+
+
 
     // Skip if the field is a read-only value
     if (item.getReadOnly() != null && item.getReadOnly()) return null;
@@ -379,7 +390,7 @@ public abstract class UIBuilder implements ConstantKeys {
     return simpleIntegrationTemplate.textProperty(CHOSEN_ENDPOINT)
         .isRequired(true)
         .refresh(RefreshPolicy.ALWAYS)
-        .label("Select Endpoint")
+        .label("Select Operation")
         .transientChoices(true)
         .instructionText(instructionText)
         .choices(choices.size() > 0 ? choices.toArray(new Choice[0]) : defaultChoices.toArray(new Choice[0]))
