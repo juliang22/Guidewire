@@ -12,9 +12,7 @@ import com.appian.guidewire.templates.GuidewireCSP;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
-import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
-import io.swagger.v3.oas.models.media.StringSchema;
 import std.Util;
 
 public class ParseOpenAPIsTests {
@@ -23,7 +21,7 @@ public class ParseOpenAPIsTests {
 
   @Test
   public void testDocuments() {
-    OpenAPI openAPI = Util.getOpenApi("com/appian/guidewire/templates/claims.yaml", GuidewireCSP.classLoader);
+    OpenAPI openAPI = Util.getOpenApi("com/appian/guidewire/templates/claims/claims_claim.yaml", GuidewireCSP.classLoader);
     String pathName = "/claims/{claimId}/documents";
 
     Object o = ((Schema)openAPI.getPaths()
@@ -75,7 +73,7 @@ public class ParseOpenAPIsTests {
 @Test
   public void getGetOptions() {
 
-  OpenAPI claimsOpenApi = Util.getOpenApi("com/appian/guidewire/templates/claims.yaml", GuidewireCSP.classLoader);
+  OpenAPI claimsOpenApi = Util.getOpenApi("com/appian/guidewire/templates/claims/claims_claim.yaml", GuidewireCSP.classLoader);
   /*String pathName = "/claim-infos";*/
   String pathName = "/claim-infos/{claimInfoId}";
   Operation get = claimsOpenApi.getPaths().get(pathName).getGet();
@@ -188,7 +186,7 @@ public class ParseOpenAPIsTests {
 
   @Test
   public void test_ParseMany() throws Exception {
-      OpenAPI openAPI = Util.getOpenApi("com/appian/guidewire/templates/claims.yaml");
+      OpenAPI openAPI = Util.getOpenApi("com/appian/guidewire/templates/claims_claim.yaml");
         openAPI.getPaths().entrySet().forEach(s -> {
             PathItem path = s.getValue();
 
@@ -301,13 +299,13 @@ public class ParseOpenAPIsTests {
     *//*        System.out.println(ParseOpenAPI.initializePaths(ConstantKeys.CLAIMS));*//*
 
     // Checks if parser works on all post/patch paths
-    // - Works for policies.yaml (which doesn't have patch paths for some reason, might have to try
+    // - Works for policy_policies.yaml (which doesn't have patch paths for some reason, might have to try
     // getting the openapi 3.0 schema from that endpoint. Excludes document paths which have a
     // different parsing structure.
     // - Almost working for Claims, excluding documents and
     // /claims/{claimId}/service-requests/{serviceRequestId}/invoices has a different structure to work
     // out, Will come back to it once I actually need to build requestBodies
-    *//*  OpenAPI openAPI = Util.getOpenApi("com/appian/guidewire/templates/policies.yaml");
+    *//*  OpenAPI openAPI = Util.getOpenApi("com/appian/guidewire/templates/policy_policies.yaml");
         openAPI.getPaths().entrySet().forEach(s -> {
             PathItem path = s.getValue();
 

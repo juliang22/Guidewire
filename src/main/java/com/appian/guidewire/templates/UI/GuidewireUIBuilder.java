@@ -2,6 +2,8 @@ package com.appian.guidewire.templates.UI;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -25,46 +27,60 @@ import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
 import std.Util;
 
-public class GuidewireUIBuilder extends UIBuilder{
+public class GuidewireUIBuilder extends UIBuilder {
   public GuidewireUIBuilder(SimpleIntegrationTemplate simpleIntegrationTemplate, String api) {
     super();
-    setOpenAPI(api);
+/*    setOpenAPI(api);*/
     setSimpleIntegrationTemplate(simpleIntegrationTemplate);
-    setDefaultEndpoints();
+    setApi(api);
+    setSubApiList(api);
   }
 
   // Sets the OpenAPI api and the paths. This is stored statically in the CSP so that it is loaded when the plugin is installed
   // Modify this method and the CSP with relevant API constants and path names
-  public void setOpenAPI(String api) {
-    switch (api) {
-      case POLICIES:
-        this.openAPI = GuidewireCSP.policiesOpenApi;
-        break;
-      case CLAIMS:
-        this.openAPI = GuidewireCSP.claimsOpenApi;
-        break;
-      case JOBS:
-        this.openAPI = GuidewireCSP.jobsOpenApi;
-        break;
-      case ACCOUNTS:
-        this.openAPI = GuidewireCSP.accountsOpenApi;
-        break;
-    }
-    this.paths = openAPI.getPaths();
-    this.api = api;
+  public void setOpenAPI(String api, String subApi) {
+    // TODO: Update with OOTB swagger files
+    setSubApi(subApi);
+    setOpenAPI(GuidewireCSP.getOpenAPI(api, subApi));
+    setPaths(openAPI.getPaths());
+    setDefaultEndpoints(null);
   }
+
 
   public PropertyDescriptor<?>[] build() {
 
-    // If no endpoint is selected, just build the api dropdown
-    String selectedEndpoint = integrationConfiguration.getValue(CHOSEN_ENDPOINT);
+    ArrayList<Choice> choices = new ArrayList<>();
+    SUB_API_MAP.get(api).forEach((String subApi) -> {
+      choices.add(Choice.builder().name(Util.camelCaseToTitleCase(subApi)).value(subApi).build());
+    });
+
+    TextPropertyDescriptor subApiUI = simpleIntegrationTemplate.textProperty(SUB_API_TYPE)
+        .label("Guidewire Module")
+        .choices(choices.toArray(new Choice[0]))
+        .description("Select the GuideWire API to access. Create a separate connected system for each additional API.")
+        .isRequired(true)
+        .refresh(RefreshPolicy.ALWAYS)
+        .build();
+    List<PropertyDescriptor<?>> result = new ArrayList<>(Collections.singletonList(subApiUI));
+
+    // If the subAPI has not been selected, only render the subAPI dropdown
+    if (integrationConfiguration.getValue(SUB_API_TYPE) == null) {
+      return result.toArray(new PropertyDescriptor<?>[0]);
+    }
+
+    String subApi = integrationConfiguration.getValue(SUB_API_TYPE).toString();
+    setOpenAPI(api, subApi);
     TextPropertyDescriptor searchBar = simpleIntegrationTemplate.textProperty(SEARCH)
         .label("Sort Endpoints Dropdown")
         .refresh(RefreshPolicy.ALWAYS)
         .instructionText("Sort the endpoints dropdown below with a relevant search query.")
-        .placeholder("Example query for the Claims API: 'injury incidents.'")
+        .placeholder("Sort Query")
         .build();
-    List<PropertyDescriptor<?>> result = new ArrayList<>(Arrays.asList(searchBar, endpointChoiceBuilder()));
+
+    result.addAll(Arrays.asList(searchBar, endpointChoiceBuilder()));
+
+    // If no endpoint is selected, just build the api dropdown
+    String selectedEndpoint = integrationConfiguration.getValue(CHOSEN_ENDPOINT);
     if (selectedEndpoint == null) {
       return result.toArray(new PropertyDescriptor<?>[0]);
     }
@@ -76,7 +92,8 @@ public class GuidewireUIBuilder extends UIBuilder{
     String restOperation = selectedEndpointStr[1];
     String pathName = selectedEndpointStr[2];
     String pathSummary = selectedEndpointStr[3];
-    if (!apiType.equals(api)) {
+    String subApiType = selectedEndpointStr[4];
+    if (!apiType.equals(api) || !subApiType.equals(subApi)) {
       integrationConfiguration.setValue(CHOSEN_ENDPOINT, null).setValue(SEARCH, "");
     } else {
       // The key of the request body is dynamic so when I need to get it in the execute function:
@@ -127,6 +144,7 @@ public class GuidewireUIBuilder extends UIBuilder{
             "the endpoint.")
         .label("Pagination")
         .isExpressionable(true)
+/*        .isRequired(true)*/
         .placeholder("25")
         .build());
 
@@ -268,7 +286,6 @@ public class GuidewireUIBuilder extends UIBuilder{
               "they exist, they will be returned alongside the root resource.")
           .build());
     }
-
   }
 
   public void buildPost(List<PropertyDescriptor<?>> result) {
@@ -288,7 +305,7 @@ public class GuidewireUIBuilder extends UIBuilder{
           .instructionText("Insert a document to upload")
           .build());
     }
-    Map<?,?> properties = (documentType == null) ?
+    Schema<?> schema = (documentType == null) ?
         ((ObjectSchema)paths.get(pathName)
             .getPost()
             .getRequestBody()
@@ -298,8 +315,7 @@ public class GuidewireUIBuilder extends UIBuilder{
             .getProperties()
             .get("data"))
             .getProperties()
-            .get("attributes")
-            .getProperties() :
+            .get("attributes") :
         ((ObjectSchema)openAPI.getPaths()
             .get(pathName)
             .getPost()
@@ -311,10 +327,12 @@ public class GuidewireUIBuilder extends UIBuilder{
             .getProperties()
             .get("data"))
             .getProperties()
-            .get("attributes")
-            .getProperties();
+            .get("attributes");
+    Set<String> required = schema.getRequired() != null ?
+        new HashSet<>(schema.getRequired()) :
+        null;
 
-    ReqBodyUIBuilder(result, properties);
+    ReqBodyUIBuilder(result, schema.getProperties(), required, new HashMap<>(), POST);
 
   }
 
@@ -335,7 +353,7 @@ public class GuidewireUIBuilder extends UIBuilder{
           .instructionText("Insert a document to upload")
           .build());
     }
-    Map<?,?> properties = (documentType == null) ?
+    Schema<?> schema = (documentType == null) ?
         ((ObjectSchema)paths.get(pathName)
             .getPatch()
             .getRequestBody()
@@ -345,8 +363,7 @@ public class GuidewireUIBuilder extends UIBuilder{
             .getProperties()
             .get("data"))
             .getProperties()
-            .get("attributes")
-            .getProperties() :
+            .get("attributes") :
         ((ObjectSchema)openAPI.getPaths()
             .get(pathName)
             .getPatch()
@@ -358,10 +375,12 @@ public class GuidewireUIBuilder extends UIBuilder{
             .getProperties()
             .get("data"))
             .getProperties()
-            .get("attributes")
-            .getProperties();
+            .get("attributes");
+    Set<String> required = schema.getRequired() != null ?
+        new HashSet<>(schema.getRequired()) :
+        null;
 
-    ReqBodyUIBuilder(result, properties);
+    ReqBodyUIBuilder(result, schema.getProperties(), required, new HashMap<>(), PATCH);
   }
 
   public void buildDelete(List<PropertyDescriptor<?>> result) {}
