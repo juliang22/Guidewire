@@ -23,15 +23,18 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.TextPrope
 import com.appian.guidewire.templates.GuidewireCSP;
 
 import io.swagger.v3.oas.models.Operation;
+import io.swagger.v3.oas.models.PathItem;
 import io.swagger.v3.oas.models.media.MediaType;
 import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
+import io.swagger.v3.oas.models.parameters.RequestBody;
+import io.swagger.v3.oas.models.responses.ApiResponse;
 import std.Util;
 
 public class GuidewireUIBuilder extends UIBuilder {
   public GuidewireUIBuilder(SimpleIntegrationTemplate simpleIntegrationTemplate, String api) {
     super();
-/*    setOpenAPI(api);*/
+    /*    setOpenAPI(api);*/
     setSimpleIntegrationTemplate(simpleIntegrationTemplate);
     setApi(api);
     setSubApiList(api);
@@ -46,7 +49,6 @@ public class GuidewireUIBuilder extends UIBuilder {
     setPaths(openAPI.getPaths());
     setDefaultEndpoints(null);
   }
-
 
   public PropertyDescriptor<?>[] build() {
 
@@ -110,7 +112,6 @@ public class GuidewireUIBuilder extends UIBuilder {
     return result.toArray(new PropertyDescriptor<?>[0]);
   }
 
-
   public void buildRestCall(String restOperation, List<PropertyDescriptor<?>> result, String pathName) {
     setPathName(pathName);
     setPathVarsUI();
@@ -145,11 +146,8 @@ public class GuidewireUIBuilder extends UIBuilder {
             "the endpoint.")
         .label("Pagination")
         .isExpressionable(true)
-/*        .isRequired(true)*/
-        .placeholder("25")
+        /*        .isRequired(true)*/.placeholder("25")
         .build());
-
-
 
     // Filtering and Sorting
     Optional<Schema> returnedFieldItems = Optional.ofNullable(get.getResponses().get("200").getContent().get("application/json"))
@@ -182,10 +180,8 @@ public class GuidewireUIBuilder extends UIBuilder {
 
         Optional<Object> extensions = Optional.ofNullable(((Schema<?>)val).getExtensions())
             .map(schema -> schema.get("x-gw-extensions"));
-        Optional<?> filterable = extensions
-            .map(extensionMap -> ((LinkedHashMap<?,?>)extensionMap).get("filterable"));
-        Optional<?> sortable = extensions
-            .map(extensionMap -> ((LinkedHashMap<?,?>)extensionMap).get("sortable"));
+        Optional<?> filterable = extensions.map(extensionMap -> ((LinkedHashMap<?,?>)extensionMap).get("filterable"));
+        Optional<?> sortable = extensions.map(extensionMap -> ((LinkedHashMap<?,?>)extensionMap).get("sortable"));
 
         if (filterable.isPresent()) {
           filteredChoices.choice(Choice.builder().name(key.toString()).value(key.toString()).build());
@@ -217,7 +213,10 @@ public class GuidewireUIBuilder extends UIBuilder {
       // If there are filtering options, add filtering UI
       if (hasFiltering.get()) {
         TextPropertyDescriptor.TextPropertyDescriptorBuilder filteringOperatorsBuilder = simpleIntegrationTemplate.textProperty(
-            FILTER_OPERATOR).instructionText("Select an operator to filter the results").refresh(RefreshPolicy.ALWAYS).isExpressionable(true);
+                FILTER_OPERATOR)
+            .instructionText("Select an operator to filter the results")
+            .refresh(RefreshPolicy.ALWAYS)
+            .isExpressionable(true);
         FILTERING_OPTIONS.entrySet().forEach(option -> {
           filteringOperatorsBuilder.choice(Choice.builder().name(option.getKey()).value(option.getValue()).build());
         });
@@ -243,18 +242,17 @@ public class GuidewireUIBuilder extends UIBuilder {
       }
     }
 
-
-
     // Included resources
-    Schema<?> hasIncludedResources = ((Schema<?>)get.getResponses()
-        .get("200")
-        .getContent()
-        .get("application/json")
-        .getSchema()
-        .getProperties()
-        .get("included"));
-    if (hasIncludedResources != null) {
-      Set<?> included = hasIncludedResources.getProperties().keySet();
+    Optional<Object> hasIncludedResources = Optional.ofNullable(get.getResponses())
+        .map(schema -> schema.get("200"))
+        .map(ApiResponse::getContent)
+        .map(contentMap -> contentMap.get("application/json"))
+        .map(MediaType::getSchema)
+        .map(Schema::getProperties)
+        .map(properties -> properties.get("included"));
+
+    if (hasIncludedResources.isPresent()) {
+      Set<?> included = ((Schema<?>)hasIncludedResources.get()).getProperties().keySet();
 
       LocalTypeDescriptor.Builder includedBuilder = simpleIntegrationTemplate.localType(
           Util.removeSpecialCharactersFromPathName(pathName) + INCLUDED_RESOURCES);
@@ -288,8 +286,7 @@ public class GuidewireUIBuilder extends UIBuilder {
       return;
     }
 
-    MediaType documentType =
-        openAPI.getPaths().get(pathName).getPost().getRequestBody().getContent().get("multipart/form-data");
+    MediaType documentType = openAPI.getPaths().get(pathName).getPost().getRequestBody().getContent().get("multipart/form-data");
     if (documentType != null) {
       result.add(simpleIntegrationTemplate.documentProperty(DOCUMENT)
           .label("Document")
@@ -299,34 +296,37 @@ public class GuidewireUIBuilder extends UIBuilder {
           .instructionText("Insert a document to upload")
           .build());
     }
-    Schema<?> schema = (documentType == null) ?
-        ((ObjectSchema)paths.get(pathName)
-            .getPost()
-            .getRequestBody()
-            .getContent()
-            .get("application/json")
-            .getSchema()
-            .getProperties()
-            .get("data"))
-            .getProperties()
-            .get("attributes") :
-        ((ObjectSchema)openAPI.getPaths()
-            .get(pathName)
-            .getPost()
-            .getResponses()
-            .get("201")
-            .getContent()
-            .get("application/json")
-            .getSchema()
-            .getProperties()
-            .get("data"))
-            .getProperties()
-            .get("attributes");
-    Set<String> required = schema.getRequired() != null ?
-        new HashSet<>(schema.getRequired()) :
-        null;
 
-    ReqBodyUIBuilder(result, schema.getProperties(), required, new HashMap<>(), POST);
+    Optional<Schema> schema = (documentType == null) ?
+        Optional.ofNullable(paths.get(pathName))
+            .map(PathItem::getPost)
+            .map(Operation::getRequestBody)
+            .map(RequestBody::getContent)
+            .map(content -> content.get("application/json"))
+            .map(MediaType::getSchema)
+            .map(Schema::getProperties)
+            .map(properties -> properties.get("data"))
+            .map(data -> ((ObjectSchema)data).getProperties())
+            .map(dataMap -> dataMap.get("attributes")) :
+        Optional.ofNullable(paths.get(pathName))
+            .map(PathItem::getPost)
+            .map(Operation::getResponses)
+            .map(apiResponses -> apiResponses.get("201"))
+            .map(ApiResponse::getContent)
+            .map(content -> content.get("application/json"))
+            .map(MediaType::getSchema)
+            .map(Schema::getProperties)
+            .map(properties -> properties.get("data"))
+            .map(data -> ((ObjectSchema)data).getProperties())
+            .map(properties -> properties.get("attributes"));
+
+    if (!schema.isPresent()) {
+      result.add(NO_REQ_BODY_UI);
+      return;
+    }
+
+    Set<String> required = schema.get().getRequired() != null ? new HashSet<>(schema.get().getRequired()) : null;
+    ReqBodyUIBuilder(result, schema.get().getProperties(), required, new HashMap<>(), POST);
   }
 
   public void buildPatch(List<PropertyDescriptor<?>> result) {
@@ -346,35 +346,41 @@ public class GuidewireUIBuilder extends UIBuilder {
           .instructionText("Insert a document to upload")
           .build());
     }
-    Schema<?> schema = (documentType == null) ?
-        ((ObjectSchema)paths.get(pathName)
-            .getPatch()
-            .getRequestBody()
-            .getContent()
-            .get("application/json")
-            .getSchema()
-            .getProperties()
-            .get("data"))
-            .getProperties()
-            .get("attributes") :
-        ((ObjectSchema)openAPI.getPaths()
-            .get(pathName)
-            .getPatch()
-            .getResponses()
-            .get("200")
-            .getContent()
-            .get("application/json")
-            .getSchema()
-            .getProperties()
-            .get("data"))
-            .getProperties()
-            .get("attributes");
-    Set<String> required = schema.getRequired() != null ?
-        new HashSet<>(schema.getRequired()) :
-        null;
 
-    ReqBodyUIBuilder(result, schema.getProperties(), required, new HashMap<>(), PATCH);
+
+    Optional<Schema> schema = (documentType == null) ?
+        Optional.ofNullable(paths.get(pathName))
+            .map(PathItem::getPatch)
+            .map(Operation::getRequestBody)
+            .map(RequestBody::getContent)
+            .map(content -> content.get("application/json"))
+            .map(MediaType::getSchema)
+            .map(Schema::getProperties)
+            .map(properties -> properties.get("data"))
+            .map(data -> ((ObjectSchema)data).getProperties())
+            .map(dataMap -> dataMap.get("attributes")) :
+        Optional.ofNullable(paths.get(pathName))
+            .map(PathItem::getPatch)
+            .map(Operation::getResponses)
+            .map(apiResponses -> apiResponses.get("200"))
+            .map(ApiResponse::getContent)
+            .map(content -> content.get("application/json"))
+            .map(MediaType::getSchema)
+            .map(Schema::getProperties)
+            .map(properties -> properties.get("data"))
+            .map(data -> ((ObjectSchema)data).getProperties())
+            .map(properties -> properties.get("attributes"));
+
+    if (!schema.isPresent()) {
+      result.add(NO_REQ_BODY_UI);
+      return;
+    }
+
+    Set<String> required = schema.get().getRequired() != null ? new HashSet<>(schema.get().getRequired()) : null;
+
+    ReqBodyUIBuilder(result, schema.get().getProperties(), required, new HashMap<>(), PATCH);
   }
 
-  public void buildDelete(List<PropertyDescriptor<?>> result) {}
+  public void buildDelete(List<PropertyDescriptor<?>> result) {
+  }
 }
