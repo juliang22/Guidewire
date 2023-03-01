@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -148,109 +149,101 @@ public class GuidewireUIBuilder extends UIBuilder {
         .placeholder("25")
         .build());
 
+
+
     // Filtering and Sorting
-    Map<?,?> returnedFieldProperties = get.getResponses()
-        .get("200")
-        .getContent()
-        .get("application/json")
-        .getSchema()
-        .getProperties();
-    AtomicBoolean hasSorting = new AtomicBoolean(false);
-    AtomicBoolean hasFiltering = new AtomicBoolean(false);
-    if (returnedFieldProperties != null) {
-      Schema<?> returnedFieldItems = ((Schema<?>)returnedFieldProperties.get("data")).getItems();
-      if (returnedFieldItems != null) {
+    Optional<Schema> returnedFieldItems = Optional.ofNullable(get.getResponses().get("200").getContent().get("application/json"))
+        .map(MediaType::getSchema)
+        .map(Schema::getProperties)
+        .map(map -> map.get("data"))
+        .map(schema -> ((Schema)schema).getItems());
 
-        // Building up sorting and filtering options
-        TextPropertyDescriptor.TextPropertyDescriptorBuilder sortedChoices = simpleIntegrationTemplate.textProperty(SORT)
-            .label("Sort Response")
-            .instructionText("Sort response by selecting a field in the dropdown. If the dropdown is empty," +
-                " there are no sortable fields available.")
-            .isExpressionable(true)
-            .refresh(RefreshPolicy.ALWAYS);
-        TextPropertyDescriptor.TextPropertyDescriptorBuilder filteredChoices = simpleIntegrationTemplate.textProperty(FILTER_FIELD)
-            .label("Filter Response")
-            .instructionText("Filter response by selecting a field in the dropdown. If the dropdown is " +
-                "empty, there are no filterable fields available.")
-            .isExpressionable(true)
-            .refresh(RefreshPolicy.ALWAYS);
+    if (returnedFieldItems.isPresent()) {
+      AtomicBoolean hasSorting = new AtomicBoolean(false);
+      AtomicBoolean hasFiltering = new AtomicBoolean(false);
 
-        // Parsing to find filtering and sorting options available on the call
-        Map<?,?> returnedFields = returnedFieldItems.getProperties().get("attributes").getProperties();
-        returnedFields.forEach((key, val) -> {
-          Map<?,?> extensions = ((Schema<?>)val).getExtensions();
-          if (extensions != null && extensions.get("x-gw-extensions") instanceof LinkedHashMap) {
+      // Building up sorting and filtering options
+      TextPropertyDescriptor.TextPropertyDescriptorBuilder sortedChoices = simpleIntegrationTemplate.textProperty(SORT)
+          .label("Sort Response")
+          .instructionText("Sort response by selecting a field in the dropdown. If the dropdown is empty," +
+              " there are no sortable fields available.")
+          .isExpressionable(true)
+          .refresh(RefreshPolicy.ALWAYS);
+      TextPropertyDescriptor.TextPropertyDescriptorBuilder filteredChoices = simpleIntegrationTemplate.textProperty(FILTER_FIELD)
+          .label("Filter Response")
+          .instructionText("Filter response by selecting a field in the dropdown. If the dropdown is " +
+              "empty, there are no filterable fields available.")
+          .isExpressionable(true)
+          .refresh(RefreshPolicy.ALWAYS);
 
-            Object isFilterable = ((LinkedHashMap<?,?>)extensions.get("x-gw-extensions")).get("filterable");
-            if (isFilterable != null) {
-              /*              System.out.println(key + " is filterable");*/
-              filteredChoices.choice(Choice.builder().name(key.toString()).value(key.toString()).build());
-              hasFiltering.set(true);
-            }
+      // Parsing to find filtering and sorting options available on the call
+      Map<?,?> returnedFields = ((Schema<?>)returnedFieldItems.get().getProperties().get("attributes")).getProperties();
+      returnedFields.forEach((key, val) -> {
 
-            Object isSortable = ((LinkedHashMap<?,?>)extensions.get("x-gw-extensions")).get("sortable");
-            if (isSortable != null) {
-              sortedChoices.choice(Choice.builder().name(key.toString()).value(key.toString()).build());
-              hasSorting.set(true);
-            }
-          }
-        });
-        // If there are sorting options, add sorting UI
-        if (hasSorting.get()) {
-          result.add(sortedChoices
-              .isRequired(integrationConfiguration.getValue(SORT_ORDER) != null).build());
-          Choice[] sortOrder = {
-              Choice.builder().name("Ascending").value("+").build(),
-              Choice.builder().name("Descending").value("-").build()
-          };
-          result.add(simpleIntegrationTemplate.textProperty(SORT_ORDER)
-              .label("Sort Order of Response")
-              .choices(sortOrder)
-              .isExpressionable(true)
-              .isRequired(integrationConfiguration.getValue(SORT) != null)
-              .displayHint(DisplayHint.NORMAL)
-              .instructionText("Default sort order is ascending.")
-              .refresh(RefreshPolicy.ALWAYS)
-              .build()
-          );
+        Optional<Object> extensions = Optional.ofNullable(((Schema<?>)val).getExtensions())
+            .map(schema -> schema.get("x-gw-extensions"));
+        Optional<?> filterable = extensions
+            .map(extensionMap -> ((LinkedHashMap<?,?>)extensionMap).get("filterable"));
+        Optional<?> sortable = extensions
+            .map(extensionMap -> ((LinkedHashMap<?,?>)extensionMap).get("sortable"));
+
+        if (filterable.isPresent()) {
+          filteredChoices.choice(Choice.builder().name(key.toString()).value(key.toString()).build());
+          hasFiltering.set(true);
         }
 
-        // If there are filtering options, add filtering UI
-        if (hasFiltering.get()) {
-          TextPropertyDescriptor.TextPropertyDescriptorBuilder filteringOperatorsBuilder = simpleIntegrationTemplate.textProperty(FILTER_OPERATOR)
-              .instructionText("Select an operator to filter the results")
-              .refresh(RefreshPolicy.ALWAYS)
-              .isExpressionable(true);
-          FILTERING_OPTIONS.entrySet().forEach(option -> {
-            filteringOperatorsBuilder.choice(
-                Choice.builder().name(option.getKey()).value(option.getValue()
-                ).build());
-          });
-
-          // If any of the options are selected, the set will have more items than just null and the rest of the fields become
-          // required
-          Set<String> requiredSet = new HashSet<>(Arrays.asList(
-              integrationConfiguration.getValue(FILTER_FIELD),
-              integrationConfiguration.getValue(FILTER_OPERATOR),
-              integrationConfiguration.getValue(FILTER_VALUE)
-          ));
-          boolean isRequired = requiredSet.size() > 1;
-
-          // Add sorting fields to the UI
-          result.add(filteredChoices.isRequired(isRequired).build());
-          result.add(filteringOperatorsBuilder.isRequired(isRequired).build());
-          result.add(simpleIntegrationTemplate.textProperty(FILTER_VALUE)
-              .instructionText("Insert the query to filter the chosen field")
-              .isRequired(isRequired)
-              .refresh(RefreshPolicy.ALWAYS)
-              .isExpressionable(true)
-              .refresh(RefreshPolicy.ALWAYS)
-              .placeholder("22")
-              .build());
+        if (sortable.isPresent()) {
+          sortedChoices.choice(Choice.builder().name(key.toString()).value(key.toString()).build());
+          hasSorting.set(true);
         }
+
+      });
+      // If there are sorting options, add sorting UI
+      if (hasSorting.get()) {
+        result.add(sortedChoices.isRequired(integrationConfiguration.getValue(SORT_ORDER) != null).build());
+        Choice[] sortOrder = {Choice.builder().name("Ascending").value("+").build(),
+            Choice.builder().name("Descending").value("-").build()};
+        result.add(simpleIntegrationTemplate.textProperty(SORT_ORDER)
+            .label("Sort Order of Response")
+            .choices(sortOrder)
+            .isExpressionable(true)
+            .isRequired(integrationConfiguration.getValue(SORT) != null)
+            .displayHint(DisplayHint.NORMAL)
+            .instructionText("Select the sort order. Default sort order is ascending")
+            .refresh(RefreshPolicy.ALWAYS)
+            .build());
       }
 
+      // If there are filtering options, add filtering UI
+      if (hasFiltering.get()) {
+        TextPropertyDescriptor.TextPropertyDescriptorBuilder filteringOperatorsBuilder = simpleIntegrationTemplate.textProperty(
+            FILTER_OPERATOR).instructionText("Select an operator to filter the results").refresh(RefreshPolicy.ALWAYS).isExpressionable(true);
+        FILTERING_OPTIONS.entrySet().forEach(option -> {
+          filteringOperatorsBuilder.choice(Choice.builder().name(option.getKey()).value(option.getValue()).build());
+        });
+
+        // If any of the options are selected, the set will have more items than just null and the rest of the fields become
+        // required
+        Set<String> requiredSet = new HashSet<>(
+            Arrays.asList(integrationConfiguration.getValue(FILTER_FIELD), integrationConfiguration.getValue(FILTER_OPERATOR),
+                integrationConfiguration.getValue(FILTER_VALUE)));
+        boolean isRequired = requiredSet.size() > 1;
+
+        // Add sorting fields to the UI
+        result.add(filteredChoices.isRequired(isRequired).build());
+        result.add(filteringOperatorsBuilder.isRequired(isRequired).build());
+        result.add(simpleIntegrationTemplate.textProperty(FILTER_VALUE)
+            .instructionText("Insert the query to filter the chosen field")
+            .isRequired(isRequired)
+            .refresh(RefreshPolicy.ALWAYS)
+            .isExpressionable(true)
+            .refresh(RefreshPolicy.ALWAYS)
+            .placeholder("22")
+            .build());
+      }
     }
+
+
 
     // Included resources
     Schema<?> hasIncludedResources = ((Schema<?>)get.getResponses()
@@ -333,7 +326,6 @@ public class GuidewireUIBuilder extends UIBuilder {
         null;
 
     ReqBodyUIBuilder(result, schema.getProperties(), required, new HashMap<>(), POST);
-
   }
 
   public void buildPatch(List<PropertyDescriptor<?>> result) {
