@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import com.appian.connectedsystems.simplified.sdk.SimpleIntegrationTemplate;
@@ -175,6 +176,10 @@ public abstract class UIBuilder implements ConstantKeys {
       Set<String> requiredProperties,
       Map<String, List<String>> removeFieldsFromReqBody,
       String httpCall) {
+
+    // Skip if the field is a read-only value
+    if (item.getReadOnly() != null && item.getReadOnly()) return null;
+
     // Control fields that you don't want to show on specific paths
     if (removeFieldsFromReqBody != null &&
         removeFieldsFromReqBody.keySet().contains(pathName) &&
@@ -182,12 +187,11 @@ public abstract class UIBuilder implements ConstantKeys {
       return null;
     }
 
+    Optional<Object> extensions = Optional.ofNullable(item.getExtensions()).map(extensionMap -> extensionMap.get("x-gw-extensions"));
+
     // For POSTs, gw sets required properties required to create a post in their extensions instead of in the required section
-    if (httpCall.equals(POST) &&
-        item.getExtensions() != null &&
-        item.getExtensions().get("x-gw-extensions") != null &&
-        ((Map<?,?>)item.getExtensions().get("x-gw-extensions")).get("requiredForCreate") != null &&
-        ((Boolean)((Map)item.getExtensions().get("x-gw-extensions")).get("requiredForCreate"))) {
+    Optional<Object> requiredForCreate = extensions.map(requiredMap -> ((Map)requiredMap).get("requiredForCreate"));
+    if (httpCall.equals(POST) && requiredForCreate.isPresent() && requiredForCreate.get().equals(true)) {
       if (requiredProperties == null) {
         requiredProperties = new HashSet<>();
       }
@@ -195,18 +199,10 @@ public abstract class UIBuilder implements ConstantKeys {
     }
 
     // Fields that are marked as createOnly are allowed in POSTs but not in PATCHes
-    if (httpCall.equals(PATCH) &&
-        item.getExtensions() != null &&
-        item.getExtensions().get("x-gw-extensions") != null &&
-        ((Map<?,?>)item.getExtensions().get("x-gw-extensions")).get("createOnly") != null &&
-        ((Boolean)((Map)item.getExtensions().get("x-gw-extensions")).get("createOnly"))) {
+    Optional<Object> createOnly = extensions.map(requiredMap -> ((Map)requiredMap).get("createOnly"));
+    if (httpCall.equals(PATCH) && createOnly.isPresent() && createOnly.get().equals(true)) {
       return null;
     }
-
-
-
-    // Skip if the field is a read-only value
-    if (item.getReadOnly() != null && item.getReadOnly()) return null;
 
     LocalTypeDescriptor.Builder builder = simpleIntegrationTemplate.localType(key);
 
@@ -243,11 +239,11 @@ public abstract class UIBuilder implements ConstantKeys {
           item.getDescription().replaceAll("\n", "") :
           "";
       return simpleIntegrationTemplate.localType(key + "Builder")
-          .properties(simpleIntegrationTemplate
-              .localTypeProperty(builder.build())
+          .properties(simpleIntegrationTemplate.localTypeProperty(builder.build())
               .label(key)
               .description(description)
               .refresh(RefreshPolicy.ALWAYS)
+              .isRequired(requiredProperties != null && requiredProperties.contains(key))
               .build())
           .build();
 
@@ -284,6 +280,7 @@ public abstract class UIBuilder implements ConstantKeys {
               .description(description)
               .displayHint(DisplayHint.EXPRESSION)
               .isExpressionable(true)
+              .isRequired(requiredProperties != null && requiredProperties.contains(key))
               .itemType(TypeReference.from(built))
               .build()
       ).build();
@@ -313,7 +310,7 @@ public abstract class UIBuilder implements ConstantKeys {
       return simpleIntegrationTemplate.localType(key + "Container")
           .property(newProperty
               .label(key)
-              .isRequired(requiredProperties != null && requiredProperties.contains(key) ? true : false)
+              .isRequired(requiredProperties != null && requiredProperties.contains(key))
               .isExpressionable(true)
      /*         .displayHint(DisplayHint.NORMAL)*/
               .refresh(RefreshPolicy.ALWAYS)

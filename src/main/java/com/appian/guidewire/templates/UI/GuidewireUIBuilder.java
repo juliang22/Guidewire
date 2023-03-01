@@ -288,7 +288,8 @@ public class GuidewireUIBuilder extends UIBuilder {
       return;
     }
 
-    MediaType documentType = openAPI.getPaths().get(pathName).getPost().getRequestBody().getContent().get("multipart/form-data");
+    MediaType documentType =
+        openAPI.getPaths().get(pathName).getPost().getRequestBody().getContent().get("multipart/form-data");
     if (documentType != null) {
       result.add(simpleIntegrationTemplate.documentProperty(DOCUMENT)
           .label("Document")
