@@ -212,8 +212,8 @@ public class GuidewireUIBuilder extends UIBuilder {
 
       // If there are filtering options, add filtering UI
       if (hasFiltering.get()) {
-        TextPropertyDescriptor.TextPropertyDescriptorBuilder filteringOperatorsBuilder = simpleIntegrationTemplate.textProperty(
-                FILTER_OPERATOR)
+        TextPropertyDescriptor.TextPropertyDescriptorBuilder filteringOperatorsBuilder = simpleIntegrationTemplate
+            .textProperty(FILTER_OPERATOR)
             .instructionText("Select an operator to filter the results")
             .refresh(RefreshPolicy.ALWAYS)
             .isExpressionable(true);
@@ -286,6 +286,19 @@ public class GuidewireUIBuilder extends UIBuilder {
       return;
     }
 
+    // Composite Request
+    if (pathName.equals("/composite")) {
+      Optional<Schema> schema = Optional.ofNullable(paths.get(pathName))
+          .map(PathItem::getPost)
+          .map(Operation::getRequestBody)
+          .map(RequestBody::getContent)
+          .map(content -> content.get("application/json"))
+          .map(MediaType::getSchema);
+
+      Set<String> required = schema.get().getRequired() != null ? new HashSet<>(schema.get().getRequired()) : null;
+      ReqBodyUIBuilder(result, schema.get().getProperties(), required, new HashMap<>(), POST);
+    }
+
     MediaType documentType = openAPI.getPaths().get(pathName).getPost().getRequestBody().getContent().get("multipart/form-data");
     if (documentType != null) {
       result.add(simpleIntegrationTemplate.documentProperty(DOCUMENT)
@@ -346,7 +359,6 @@ public class GuidewireUIBuilder extends UIBuilder {
           .instructionText("Insert a document to upload")
           .build());
     }
-
 
     Optional<Schema> schema = (documentType == null) ?
         Optional.ofNullable(paths.get(pathName))

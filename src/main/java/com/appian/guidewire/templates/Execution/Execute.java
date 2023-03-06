@@ -147,6 +147,8 @@ public abstract class Execute implements ConstantKeys {
     Set<String> notNested = new HashSet<>(Arrays.asList("STRING", "INTEGER", "BOOLEAN", "DOUBLE"));
     Map<String, Object> propertyMap = new HashMap<>();
 
+/*    if (val == null) return propertyMap;*/
+
     // Base case: if the value does not have nested values, insert the value into the map
     if (notNested.contains(val.getType().getTypeDisplayName())) {
       if (val.getValue() == null) { // Use this line if you want to tell the user that they passed in a null value

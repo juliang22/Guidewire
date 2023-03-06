@@ -226,10 +226,9 @@ public abstract class UIBuilder implements ConstantKeys {
 
       for (Map.Entry<String,Schema> entry : item.getProperties().entrySet()) {
         String innerKey = entry.getKey();
-        Schema innerItem = entry.getValue();
-        Schema<?> innerItemSchema = (Schema<?>)innerItem;
-        requiredProperties = innerItemSchema.getRequired() != null ? new HashSet<>(innerItemSchema.getRequired()) : requiredProperties;
-        LocalTypeDescriptor nested = parseRequestBody(innerKey, innerItemSchema, requiredProperties, removeFieldsFromReqBody, httpCall);
+        Schema<?> innerItem = entry.getValue();
+        requiredProperties = innerItem.getRequired() != null ? new HashSet<>(innerItem.getRequired()) : requiredProperties;
+        LocalTypeDescriptor nested = parseRequestBody(innerKey, innerItem, requiredProperties, removeFieldsFromReqBody, httpCall);
         if (nested != null) {
           builder.properties(nested.getProperties());
         }
@@ -254,11 +253,13 @@ public abstract class UIBuilder implements ConstantKeys {
 
       for (Map.Entry<String,Schema> entry : item.getItems().getProperties().entrySet()) {
         String innerKey = entry.getKey();
-        Schema innerItem = entry.getValue();
-        Schema<?> innerItemSchema = (Schema<?>)innerItem;
-        Set<String> innerRequiredProperties =
-            innerItemSchema.getRequired() != null ? new HashSet<>(innerItemSchema.getRequired()) : requiredProperties;
-        LocalTypeDescriptor nested = parseRequestBody(innerKey, innerItemSchema, innerRequiredProperties,
+        Schema<?> innerItem = entry.getValue();
+
+        Set<String> innerRequiredProperties = innerItem.getRequired() != null ?
+            new HashSet<>(innerItem.getRequired()) :
+            new HashSet<>(item.getItems().getRequired());
+
+        LocalTypeDescriptor nested = parseRequestBody(innerKey, innerItem, innerRequiredProperties,
             removeFieldsFromReqBody, httpCall);
         if (nested != null) {
           builder.properties(nested.getProperties());
@@ -312,7 +313,6 @@ public abstract class UIBuilder implements ConstantKeys {
               .label(key)
               .isRequired(requiredProperties != null && requiredProperties.contains(key))
               .isExpressionable(true)
-     /*         .displayHint(DisplayHint.NORMAL)*/
               .refresh(RefreshPolicy.ALWAYS)
               .placeholder(description)
               .description(description)
@@ -339,6 +339,9 @@ public abstract class UIBuilder implements ConstantKeys {
 
       operations.forEach((restOperation, openAPIOperation) -> {
         if (openAPIOperation != null) {
+          // filter out deprecated endpoints
+          if (openAPIOperation.getDeprecated() != null && openAPIOperation.getDeprecated()) return;
+
           String name = restOperation + " - " + openAPIOperation.getSummary();
           String value = api + ":" + restOperation + ":" + pathName + ":" + openAPIOperation.getSummary() + ":" + subApi ;
 
