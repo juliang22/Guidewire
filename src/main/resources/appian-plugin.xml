@@ -10,22 +10,10 @@
       <connected-system-template key="GuidewireCSP"
                                  name="Guidewire"
                                  class="com.appian.guidewire.templates.GuidewireCSP"/>
-      <integration-template key="ClaimsIntegrationTemplate"
-                            name="Claims"
-                            class="com.appian.guidewire.templates.apis.ClaimsIntegrationTemplate"
-                            request-policy="write" />
-      <integration-template key="PoliciesIntegrationTemplate"
-                            name="Policies"
-                            class="com.appian.guidewire.templates.apis.PoliciesIntegrationTemplate"
-                            request-policy="write" />
-      <integration-template key="JobsIntegrationTemplate"
-                            name="Jobs"
-                            class="com.appian.guidewire.templates.apis.JobsIntegrationTemplate"
-                            request-policy="write" />
-      <integration-template key="AccountsIntegrationTemplate"
-                            name="Accounts"
-                            class="com.appian.guidewire.templates.apis.AccountsIntegrationTemplate"
-                            request-policy="write" />
+      <integration-template key="GuidewireIntegrationTemplate"
+                            name="Guidewire"
+                            class="com.appian.guidewire.templates.apis.GuidewireIntegrationTemplate"
+                            request-policy="read_and_write" />
     </version>
   </connected-system>
 </appian-plugin>

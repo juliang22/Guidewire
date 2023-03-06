@@ -2,10 +2,13 @@ package com.appian.guidewire.templates.UI;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -20,51 +23,67 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.TextPrope
 import com.appian.guidewire.templates.GuidewireCSP;
 
 import io.swagger.v3.oas.models.Operation;
+import io.swagger.v3.oas.models.PathItem;
 import io.swagger.v3.oas.models.media.MediaType;
 import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
+import io.swagger.v3.oas.models.parameters.RequestBody;
+import io.swagger.v3.oas.models.responses.ApiResponse;
 import std.Util;
 
-public class GuidewireUIBuilder extends UIBuilder{
+public class GuidewireUIBuilder extends UIBuilder {
   public GuidewireUIBuilder(SimpleIntegrationTemplate simpleIntegrationTemplate, String api) {
     super();
-    setOpenAPI(api);
+    /*    setOpenAPI(api);*/
     setSimpleIntegrationTemplate(simpleIntegrationTemplate);
-    setDefaultEndpoints();
+    setApi(api);
+    setSubApiList(api);
   }
 
   // Sets the OpenAPI api and the paths. This is stored statically in the CSP so that it is loaded when the plugin is installed
   // Modify this method and the CSP with relevant API constants and path names
-  public void setOpenAPI(String api) {
-    switch (api) {
-      case POLICIES:
-        this.openAPI = GuidewireCSP.policiesOpenApi;
-        break;
-      case CLAIMS:
-        this.openAPI = GuidewireCSP.claimsOpenApi;
-        break;
-      case JOBS:
-        this.openAPI = GuidewireCSP.jobsOpenApi;
-        break;
-      case ACCOUNTS:
-        this.openAPI = GuidewireCSP.accountsOpenApi;
-        break;
-    }
-    this.paths = openAPI.getPaths();
-    this.api = api;
+  public void setOpenAPI(String api, String subApi) {
+    // TODO: Update with OOTB swagger files
+    setSubApi(subApi);
+    setOpenAPI(GuidewireCSP.getOpenAPI(api, subApi));
+    setPaths(openAPI.getPaths());
+    setDefaultEndpoints(null);
   }
 
   public PropertyDescriptor<?>[] build() {
 
-    // If no endpoint is selected, just build the api dropdown
-    String selectedEndpoint = integrationConfiguration.getValue(CHOSEN_ENDPOINT);
+    ArrayList<Choice> choices = new ArrayList<>();
+    SUB_API_MAP.get(api).forEach((String subApi) -> {
+      choices.add(Choice.builder().name(Util.camelCaseToTitleCase(subApi)).value(subApi).build());
+    });
+
+    TextPropertyDescriptor subApiUI = simpleIntegrationTemplate.textProperty(SUB_API_TYPE)
+        .label("Guidewire Module")
+        .choices(choices.toArray(new Choice[0]))
+        .description("Select the GuideWire API to access. Create a separate connected system for each additional API.")
+        .isRequired(true)
+        .refresh(RefreshPolicy.ALWAYS)
+        .build();
+    List<PropertyDescriptor<?>> result = new ArrayList<>(Collections.singletonList(subApiUI));
+
+    // If the subAPI has not been selected, only render the subAPI dropdown
+    if (integrationConfiguration.getValue(SUB_API_TYPE) == null) {
+      return result.toArray(new PropertyDescriptor<?>[0]);
+    }
+
+    String subApi = integrationConfiguration.getValue(SUB_API_TYPE).toString();
+    setOpenAPI(api, subApi);
     TextPropertyDescriptor searchBar = simpleIntegrationTemplate.textProperty(SEARCH)
         .label("Sort Endpoints Dropdown")
         .refresh(RefreshPolicy.ALWAYS)
         .instructionText("Sort the endpoints dropdown below with a relevant search query.")
-        .placeholder("Example query for the Claims API: 'injury incidents.'")
+        .placeholder("Sort Query")
         .build();
-    List<PropertyDescriptor<?>> result = new ArrayList<>(Arrays.asList(searchBar, endpointChoiceBuilder()));
+
+    result.addAll(Arrays.asList(searchBar, endpointChoiceBuilder()));
+
+    // If no endpoint is selected, just build the api dropdown
+    String selectedEndpoint = integrationConfiguration.getValue(CHOSEN_ENDPOINT);
     if (selectedEndpoint == null) {
       return result.toArray(new PropertyDescriptor<?>[0]);
     }
@@ -76,7 +95,8 @@ public class GuidewireUIBuilder extends UIBuilder{
     String restOperation = selectedEndpointStr[1];
     String pathName = selectedEndpointStr[2];
     String pathSummary = selectedEndpointStr[3];
-    if (!apiType.equals(api)) {
+    String subApiType = selectedEndpointStr[4];
+    if (!apiType.equals(api) || !subApiType.equals(subApi)) {
       integrationConfiguration.setValue(CHOSEN_ENDPOINT, null).setValue(SEARCH, "");
     } else {
       // The key of the request body is dynamic so when I need to get it in the execute function:
@@ -91,7 +111,6 @@ public class GuidewireUIBuilder extends UIBuilder{
     }
     return result.toArray(new PropertyDescriptor<?>[0]);
   }
-
 
   public void buildRestCall(String restOperation, List<PropertyDescriptor<?>> result, String pathName) {
     setPathName(pathName);
@@ -127,123 +146,113 @@ public class GuidewireUIBuilder extends UIBuilder{
             "the endpoint.")
         .label("Pagination")
         .isExpressionable(true)
-        .placeholder("25")
+        /*        .isRequired(true)*/.placeholder("25")
         .build());
 
     // Filtering and Sorting
-    Map<?,?> returnedFieldProperties = get.getResponses()
-        .get("200")
-        .getContent()
-        .get("application/json")
-        .getSchema()
-        .getProperties();
-    AtomicBoolean hasSorting = new AtomicBoolean(false);
-    AtomicBoolean hasFiltering = new AtomicBoolean(false);
-    if (returnedFieldProperties != null) {
-      Schema<?> returnedFieldItems = ((Schema<?>)returnedFieldProperties.get("data")).getItems();
-      if (returnedFieldItems != null) {
+    Optional<Schema> returnedFieldItems = Optional.ofNullable(get.getResponses().get("200").getContent().get("application/json"))
+        .map(MediaType::getSchema)
+        .map(Schema::getProperties)
+        .map(map -> map.get("data"))
+        .map(schema -> ((Schema)schema).getItems());
 
-        // Building up sorting and filtering options
-        TextPropertyDescriptor.TextPropertyDescriptorBuilder sortedChoices = simpleIntegrationTemplate.textProperty(SORT)
-            .label("Sort Response")
-            .instructionText("Sort response by selecting a field in the dropdown. If the dropdown is empty," +
-                " there are no sortable fields available.")
-            .isExpressionable(true)
-            .refresh(RefreshPolicy.ALWAYS);
-        TextPropertyDescriptor.TextPropertyDescriptorBuilder filteredChoices = simpleIntegrationTemplate.textProperty(FILTER_FIELD)
-            .label("Filter Response")
-            .instructionText("Filter response by selecting a field in the dropdown. If the dropdown is " +
-                "empty, there are no filterable fields available.")
-            .isExpressionable(true)
-            .refresh(RefreshPolicy.ALWAYS);
+    if (returnedFieldItems.isPresent()) {
+      AtomicBoolean hasSorting = new AtomicBoolean(false);
+      AtomicBoolean hasFiltering = new AtomicBoolean(false);
 
-        // Parsing to find filtering and sorting options available on the call
-        Map<?,?> returnedFields = returnedFieldItems.getProperties().get("attributes").getProperties();
-        returnedFields.forEach((key, val) -> {
-          Map<?,?> extensions = ((Schema<?>)val).getExtensions();
-          if (extensions != null && extensions.get("x-gw-extensions") instanceof LinkedHashMap) {
+      // Building up sorting and filtering options
+      TextPropertyDescriptor.TextPropertyDescriptorBuilder sortedChoices = simpleIntegrationTemplate.textProperty(SORT)
+          .label("Sort Response")
+          .instructionText("Sort response by selecting a field in the dropdown. If the dropdown is empty," +
+              " there are no sortable fields available.")
+          .isExpressionable(true)
+          .refresh(RefreshPolicy.ALWAYS);
+      TextPropertyDescriptor.TextPropertyDescriptorBuilder filteredChoices = simpleIntegrationTemplate.textProperty(FILTER_FIELD)
+          .label("Filter Response")
+          .instructionText("Filter response by selecting a field in the dropdown. If the dropdown is " +
+              "empty, there are no filterable fields available.")
+          .isExpressionable(true)
+          .refresh(RefreshPolicy.ALWAYS);
 
-            Object isFilterable = ((LinkedHashMap<?,?>)extensions.get("x-gw-extensions")).get("filterable");
-            if (isFilterable != null) {
-              /*              System.out.println(key + " is filterable");*/
-              filteredChoices.choice(Choice.builder().name(key.toString()).value(key.toString()).build());
-              hasFiltering.set(true);
-            }
+      // Parsing to find filtering and sorting options available on the call
+      Map<?,?> returnedFields = ((Schema<?>)returnedFieldItems.get().getProperties().get("attributes")).getProperties();
+      returnedFields.forEach((key, val) -> {
 
-            Object isSortable = ((LinkedHashMap<?,?>)extensions.get("x-gw-extensions")).get("sortable");
-            if (isSortable != null) {
-              sortedChoices.choice(Choice.builder().name(key.toString()).value(key.toString()).build());
-              hasSorting.set(true);
-            }
-          }
-        });
-        // If there are sorting options, add sorting UI
-        if (hasSorting.get()) {
-          result.add(sortedChoices
-              .isRequired(integrationConfiguration.getValue(SORT_ORDER) != null).build());
-          Choice[] sortOrder = {
-              Choice.builder().name("Ascending").value("+").build(),
-              Choice.builder().name("Descending").value("-").build()
-          };
-          result.add(simpleIntegrationTemplate.textProperty(SORT_ORDER)
-              .label("Sort Order of Response")
-              .choices(sortOrder)
-              .isExpressionable(true)
-              .isRequired(integrationConfiguration.getValue(SORT) != null)
-              .displayHint(DisplayHint.NORMAL)
-              .instructionText("Default sort order is ascending.")
-              .refresh(RefreshPolicy.ALWAYS)
-              .build()
-          );
+        Optional<Object> extensions = Optional.ofNullable(((Schema<?>)val).getExtensions())
+            .map(schema -> schema.get("x-gw-extensions"));
+        Optional<?> filterable = extensions.map(extensionMap -> ((LinkedHashMap<?,?>)extensionMap).get("filterable"));
+        Optional<?> sortable = extensions.map(extensionMap -> ((LinkedHashMap<?,?>)extensionMap).get("sortable"));
+
+        if (filterable.isPresent()) {
+          filteredChoices.choice(Choice.builder().name(key.toString()).value(key.toString()).build());
+          hasFiltering.set(true);
         }
 
-        // If there are filtering options, add filtering UI
-        if (hasFiltering.get()) {
-          TextPropertyDescriptor.TextPropertyDescriptorBuilder filteringOperatorsBuilder = simpleIntegrationTemplate.textProperty(FILTER_OPERATOR)
-              .instructionText("Select an operator to filter the results")
-              .refresh(RefreshPolicy.ALWAYS)
-              .isExpressionable(true);
-          FILTERING_OPTIONS.entrySet().forEach(option -> {
-            filteringOperatorsBuilder.choice(
-                Choice.builder().name(option.getKey()).value(option.getValue()
-                ).build());
-          });
-
-          // If any of the options are selected, the set will have more items than just null and the rest of the fields become
-          // required
-          Set<String> requiredSet = new HashSet<>(Arrays.asList(
-              integrationConfiguration.getValue(FILTER_FIELD),
-              integrationConfiguration.getValue(FILTER_OPERATOR),
-              integrationConfiguration.getValue(FILTER_VALUE)
-          ));
-          boolean isRequired = requiredSet.size() > 1;
-
-          // Add sorting fields to the UI
-          result.add(filteredChoices.isRequired(isRequired).build());
-          result.add(filteringOperatorsBuilder.isRequired(isRequired).build());
-          result.add(simpleIntegrationTemplate.textProperty(FILTER_VALUE)
-              .instructionText("Insert the query to filter the chosen field")
-              .isRequired(isRequired)
-              .refresh(RefreshPolicy.ALWAYS)
-              .isExpressionable(true)
-              .refresh(RefreshPolicy.ALWAYS)
-              .placeholder("22")
-              .build());
+        if (sortable.isPresent()) {
+          sortedChoices.choice(Choice.builder().name(key.toString()).value(key.toString()).build());
+          hasSorting.set(true);
         }
+
+      });
+      // If there are sorting options, add sorting UI
+      if (hasSorting.get()) {
+        result.add(sortedChoices.isRequired(integrationConfiguration.getValue(SORT_ORDER) != null).build());
+        Choice[] sortOrder = {Choice.builder().name("Ascending").value("+").build(),
+            Choice.builder().name("Descending").value("-").build()};
+        result.add(simpleIntegrationTemplate.textProperty(SORT_ORDER)
+            .label("Sort Order of Response")
+            .choices(sortOrder)
+            .isExpressionable(true)
+            .isRequired(integrationConfiguration.getValue(SORT) != null)
+            .displayHint(DisplayHint.NORMAL)
+            .instructionText("Select the sort order. Default sort order is ascending")
+            .refresh(RefreshPolicy.ALWAYS)
+            .build());
       }
 
+      // If there are filtering options, add filtering UI
+      if (hasFiltering.get()) {
+        TextPropertyDescriptor.TextPropertyDescriptorBuilder filteringOperatorsBuilder = simpleIntegrationTemplate
+            .textProperty(FILTER_OPERATOR)
+            .instructionText("Select an operator to filter the results")
+            .refresh(RefreshPolicy.ALWAYS)
+            .isExpressionable(true);
+        FILTERING_OPTIONS.entrySet().forEach(option -> {
+          filteringOperatorsBuilder.choice(Choice.builder().name(option.getKey()).value(option.getValue()).build());
+        });
+
+        // If any of the options are selected, the set will have more items than just null and the rest of the fields become
+        // required
+        Set<String> requiredSet = new HashSet<>(
+            Arrays.asList(integrationConfiguration.getValue(FILTER_FIELD), integrationConfiguration.getValue(FILTER_OPERATOR),
+                integrationConfiguration.getValue(FILTER_VALUE)));
+        boolean isRequired = requiredSet.size() > 1;
+
+        // Add sorting fields to the UI
+        result.add(filteredChoices.isRequired(isRequired).build());
+        result.add(filteringOperatorsBuilder.isRequired(isRequired).build());
+        result.add(simpleIntegrationTemplate.textProperty(FILTER_VALUE)
+            .instructionText("Insert the query to filter the chosen field")
+            .isRequired(isRequired)
+            .refresh(RefreshPolicy.ALWAYS)
+            .isExpressionable(true)
+            .refresh(RefreshPolicy.ALWAYS)
+            .placeholder("22")
+            .build());
+      }
     }
 
     // Included resources
-    Schema<?> hasIncludedResources = ((Schema<?>)get.getResponses()
-        .get("200")
-        .getContent()
-        .get("application/json")
-        .getSchema()
-        .getProperties()
-        .get("included"));
-    if (hasIncludedResources != null) {
-      Set<?> included = hasIncludedResources.getProperties().keySet();
+    Optional<Object> hasIncludedResources = Optional.ofNullable(get.getResponses())
+        .map(schema -> schema.get("200"))
+        .map(ApiResponse::getContent)
+        .map(contentMap -> contentMap.get("application/json"))
+        .map(MediaType::getSchema)
+        .map(Schema::getProperties)
+        .map(properties -> properties.get("included"));
+
+    if (hasIncludedResources.isPresent()) {
+      Set<?> included = ((Schema<?>)hasIncludedResources.get()).getProperties().keySet();
 
       LocalTypeDescriptor.Builder includedBuilder = simpleIntegrationTemplate.localType(
           Util.removeSpecialCharactersFromPathName(pathName) + INCLUDED_RESOURCES);
@@ -268,7 +277,6 @@ public class GuidewireUIBuilder extends UIBuilder{
               "they exist, they will be returned alongside the root resource.")
           .build());
     }
-
   }
 
   public void buildPost(List<PropertyDescriptor<?>> result) {
@@ -276,6 +284,19 @@ public class GuidewireUIBuilder extends UIBuilder{
     if (paths.get(pathName).getPost().getRequestBody() == null) {
       result.add(NO_REQ_BODY_UI);
       return;
+    }
+
+    // Composite Request
+    if (pathName.equals("/composite")) {
+      Optional<Schema> schema = Optional.ofNullable(paths.get(pathName))
+          .map(PathItem::getPost)
+          .map(Operation::getRequestBody)
+          .map(RequestBody::getContent)
+          .map(content -> content.get("application/json"))
+          .map(MediaType::getSchema);
+
+      Set<String> required = schema.get().getRequired() != null ? new HashSet<>(schema.get().getRequired()) : null;
+      ReqBodyUIBuilder(result, schema.get().getProperties(), required, new HashMap<>(), POST);
     }
 
     MediaType documentType = openAPI.getPaths().get(pathName).getPost().getRequestBody().getContent().get("multipart/form-data");
@@ -288,34 +309,37 @@ public class GuidewireUIBuilder extends UIBuilder{
           .instructionText("Insert a document to upload")
           .build());
     }
-    Map<?,?> properties = (documentType == null) ?
-        ((ObjectSchema)paths.get(pathName)
-            .getPost()
-            .getRequestBody()
-            .getContent()
-            .get("application/json")
-            .getSchema()
-            .getProperties()
-            .get("data"))
-            .getProperties()
-            .get("attributes")
-            .getProperties() :
-        ((ObjectSchema)openAPI.getPaths()
-            .get(pathName)
-            .getPost()
-            .getResponses()
-            .get("201")
-            .getContent()
-            .get("application/json")
-            .getSchema()
-            .getProperties()
-            .get("data"))
-            .getProperties()
-            .get("attributes")
-            .getProperties();
 
-    ReqBodyUIBuilder(result, properties);
+    Optional<Schema> schema = (documentType == null) ?
+        Optional.ofNullable(paths.get(pathName))
+            .map(PathItem::getPost)
+            .map(Operation::getRequestBody)
+            .map(RequestBody::getContent)
+            .map(content -> content.get("application/json"))
+            .map(MediaType::getSchema)
+            .map(Schema::getProperties)
+            .map(properties -> properties.get("data"))
+            .map(data -> ((ObjectSchema)data).getProperties())
+            .map(dataMap -> dataMap.get("attributes")) :
+        Optional.ofNullable(paths.get(pathName))
+            .map(PathItem::getPost)
+            .map(Operation::getResponses)
+            .map(apiResponses -> apiResponses.get("201"))
+            .map(ApiResponse::getContent)
+            .map(content -> content.get("application/json"))
+            .map(MediaType::getSchema)
+            .map(Schema::getProperties)
+            .map(properties -> properties.get("data"))
+            .map(data -> ((ObjectSchema)data).getProperties())
+            .map(properties -> properties.get("attributes"));
 
+    if (!schema.isPresent()) {
+      result.add(NO_REQ_BODY_UI);
+      return;
+    }
+
+    Set<String> required = schema.get().getRequired() != null ? new HashSet<>(schema.get().getRequired()) : null;
+    ReqBodyUIBuilder(result, schema.get().getProperties(), required, new HashMap<>(), POST);
   }
 
   public void buildPatch(List<PropertyDescriptor<?>> result) {
@@ -335,34 +359,40 @@ public class GuidewireUIBuilder extends UIBuilder{
           .instructionText("Insert a document to upload")
           .build());
     }
-    Map<?,?> properties = (documentType == null) ?
-        ((ObjectSchema)paths.get(pathName)
-            .getPatch()
-            .getRequestBody()
-            .getContent()
-            .get("application/json")
-            .getSchema()
-            .getProperties()
-            .get("data"))
-            .getProperties()
-            .get("attributes")
-            .getProperties() :
-        ((ObjectSchema)openAPI.getPaths()
-            .get(pathName)
-            .getPatch()
-            .getResponses()
-            .get("200")
-            .getContent()
-            .get("application/json")
-            .getSchema()
-            .getProperties()
-            .get("data"))
-            .getProperties()
-            .get("attributes")
-            .getProperties();
 
-    ReqBodyUIBuilder(result, properties);
+    Optional<Schema> schema = (documentType == null) ?
+        Optional.ofNullable(paths.get(pathName))
+            .map(PathItem::getPatch)
+            .map(Operation::getRequestBody)
+            .map(RequestBody::getContent)
+            .map(content -> content.get("application/json"))
+            .map(MediaType::getSchema)
+            .map(Schema::getProperties)
+            .map(properties -> properties.get("data"))
+            .map(data -> ((ObjectSchema)data).getProperties())
+            .map(dataMap -> dataMap.get("attributes")) :
+        Optional.ofNullable(paths.get(pathName))
+            .map(PathItem::getPatch)
+            .map(Operation::getResponses)
+            .map(apiResponses -> apiResponses.get("200"))
+            .map(ApiResponse::getContent)
+            .map(content -> content.get("application/json"))
+            .map(MediaType::getSchema)
+            .map(Schema::getProperties)
+            .map(properties -> properties.get("data"))
+            .map(data -> ((ObjectSchema)data).getProperties())
+            .map(properties -> properties.get("attributes"));
+
+    if (!schema.isPresent()) {
+      result.add(NO_REQ_BODY_UI);
+      return;
+    }
+
+    Set<String> required = schema.get().getRequired() != null ? new HashSet<>(schema.get().getRequired()) : null;
+
+    ReqBodyUIBuilder(result, schema.get().getProperties(), required, new HashMap<>(), PATCH);
   }
 
-  public void buildDelete(List<PropertyDescriptor<?>> result) {}
+  public void buildDelete(List<PropertyDescriptor<?>> result) {
+  }
 }
