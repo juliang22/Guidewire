@@ -377,9 +377,9 @@ public abstract class UIBuilder implements ConstantKeys {
     if (searchQuery != null && !searchQuery.equals("") && !choicesForSearch.isEmpty()) {
       List<ExtractedResult> extractedResults = FuzzySearch.extractSorted(searchQuery, choicesForSearch);
       extractedResults.forEach(choice -> {
-        String restType = choice.getString().split(":")[1];
-        String restOperation = choice.getString().split(":")[3];
-        choices.add(Choice.builder().name(restType + " - " + restOperation).value(choice.getString()).build());
+        String restOperation = choice.getString().split(":")[1];
+        String summary = choice.getString().split(":")[3];
+        choices.add(Choice.builder().name(restOperation + " - " + summary).value(choice.getString()).build());
       });
     }
 
