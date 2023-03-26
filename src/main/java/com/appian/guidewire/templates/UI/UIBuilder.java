@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.appian.connectedsystems.simplified.sdk.SimpleIntegrationTemplate;
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
@@ -22,6 +23,7 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.TypeRefer
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
+import io.swagger.v3.oas.models.PathItem;
 import io.swagger.v3.oas.models.Paths;
 import io.swagger.v3.oas.models.media.ArraySchema;
 import io.swagger.v3.oas.models.media.BooleanSchema;
@@ -374,19 +376,41 @@ public abstract class UIBuilder implements ConstantKeys {
     // If there is a search query, sort the dropdown with the query
     String searchQuery = integrationConfiguration.getValue(SEARCH);
     ArrayList<Choice> choices = new ArrayList<>();
+    AtomicReference<String> description = new AtomicReference<>("");
     if (searchQuery != null && !searchQuery.equals("") && !choicesForSearch.isEmpty()) {
       List<ExtractedResult> extractedResults = FuzzySearch.extractSorted(searchQuery, choicesForSearch);
       extractedResults.forEach(choice -> {
-        String restOperation = choice.getString().split(":")[1];
-        String summary = choice.getString().split(":")[3];
-        choices.add(Choice.builder().name(restOperation + " - " + summary).value(choice.getString()).build());
+        String[] pathInfo = choice.getString().split(":");
+        String restOperation = pathInfo[1];
+        PathItem chosenPath = paths.get(pathInfo[2]);
+
+        Operation chosenOpenApiPath = null;
+        switch(restOperation) {
+          case GET:
+            chosenOpenApiPath = chosenPath.getGet();
+            break;
+          case POST:
+            chosenOpenApiPath = chosenPath.getPost();
+            break;
+          case PATCH:
+            chosenOpenApiPath = chosenPath.getPatch();
+            break;
+          case DELETE:
+            chosenOpenApiPath = chosenPath.getDelete();
+            break;
+        }
+        choices.add(Choice.builder().name(restOperation + " - " + chosenOpenApiPath.getSummary()).value(choice.getString()).build());
+        if (!chosenOpenApiPath.getSummary().equals(chosenOpenApiPath.getDescription())) {
+          description.set(chosenOpenApiPath.getDescription());
+        }
       });
     }
 
     // If an endpoint is selected, the instructionText will update to the REST call and path name
     Object chosenEndpoint = integrationConfiguration.getValue(CHOSEN_ENDPOINT);
-    String instructionText =
-        chosenEndpoint != null ? chosenEndpoint.toString().split(":")[1] + "  " + chosenEndpoint.toString().split(":")[2] : "";
+    String instructionText = chosenEndpoint != null ?
+        chosenEndpoint.toString().split(":")[1] + "  " + chosenEndpoint.toString().split(":")[2] + "  " + description  :
+        "";
     return simpleIntegrationTemplate.textProperty(CHOSEN_ENDPOINT)
         .isRequired(true)
         .refresh(RefreshPolicy.ALWAYS)
