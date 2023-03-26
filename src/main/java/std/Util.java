@@ -18,10 +18,12 @@ import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
 
 import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.Operation;
+import io.swagger.v3.oas.models.PathItem;
 import io.swagger.v3.parser.OpenAPIV3Parser;
 import io.swagger.v3.parser.core.models.ParseOptions;
 
-public class Util {
+public class Util implements ConstantKeys{
 
     private static List<Integer> responseCode = Arrays.asList(200, 201, 202, 207, 204);
 
@@ -117,6 +119,40 @@ public class Util {
 
     public static String removeLastChar(String str) {
         return str.substring(0, str.length() - 1);
+    }
+
+    public static Operation getOperation(PathItem path, String restOperation) {
+        Operation chosenOpenApiPath = null;
+        switch(restOperation) {
+            case GET:
+                chosenOpenApiPath = path.getGet();
+                break;
+            case POST:
+                chosenOpenApiPath = path.getPost();
+                break;
+            case PATCH:
+                chosenOpenApiPath = path.getPatch();
+                break;
+            case DELETE:
+                chosenOpenApiPath = path.getDelete();
+                break;
+        }
+        return chosenOpenApiPath;
+    }
+
+    public static String getPathProperties(PathItem path, String restOperation, String property) {
+
+        Operation chosenOpenApiPath = getOperation(path, restOperation);
+        String result = "";
+        switch (property) {
+            case "description":
+                result = chosenOpenApiPath.getDescription();
+                break;
+            case "summary":
+                result = chosenOpenApiPath.getSummary();
+                break;
+        }
+        return result;
     }
 
 }
