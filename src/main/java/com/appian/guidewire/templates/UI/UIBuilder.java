@@ -257,9 +257,13 @@ public abstract class UIBuilder implements ConstantKeys {
         String innerKey = entry.getKey();
         Schema<?> innerItem = entry.getValue();
 
-        Set<String> innerRequiredProperties = innerItem.getRequired() != null ?
+/*        Set<String> innerRequiredProperties = innerItem.getRequired() != null ?
             new HashSet<>(innerItem.getRequired()) :
-            new HashSet<>(item.getItems().getRequired());
+            new HashSet<>(item.getItems().getRequired());*/
+
+        Set<String> innerRequiredProperties = new HashSet<>();
+        if (innerItem.getRequired() != null) innerRequiredProperties.addAll(innerItem.getRequired());
+        else if (item.getItems().getRequired() != null) innerRequiredProperties.addAll(item.getItems().getRequired());
 
         LocalTypeDescriptor nested = parseRequestBody(innerKey, innerItem, innerRequiredProperties,
             removeFieldsFromReqBody, httpCall);
