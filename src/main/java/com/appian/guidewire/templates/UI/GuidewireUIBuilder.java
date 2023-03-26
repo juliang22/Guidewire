@@ -76,44 +76,44 @@ public class GuidewireUIBuilder extends UIBuilder {
     TextPropertyDescriptor searchBar = simpleIntegrationTemplate.textProperty(SEARCH)
         .label("Sort Endpoints Dropdown")
         .refresh(RefreshPolicy.ALWAYS)
-        .instructionText("Sort the endpoints dropdown below with a relevant search query.")
+        .instructionText("Sort the endpoints dropdown below with a relevant search query")
         .placeholder("Sort Query")
         .build();
-
-    result.addAll(Arrays.asList(searchBar, endpointChoiceBuilder()));
 
     // If no endpoint is selected, just build the api dropdown
     String selectedEndpoint = integrationConfiguration.getValue(CHOSEN_ENDPOINT);
     if (selectedEndpoint == null) {
+      result.addAll(Arrays.asList(searchBar, endpointChoiceBuilder()));
       return result.toArray(new PropertyDescriptor<?>[0]);
     }
 
-    // If a user switched to another api after they selected an endpoint, set the endpoint and search to null
-    // Else if a user selects api then a corresponding endpoint, update label and description accordingly
     String[] selectedEndpointStr = selectedEndpoint.split(":");
     String apiType = selectedEndpointStr[0];
     String restOperation = selectedEndpointStr[1];
     String pathName = selectedEndpointStr[2];
-    String pathSummary = selectedEndpointStr[3];
-    String subApiType = selectedEndpointStr[4];
+    String subApiType = selectedEndpointStr[3];
+    // If a user switched to another api after they selected an endpoint, set the endpoint and search to null
     if (!apiType.equals(api) || !subApiType.equals(subApi)) {
       integrationConfiguration.setValue(CHOSEN_ENDPOINT, null).setValue(SEARCH, "");
-    } else {
-      // The key of the request body is dynamic so when I need to get it in the execute function:
-      // key = integrationConfiguration.getProperty(REQ_BODY).getLabel();
-      // integrationConfiguration.getProperty(key)
-      // TODO: put below in buildRestCall()
-      String KEY_OF_REQ_BODY = Util.removeSpecialCharactersFromPathName(pathName);
-      result.add(simpleIntegrationTemplate.textProperty(REQ_BODY).label(KEY_OF_REQ_BODY).isHidden(true).build());
-
-      // Building the result with path variables, request body, and other functionality needed to make the request
-      buildRestCall(restOperation, result, pathName);
+      result.addAll(Arrays.asList(searchBar, endpointChoiceBuilder()));
+      return result.toArray(new PropertyDescriptor<?>[0]);
     }
+    // Else if a user selects api then a corresponding endpoint, update label and description accordingly
+    result.addAll(Arrays.asList(searchBar, endpointChoiceBuilder()));
+    String KEY_OF_REQ_BODY = Util.removeSpecialCharactersFromPathName(pathName);
+    result.add(simpleIntegrationTemplate.textProperty(REQ_BODY).label(KEY_OF_REQ_BODY).isHidden(true).build());
+    // The key of the request body is dynamic so when I need to get it in the execute function:
+    // key = integrationConfiguration.getProperty(REQ_BODY).getLabel();
+    // integrationConfiguration.getProperty(key);
+
+    // Building the result with path variables, request body, and other functionality needed to make the request
+    buildRestCall(restOperation, result, pathName);
     return result.toArray(new PropertyDescriptor<?>[0]);
   }
 
   public void buildRestCall(String restOperation, List<PropertyDescriptor<?>> result, String pathName) {
     setPathName(pathName);
+    setRestOperation(restOperation);
     setPathVarsUI();
     if (getPathVarsUI().size() > 0) {
       result.addAll(getPathVarsUI());
@@ -132,7 +132,6 @@ public class GuidewireUIBuilder extends UIBuilder {
       case (DELETE):
         buildDelete(result);
     }
-
   }
 
   public void buildGet(List<PropertyDescriptor<?>> result) {
@@ -143,10 +142,11 @@ public class GuidewireUIBuilder extends UIBuilder {
     // result.add(simpleIntegrationTemplate.textProperty(PADDING).isReadOnly(true).label("").build());
     result.add(simpleIntegrationTemplate.integerProperty(PAGESIZE)
         .instructionText("Return 'n' number of items in the response. Default returns maximum number of resources allowed by " +
-            "the endpoint.")
+            "the endpoint")
         .label("Pagination")
         .isExpressionable(true)
-        /*        .isRequired(true)*/.placeholder("25")
+        /*        .isRequired(true)*/
+        .placeholder("25")
         .build());
 
     // Filtering and Sorting
@@ -164,13 +164,13 @@ public class GuidewireUIBuilder extends UIBuilder {
       TextPropertyDescriptor.TextPropertyDescriptorBuilder sortedChoices = simpleIntegrationTemplate.textProperty(SORT)
           .label("Sort Response")
           .instructionText("Sort response by selecting a field in the dropdown. If the dropdown is empty," +
-              " there are no sortable fields available.")
+              " there are no sortable fields available")
           .isExpressionable(true)
           .refresh(RefreshPolicy.ALWAYS);
       TextPropertyDescriptor.TextPropertyDescriptorBuilder filteredChoices = simpleIntegrationTemplate.textProperty(FILTER_FIELD)
           .label("Filter Response")
           .instructionText("Filter response by selecting a field in the dropdown. If the dropdown is " +
-              "empty, there are no filterable fields available.")
+              "empty, there are no filterable fields available")
           .isExpressionable(true)
           .refresh(RefreshPolicy.ALWAYS);
 
@@ -184,12 +184,12 @@ public class GuidewireUIBuilder extends UIBuilder {
         Optional<?> sortable = extensions.map(extensionMap -> ((LinkedHashMap<?,?>)extensionMap).get("sortable"));
 
         if (filterable.isPresent()) {
-          filteredChoices.choice(Choice.builder().name(key.toString()).value(key.toString()).build());
+          filteredChoices.choice(Choice.builder().name(Util.camelCaseToTitleCase(key.toString())).value(key.toString()).build());
           hasFiltering.set(true);
         }
 
         if (sortable.isPresent()) {
-          sortedChoices.choice(Choice.builder().name(key.toString()).value(key.toString()).build());
+          sortedChoices.choice(Choice.builder().name(Util.camelCaseToTitleCase(key.toString())).value(key.toString()).build());
           hasSorting.set(true);
         }
 

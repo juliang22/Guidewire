@@ -30,6 +30,7 @@ import io.swagger.v3.oas.models.media.BooleanSchema;
 import io.swagger.v3.oas.models.media.IntegerSchema;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.media.StringSchema;
+import io.swagger.v3.oas.models.parameters.PathParameter;
 import me.xdrop.fuzzywuzzy.FuzzySearch;
 import me.xdrop.fuzzywuzzy.model.ExtractedResult;
 import std.ConstantKeys;
@@ -39,6 +40,7 @@ public abstract class UIBuilder implements ConstantKeys {
   protected String api;
   protected String subApi;
   protected String pathName;
+  protected String restOperation;
   protected List<PropertyDescriptor<?>> pathVarsUI = new ArrayList<>();
   protected OpenAPI openAPI = null;
   protected List<String> subApiList = null;
@@ -72,6 +74,10 @@ public abstract class UIBuilder implements ConstantKeys {
     this.pathName = pathName;
   }
 
+  public void setRestOperation(String restOperation) {
+    this.restOperation = restOperation;
+  }
+
   public void setSubApiList(String api) {this.subApiList = SUB_API_MAP.get(api);}
 
   public void setApi(String api) {this.api = api;}
@@ -83,17 +89,20 @@ public abstract class UIBuilder implements ConstantKeys {
 
   // Find all occurrences of variables inside path (ex. {claimId})
   protected void setPathVarsUI() {
-    List<String> pathVars = Util.getPathVarsStr(pathName);
-    pathVars.forEach(key -> {
-      TextPropertyDescriptor ui = simpleIntegrationTemplate.textProperty(key)
-          .instructionText("")
-          .isRequired(true)
-          .isExpressionable(true)
-          .refresh(RefreshPolicy.ALWAYS)
-          .placeholder("1")
-          .label(Util.camelCaseToTitleCase(key))
-          .build();
-      pathVarsUI.add(ui);
+
+    Util.getOperation(paths.get(pathName), restOperation).getParameters().forEach(param -> {
+      if (param instanceof PathParameter) {
+        TextPropertyDescriptor ui = simpleIntegrationTemplate.textProperty(param.getName())
+            .instructionText("")
+            .isRequired(true)
+            .isExpressionable(true)
+            .refresh(RefreshPolicy.ALWAYS)
+            .placeholder("1")
+            .label(Util.camelCaseToTitleCase(param.getName()))
+            .instructionText(param.getDescription() != null ? param.getDescription() : "")
+            .build();
+        pathVarsUI.add(ui);
+      }
     });
   }
 
@@ -257,10 +266,6 @@ public abstract class UIBuilder implements ConstantKeys {
         String innerKey = entry.getKey();
         Schema<?> innerItem = entry.getValue();
 
-/*        Set<String> innerRequiredProperties = innerItem.getRequired() != null ?
-            new HashSet<>(innerItem.getRequired()) :
-            new HashSet<>(item.getItems().getRequired());*/
-
         Set<String> innerRequiredProperties = new HashSet<>();
         if (innerItem.getRequired() != null) innerRequiredProperties.addAll(innerItem.getRequired());
         else if (item.getItems().getRequired() != null) innerRequiredProperties.addAll(item.getItems().getRequired());
@@ -349,7 +354,7 @@ public abstract class UIBuilder implements ConstantKeys {
           if (openAPIOperation.getDeprecated() != null && openAPIOperation.getDeprecated()) return;
 
           String name = restOperation + " - " + openAPIOperation.getSummary();
-          String value = api + ":" + restOperation + ":" + pathName + ":" + openAPIOperation.getSummary() + ":" + subApi ;
+          String value = api + ":" + restOperation + ":" + pathName + ":" + subApi ;
 
           // Builds up choices for search on initial run with all paths
           choicesForSearch.add(value);
@@ -380,41 +385,30 @@ public abstract class UIBuilder implements ConstantKeys {
     // If there is a search query, sort the dropdown with the query
     String searchQuery = integrationConfiguration.getValue(SEARCH);
     ArrayList<Choice> choices = new ArrayList<>();
-    AtomicReference<String> description = new AtomicReference<>("");
     if (searchQuery != null && !searchQuery.equals("") && !choicesForSearch.isEmpty()) {
       List<ExtractedResult> extractedResults = FuzzySearch.extractSorted(searchQuery, choicesForSearch);
-      extractedResults.forEach(choice -> {
+      for (ExtractedResult choice : extractedResults) {
         String[] pathInfo = choice.getString().split(":");
         String restOperation = pathInfo[1];
         PathItem chosenPath = paths.get(pathInfo[2]);
 
-        Operation chosenOpenApiPath = null;
-        switch(restOperation) {
-          case GET:
-            chosenOpenApiPath = chosenPath.getGet();
-            break;
-          case POST:
-            chosenOpenApiPath = chosenPath.getPost();
-            break;
-          case PATCH:
-            chosenOpenApiPath = chosenPath.getPatch();
-            break;
-          case DELETE:
-            chosenOpenApiPath = chosenPath.getDelete();
-            break;
-        }
-        choices.add(Choice.builder().name(restOperation + " - " + chosenOpenApiPath.getSummary()).value(choice.getString()).build());
-        if (!chosenOpenApiPath.getSummary().equals(chosenOpenApiPath.getDescription())) {
-          description.set(chosenOpenApiPath.getDescription());
-        }
-      });
+        String summary = Util.getPathProperties(chosenPath, restOperation, "summary");
+        choices.add(Choice.builder().name(restOperation + " - " + summary).value(choice.getString()).build());
+      }
     }
 
     // If an endpoint is selected, the instructionText will update to the REST call and path name
-    Object chosenEndpoint = integrationConfiguration.getValue(CHOSEN_ENDPOINT);
-    String instructionText = chosenEndpoint != null ?
-        chosenEndpoint.toString().split(":")[1] + "  " + chosenEndpoint.toString().split(":")[2] + "  " + description  :
-        "";
+    String chosenEndpoint = integrationConfiguration.getValue(CHOSEN_ENDPOINT);
+
+    // Add description to the instruction text if it is different from the summary
+    String instructionText = "";
+    if (chosenEndpoint != null) {
+      String restOperation = chosenEndpoint.split(":")[1];
+      String chosenPath = chosenEndpoint.split(":")[2];
+      String description = Util.getPathProperties(paths.get(chosenPath), restOperation, "description");
+      instructionText = restOperation + " " + chosenPath + " " + description;
+    }
+
     return simpleIntegrationTemplate.textProperty(CHOSEN_ENDPOINT)
         .isRequired(true)
         .refresh(RefreshPolicy.ALWAYS)
