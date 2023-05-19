@@ -29,6 +29,7 @@ public abstract class Execute implements ConstantKeys {
   protected String pathNameUnmodified;
   protected String pathNameModified;
   protected String api;
+  protected String subApi;
   protected String restOperation;
   protected SimpleConfiguration integrationConfiguration;
   protected SimpleConfiguration connectedSystemConfiguration;
@@ -59,9 +60,11 @@ public abstract class Execute implements ConstantKeys {
     this.httpService = new HTTP(this);
     String[] pathData = integrationConfiguration.getValue(CHOSEN_ENDPOINT).toString().split(":");
     this.api = pathData[0];
+    this.subApi = pathData[3].split("(?<=.)(?=\\p{Lu})")[1].toLowerCase();
     this.restOperation = pathData[1];
     this.pathNameUnmodified = pathData[2];
-    this.pathNameModified = connectedSystemConfiguration.getValue(ROOT_URL) + pathData[2];
+    this.pathNameModified =
+        connectedSystemConfiguration.getValue(ROOT_URL) + "/rest/" + subApi +"/v1" + pathData[2];
     this.gson = new Gson();
     this.reqBodyKey = integrationConfiguration.getProperty(REQ_BODY) != null ?
         integrationConfiguration.getProperty(REQ_BODY).getLabel() :
@@ -102,7 +105,7 @@ public abstract class Execute implements ConstantKeys {
   // getting/setting diagnostics
   public Map<String,Object> getDiagnostics() {return this.requestDiagnostic;}
 
-  public void setDiagnostics() {
+  public void setRequestDiagnostics() {
     Map<String,Object> requestDiagnostic = new HashMap<>();
     requestDiagnostic.put("Operation: ", pathNameUnmodified);
     requestDiagnostic.put("Operation with Path Params: ", pathNameModified);
@@ -113,33 +116,16 @@ public abstract class Execute implements ConstantKeys {
   }
 
   public IntegrationDesignerDiagnostic getDiagnosticsUI() {
-    setDiagnostics();
+    setRequestDiagnostics();
     return IntegrationDesignerDiagnostic.builder()
         .addExecutionTimeDiagnostic(System.currentTimeMillis() - start)
         .addRequestDiagnostic(getDiagnostics())
-        .addResponseDiagnostic(getResponse())
+        .addResponseDiagnostic(getHTTPResponse().getCombinedResponse())
         .build();
   }
 
-  public Map<String,Object> getResponse() {
-    Map<String,Object> response = new HashMap<>();
-
-    if (HTTPResponse != null) {
-      response.putAll(HTTPResponse.getResponse());
-      response.put("Status Code", HTTPResponse.getStatusCode());
-
-      // If files were returned from the http response, add them to Appian response in designer
-      List<Document> documents = HTTPResponse.getDocuments();
-      if (documents == null) return response;
-      if (documents.size() == 1) {
-        documents.forEach(doc -> response.put("Document", doc));
-      } else {
-        AtomicInteger index = new AtomicInteger(1);
-        documents.forEach(doc -> response.put("Document" + index.getAndIncrement(), doc));
-      }
-    }
-    return response;
-  }
+  public void setHTTPResponse(HttpResponse HTTPResponse) { this.HTTPResponse = HTTPResponse; }
+  public HttpResponse getHTTPResponse() { return this.HTTPResponse; }
 
   // buildRequestBodyJSON() helper function to recursively extract user inputted values from Appian property descriptors
   public Map<String,Object> parseReqBodyJSON(String key, PropertyState val) {

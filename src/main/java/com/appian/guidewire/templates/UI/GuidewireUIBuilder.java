@@ -140,13 +140,16 @@ public class GuidewireUIBuilder extends UIBuilder {
 
     // Pagination
     // result.add(simpleIntegrationTemplate.textProperty(PADDING).isReadOnly(true).label("").build());
-    result.add(simpleIntegrationTemplate.integerProperty(PAGESIZE)
-        .instructionText("Return 'n' number of items in the response. Default returns maximum number of resources allowed by " +
-            "the endpoint")
+    result.add(simpleIntegrationTemplate.textProperty(PAGESIZE)
         .label("Pagination")
+        .instructionText("Return 'n' number of items in the response or pass in a link to the 'next' or 'prev' set of items as " +
+            "shown here: https://docs.guidewire.com/cloud/cc/202302/cloudapibf/cloudAPI/topics/101-Fund/03-query-parameters" +
+            "/c_the-pagination-query-parameters.html.")
+        .description("Every resource type has a default pageSize. This value is used when the query does not specify a pageSize. " +
+                "To paginate through results, pass the href within the 'next' parameter of 'links', found in the result of the " +
+                "initial call to the resource.")
         .isExpressionable(true)
-        /*        .isRequired(true)*/
-        .placeholder("25")
+        .placeholder("25 or /common/v1/activities?pageSize=25")
         .build());
 
     // Filtering and Sorting
@@ -243,6 +246,17 @@ public class GuidewireUIBuilder extends UIBuilder {
     }
 
     // Included resources
+    result.add(simpleIntegrationTemplate.booleanProperty(INCLUDE_TOTAL)
+            .label("Include Total")
+            .isExpressionable(true)
+            .displayMode(BooleanDisplayMode.RADIO_BUTTON)
+            .instructionText("Used to request that results should include a count of the total number of results available, " +
+                "which may be more than the total number of results currently being returned.")
+            .description("If not specified, the default is considered to be `false.` This value can only be set when there is " +
+                "more than one element returned. If the number of resources to total is sufficiently large, using the includeTotal " +
+                "parameter can affect performance. Guidewire recommends you use this parameter only when there is a need for it, and " +
+                "only when the number of resources to total is unlikely to affect performance.")
+        .build());
     Optional<Object> hasIncludedResources = Optional.ofNullable(get.getResponses())
         .map(schema -> schema.get("200"))
         .map(ApiResponse::getContent)
@@ -286,8 +300,8 @@ public class GuidewireUIBuilder extends UIBuilder {
       return;
     }
 
-    // Composite Request
-    if (pathName.equals("/composite")) {
+    // Composite Request -
+/*    if (pathName.equals("/composite")) {
       Optional<Schema> schema = Optional.ofNullable(paths.get(pathName))
           .map(PathItem::getPost)
           .map(Operation::getRequestBody)
@@ -297,7 +311,7 @@ public class GuidewireUIBuilder extends UIBuilder {
 
       Set<String> required = schema.get().getRequired() != null ? new HashSet<>(schema.get().getRequired()) : null;
       ReqBodyUIBuilder(result, schema.get().getProperties(), required, new HashMap<>(), POST);
-    }
+    }*/
 
     MediaType documentType = openAPI.getPaths().get(pathName).getPost().getRequestBody().getContent().get("multipart/form-data");
     if (documentType != null) {

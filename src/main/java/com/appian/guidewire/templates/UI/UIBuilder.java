@@ -7,10 +7,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
 
 import com.appian.connectedsystems.simplified.sdk.SimpleIntegrationTemplate;
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
+import com.appian.connectedsystems.templateframework.sdk.configuration.BooleanDisplayMode;
 import com.appian.connectedsystems.templateframework.sdk.configuration.Choice;
 import com.appian.connectedsystems.templateframework.sdk.configuration.DisplayHint;
 import com.appian.connectedsystems.templateframework.sdk.configuration.DocumentPropertyDescriptor;
@@ -302,7 +302,7 @@ public abstract class UIBuilder implements ConstantKeys {
       PropertyDescriptorBuilder<?> newProperty;
       switch (item.getType()) {
         case ("boolean"):
-          newProperty = simpleIntegrationTemplate.booleanProperty(key);
+          newProperty = simpleIntegrationTemplate.booleanProperty(key).displayMode(BooleanDisplayMode.RADIO_BUTTON);
           break;
         case ("integer"):
           newProperty = simpleIntegrationTemplate.integerProperty(key);

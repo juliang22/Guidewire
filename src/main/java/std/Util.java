@@ -78,6 +78,38 @@ public class Util implements ConstantKeys{
                 .build();
     }
 
+    public static boolean isInteger(String str) {
+        try {
+            Integer.parseInt(str);
+            return true;
+        } catch(NumberFormatException e) {
+            return false;
+        }
+    }
+
+    // finds the longest common substring at the end of the first string and the beginning of the second string by starting at
+    // the end of the first string and the start of the second string and moving towards the start of the first string and the
+    // end of the second string respectively. If it finds characters that don't match, it breaks the loop and then constructs the
+    // merged string by appending to the first string the substring of the second string starting from the end of the longest common substring.
+    //Note: This function assumes that the common part is at the end of the first string and at the start of the second string.
+    public static String mergeStrings(String str1, String str2) {
+        // start from end of str1 and beginning of str2
+        int i = str1.length() - 1;
+        int j = 0;
+
+        // find the start of overlap
+        while(i >= 0 && !str1.substring(i).equals(str2.substring(0, str1.length() - i))) {
+            i--;
+        }
+
+        // if overlap was found
+        if (i != -1) {
+            return str1 + str2.substring(str1.length() - i);
+        } else {
+            return str1 + str2;
+        }
+    }
+
     public static List<String> getPathVarsStr(String pathName) {
         Matcher m = Pattern.compile("[^{*}]+(?=})").matcher(pathName);
         List<String> pathVars = new ArrayList<>();

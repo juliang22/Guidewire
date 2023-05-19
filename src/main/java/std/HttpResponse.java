@@ -3,6 +3,7 @@ package std;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.appian.connectedsystems.templateframework.sdk.configuration.Document;
 
@@ -12,10 +13,10 @@ public class HttpResponse {
     private final String statusLine;
     private List<Document> documents;
 
-    public HttpResponse(int statusCode, String statusLine, HashMap<String, Object> result) {
-        this.response = result;
-        this.statusLine = statusLine;
+    public HttpResponse(int statusCode, String statusLine, HashMap<String, Object> response) {
         this.statusCode = statusCode;
+        this.statusLine = statusLine;
+        this.response = response;
     }
 
     public HttpResponse(int statusCode, String statusLine, HashMap<String, Object> result, List<Document> documents) {
@@ -41,6 +42,23 @@ public class HttpResponse {
     }
 
     public Map<String, Object> getResponse(){
+        return response;
+    }
+
+    public Map<String,Object> getCombinedResponse() {
+
+        Map<String,Object> response = new HashMap<>(getResponse());
+        response.put("Status Code", statusCode);
+
+        // If files were returned from the http response, add them to Appian response in designer
+        if (documents == null) return response;
+        if (documents.size() == 1) {
+            documents.forEach(doc -> response.put("Document", doc));
+        } else {
+            AtomicInteger index = new AtomicInteger(1);
+            documents.forEach(doc -> response.put("Document" + index.getAndIncrement(), doc));
+        }
+
         return response;
     }
 }

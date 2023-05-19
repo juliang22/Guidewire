@@ -61,15 +61,17 @@ public interface ConstantKeys {
   String BILLING_SYSTEM_TOOLS = "billingSystemTools";
 
 
-  String JOBS = "jobs";
-  String ACCOUNTS = "accounts";
-
 
   Map<String, List<String>> SUB_API_MAP = new HashMap<String, List<String>>() {{
-    put(CLAIMS, new ArrayList<>(Arrays.asList(CLAIMS_ADMIN, CLAIMS_ASYNC, CLAIMS_CLAIM, CLAIMS_COMMON, CLAIMS_COMPOSITE, CLAIMS_SYSTEM_TOOLS)));
-    put(POLICIES, new ArrayList<>(Arrays.asList(POLICY_ACCOUNT, POLICY_ADMIN, POLICY_ASYNC, POLICY_COMMON, POLICY_COMPOSITE,
+    put(CLAIMS, new ArrayList<>(Arrays.asList(CLAIMS_ADMIN, CLAIMS_ASYNC, CLAIMS_CLAIM, CLAIMS_COMMON,
+/*        CLAIMS_COMPOSITE, */
+        CLAIMS_SYSTEM_TOOLS)));
+    put(POLICIES, new ArrayList<>(Arrays.asList(POLICY_ACCOUNT, POLICY_ADMIN, POLICY_ASYNC, POLICY_COMMON,
+/*        POLICY_COMPOSITE,*/
         POLICY_JOB, POLICY_POLICIES, POLICY_PRODUCT_DEFINITION, POLICY_SYSTEM_TOOLS)));
-    put(BILLING, new ArrayList<>(Arrays.asList(BILLING_ADMIN, BILLING_ASYNC, BILLING_BILLING, BILLING_COMMON, BILLING_COMPOSITE, BILLING_SYSTEM_TOOLS )));
+    put(BILLING, new ArrayList<>(Arrays.asList(BILLING_ADMIN, BILLING_ASYNC, BILLING_BILLING, BILLING_COMMON,
+/*        BILLING_COMPOSITE, */
+        BILLING_SYSTEM_TOOLS )));
   }};
 
   // API URLS
@@ -84,7 +86,7 @@ public interface ConstantKeys {
     put(CLAIMS_ASYNC, "async/" + API_VERSION);
     put(CLAIMS_CLAIM, "claim/" + API_VERSION);
     put(CLAIMS_COMMON, "activities/" + API_VERSION);
-    put(CLAIMS_COMPOSITE, "composite/" + API_VERSION);
+/*    put(CLAIMS_COMPOSITE, "composite/" + API_VERSION);*/
     put(CLAIMS_SYSTEM_TOOLS, "systemtools/" + API_VERSION);
   }};
 
@@ -93,7 +95,7 @@ public interface ConstantKeys {
     put(POLICY_ADMIN, "admin/" + API_VERSION);
     put(POLICY_ASYNC, "async/" + API_VERSION);
     put(POLICY_COMMON, "common/" + API_VERSION);
-    put(POLICY_COMPOSITE, "composite/" + API_VERSION);
+/*    put(POLICY_COMPOSITE, "composite/" + API_VERSION);*/
     put(POLICY_JOB, "job/" + API_VERSION);
     put(POLICY_POLICIES, "policy/" + API_VERSION);
     put(POLICY_PRODUCT_DEFINITION, "productdefinition/" + API_VERSION);
@@ -105,7 +107,7 @@ public interface ConstantKeys {
     put(BILLING_ASYNC, "async/" + API_VERSION);
     put(BILLING_BILLING, "billing/" + API_VERSION);
     put(BILLING_COMMON, "common/" + API_VERSION);
-    put(BILLING_COMPOSITE, "composite/" + API_VERSION);
+/*    put(BILLING_COMPOSITE, "composite/" + API_VERSION);*/
     put(BILLING_SYSTEM_TOOLS, "systemtools/" + API_VERSION);
   }};
 
@@ -144,11 +146,12 @@ public interface ConstantKeys {
       .instructionText("No Request Body is required to execute this POST")
       .build();
   String INCLUDED_RESOURCES = "includedResources";
+  String INCLUDE_TOTAL = "includeTotal";
   String REQ_BODY = "reqBody";
   String REQ_BODY_PROPERTIES = "reqBodyProperties";
   String DOCUMENT = "document";
   String PAGESIZE = "pagesize";
-  String PADDING = "padding";
+  String NEXT_PAGINATION = "nextPagination";
   String SORT = "sort";
   String SORT_ORDER = "sortOrder";
   String FILTER_FIELD = "filterField";

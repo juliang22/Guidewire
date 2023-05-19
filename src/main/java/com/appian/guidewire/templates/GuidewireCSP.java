@@ -27,7 +27,9 @@ public class GuidewireCSP extends SimpleConnectedSystemTemplate implements Const
     put(CLAIMS_ASYNC, Util.getOpenApi("com/appian/guidewire/templates/claims/claims_async.yaml", classLoader));
     put(CLAIMS_CLAIM, Util.getOpenApi("com/appian/guidewire/templates/claims/claims_claim.yaml", classLoader));
     put(CLAIMS_COMMON, Util.getOpenApi("com/appian/guidewire/templates/claims/claims_common.yaml", classLoader));
-    put(CLAIMS_COMPOSITE, Util.getOpenApi("com/appian/guidewire/templates/claims/claims_composite.yaml", classLoader));
+    // Composite API is not possible due to SDK limitations. SDK currently doesn't support the user inputting unknown parameters
+    // into a localTypeProperty (parameters need to be explicitly defined in java, not in expression editor)
+/*    put(CLAIMS_COMPOSITE, Util.getOpenApi("com/appian/guidewire/templates/claims/claims_composite.yaml", classLoader));*/
     put(CLAIMS_SYSTEM_TOOLS, Util.getOpenApi("com/appian/guidewire/templates/claims/claims_systemtools.yaml", classLoader));
   }};
 
@@ -36,7 +38,7 @@ public class GuidewireCSP extends SimpleConnectedSystemTemplate implements Const
     put(POLICY_ADMIN, Util.getOpenApi("com/appian/guidewire/templates/policy/policy_admin.yaml", classLoader));
     put(POLICY_ASYNC, Util.getOpenApi("com/appian/guidewire/templates/policy/policy_async.yaml", classLoader));
     put(POLICY_COMMON, Util.getOpenApi("com/appian/guidewire/templates/policy/policy_common.yaml", classLoader));
-    put(POLICY_COMPOSITE, Util.getOpenApi("com/appian/guidewire/templates/policy/policy_composite.yaml", classLoader));
+/*    put(POLICY_COMPOSITE, Util.getOpenApi("com/appian/guidewire/templates/policy/policy_composite.yaml", classLoader));*/
     put(POLICY_JOB, Util.getOpenApi("com/appian/guidewire/templates/policy/policy_job.yaml", classLoader));
     put(POLICY_POLICIES, Util.getOpenApi("com/appian/guidewire/templates/policy/policy_policies.yaml", classLoader));
     put(POLICY_POLICIES, Util.getOpenApi("com/appian/guidewire/templates/policy/policy_productdefinition.yaml", classLoader));
@@ -48,7 +50,7 @@ public class GuidewireCSP extends SimpleConnectedSystemTemplate implements Const
     put(BILLING_ASYNC, Util.getOpenApi("com/appian/guidewire/templates/billing/billing_async.yaml", classLoader));
     put(BILLING_BILLING, Util.getOpenApi("com/appian/guidewire/templates/billing/billing_billing.yaml", classLoader));
     put(BILLING_COMMON, Util.getOpenApi("com/appian/guidewire/templates/billing/billing_common.yaml", classLoader));
-    put(BILLING_COMPOSITE, Util.getOpenApi("com/appian/guidewire/templates/billing/billing_composite.yaml", classLoader));
+/*    put(BILLING_COMPOSITE, Util.getOpenApi("com/appian/guidewire/templates/billing/billing_composite.yaml", classLoader));*/
     put(BILLING_SYSTEM_TOOLS, Util.getOpenApi("com/appian/guidewire/templates/billing/billing_systemtools.yaml", classLoader));
   }};
 
@@ -74,13 +76,6 @@ public class GuidewireCSP extends SimpleConnectedSystemTemplate implements Const
                  Choice.builder().name("Billing Center").value(BILLING).build())
             .label("Guidewire API")
             .description("Select the GuideWire API to access. Create a separate connected system for each additional API.")
-            .isRequired(true)
-            .build(),
-        folderProperty(SWAGGER_FOLDER_LOCATION)
-            .label("Location to Save API Specification")
-            .description("This plugin uses a Swagger file (a standard specification for documenting APIs) to generate the " +
-                "operations available in this integration. Select an Appian folder to store this file.")
-            .isExpressionable(false)
             .isRequired(true)
             .build(),
         textProperty(ROOT_URL)

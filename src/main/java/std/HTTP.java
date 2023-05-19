@@ -37,11 +37,23 @@ protected Execute executionService;
 
   public static OkHttpClient getHTTPClient(SimpleConfiguration connectedSystemConfiguration, String contentType) {
 
+    String username = connectedSystemConfiguration.getValue(USERNAME);
+    String password = connectedSystemConfiguration.getValue(PASSWORD);
+    String usernamePassword = username + ":" + password;
+    String encodedCredentials = Base64.getEncoder().encodeToString(usernamePassword.getBytes());
+
     return new OkHttpClient.Builder().connectTimeout(2, TimeUnit.MINUTES)
         .connectTimeout(2, TimeUnit.MINUTES)
         .readTimeout(2, TimeUnit.MINUTES)
         .callTimeout(2, TimeUnit.MINUTES)
         .writeTimeout(2, TimeUnit.MINUTES)
+        .addInterceptor(chain -> {
+          Request.Builder newRequest = chain.request()
+              .newBuilder()
+              .addHeader("Content-Type", contentType)
+              .addHeader("Authorization", "Basic " + encodedCredentials);
+          return chain.proceed(newRequest.build());
+        })
         .build();
   }
 
@@ -77,18 +89,8 @@ protected Execute executionService;
       ObjectMapper mapper = new ObjectMapper();
       HashMap<String,Object> responseEntity = new HashMap<>();
 
-      // If the response is in JSONLines Format
-      if (executionService.getPathNameUnmodified().equals("/files/{file_id}/content") && code == 200) {
-        String[] jsonObjects = bodyStr.split("\n");
-        List<Map<String, Object>> responseList = new ArrayList<>();
-        for (String jsonObject : jsonObjects) {
-          HashMap<String,Object> inner = new HashMap<>(mapper.readValue(jsonObject, new TypeReference<HashMap<String,Object>>() {
-          }));
-          responseList.add(inner);
-        }
-        responseEntity.put("Response", responseList);
-      } else {
-        // Normal json response sent back
+      // Normal json response sent back
+      if (bodyStr.length() > 0) {
         responseEntity.putAll(mapper.readValue(bodyStr, new TypeReference<HashMap<String,Object>>() {}));
       }
 
@@ -159,6 +161,13 @@ protected Execute executionService;
   public HttpResponse post(String url, RequestBody body)
       throws IOException {
     Request request = new Request.Builder().url(url).post(body).build();
+    OkHttpClient client = getHTTPClient(executionService.getConnectedSystemConfiguration(), "application/json");
+    return executeRequest(client, request);
+  }
+
+  public HttpResponse patch(String url, RequestBody body)
+      throws IOException {
+    Request request = new Request.Builder().url(url).patch(body).build();
     OkHttpClient client = getHTTPClient(executionService.getConnectedSystemConfiguration(), "application/json");
     return executeRequest(client, request);
   }

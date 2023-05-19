@@ -1,11 +1,10 @@
 package com.appian.guidewire.templates.Execution;
 
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
@@ -13,7 +12,10 @@ import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationError;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyState;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
+import okhttp3.MediaType;
+import okhttp3.RequestBody;
 import std.Util;
 
 public class GuidewireExecute extends Execute {
@@ -58,8 +60,9 @@ public class GuidewireExecute extends Execute {
           IntegrationResponse.forError(error).build();
     }
 
-    return IntegrationResponse.forSuccess(
-            getResponse()).withDiagnostic(getDiagnosticsUI())
+    return IntegrationResponse
+        .forSuccess(getHTTPResponse().getCombinedResponse())
+        .withDiagnostic(getDiagnosticsUI())
         .build();
   }
 
@@ -69,15 +72,26 @@ public class GuidewireExecute extends Execute {
     pathNameModified += "?";
     // Pagination
     // TODO: pagination with next parameter
-    int pageSize = integrationConfiguration.getValue(PAGESIZE) != null ? integrationConfiguration.getValue(PAGESIZE) : 0;
-    if (pageSize > 0) {
-      pathNameModified = pathNameModified + "pageSize=" + pageSize + "&";
+    String pageSize = integrationConfiguration.getValue(PAGESIZE);
+    if (pageSize != null) {
+      if (Util.isInteger(pageSize) && Integer.parseInt(pageSize) > 0) { // Pagesize is just a number
+        pathNameModified = pathNameModified + "pageSize=" + pageSize + "&";
+      } else { // pagesize is a link to next/prev href
+        // merge next/prev link into pathName
+        String nextOrPrevPagination = Util.mergeStrings(pathNameModified, pageSize);
+        setHTTPResponse(httpService.get(nextOrPrevPagination));
+        return;
+      }
     }
 
-    // Included Resources
+    // Included Resources exist and have been selected by user
     String includedResourcesKey = Util.removeSpecialCharactersFromPathName(pathNameUnmodified) + INCLUDED_RESOURCES;
     Map<String,PropertyState> includedMap = integrationConfiguration.getValue(includedResourcesKey);
-    if (includedMap != null && includedMap.size() > 0) {
+    boolean includedPropertiesSelected = Optional.ofNullable(includedMap)
+        .filter(m -> !m.isEmpty())
+        .map(m -> m.values().stream().anyMatch(val -> Boolean.parseBoolean(val.getValue().toString())))
+        .orElse(false);
+    if (includedPropertiesSelected) {
       AtomicBoolean firstIncluded = new AtomicBoolean(true);
       includedMap.entrySet().forEach(entry -> {
         if (entry.getValue().getValue().equals(true)) {
@@ -106,33 +120,42 @@ public class GuidewireExecute extends Execute {
     }
 
     // Include Total
-    pathNameModified = pathNameModified + "includeTotal=true";
+    pathNameModified = integrationConfiguration.getProperty(INCLUDE_TOTAL) != null && integrationConfiguration.getValue(INCLUDE_TOTAL).equals(true) ?
+        pathNameModified + "includeTotal=true" :
+        pathNameModified;
 
     // If none of the above options were set or if options have been set and there are no more edits required to the pathName
-/*    String lastChar = pathNameModified.substring(pathNameModified.length() - 1);
+    String lastChar = pathNameModified.substring(pathNameModified.length() - 1);
     if (lastChar.equals("&") || lastChar.equals("?")) {
       pathNameModified = Util.removeLastChar(pathNameModified);
-    }*/
+    }
 
-    this.HTTPResponse = httpService.get(pathNameModified);
+    setHTTPResponse(httpService.get(pathNameModified));
 
     System.out.println(pathNameModified);
   }
 
-  @Override
-  public void executePost() throws IOException {
+  public RequestBody getCompletedRequestBody() throws IOException {
     HashMap<String, PropertyState> reqBodyProperties = integrationConfiguration.getValue(reqBodyKey);
     buildRequestBodyJSON(reqBodyProperties);
+    Map<String, Object> attributesWrapper = Collections.singletonMap("attributes", builtRequestBody);
+    Map<String, Object> dataWrapper = Collections.singletonMap("data", attributesWrapper);
+    String jsonString = new ObjectMapper().writeValueAsString(dataWrapper);
+    return RequestBody.create(jsonString, MediaType.get("application/json; charset=utf-8"));
+  }
+
+  @Override
+  public void executePost() throws IOException {
+    setHTTPResponse(httpService.post(pathNameModified, getCompletedRequestBody()));
   }
 
   @Override
   public void executePatch() throws IOException {
-    HashMap<String, PropertyState> reqBodyProperties = integrationConfiguration.getValue(reqBodyKey);
-    buildRequestBodyJSON(reqBodyProperties);
+    setHTTPResponse(httpService.patch(pathNameModified, getCompletedRequestBody()));
   }
 
   @Override
   public void executeDelete() throws IOException {
-
+    setHTTPResponse(httpService.delete(pathNameModified));
   }
 }
