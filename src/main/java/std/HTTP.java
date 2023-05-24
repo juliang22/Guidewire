@@ -7,10 +7,14 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
+
+import org.apache.tika.mime.MimeTypeException;
+import org.apache.tika.mime.MimeTypes;
 
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.templateframework.sdk.configuration.Document;
@@ -100,11 +104,21 @@ protected Execute executionService;
       }
 
       // If OpenAI returns a document back, capture the document
-      Object data = responseEntity.get("data");
-      if (data instanceof List &&
-          ((List<?>)data).size() > 0 &&
-          ((List<?>)data).get(0) instanceof Map &&
-          ((Map<?,?>)((List<?>)data).get(0)).containsKey("b64_json")) {
+
+     Optional<Object> isDocument = Optional.ofNullable(responseEntity.get("data"))
+         .flatMap(data -> data instanceof LinkedHashMap ?
+             Optional.ofNullable(((LinkedHashMap)data).get("attributes")) :
+             Optional.empty())
+         .flatMap(attributes -> attributes instanceof LinkedHashMap ?
+             Optional.ofNullable(((LinkedHashMap)attributes).get("contents")) :
+             Optional.empty());
+
+      if (isDocument.isPresent()) {
+        String documentContent = isDocument.get().toString();
+        String mimeType =
+            ((LinkedHashMap)((LinkedHashMap)responseEntity.get("data")).get("attributes")).get("responseMimeType").toString();
+        String extension = MimeTypes.getDefaultMimeTypes().forName(mimeType).getExtension();
+
 
         // If there is an incoming file, save it in the desired location with the desired name
         // Set errors if no name or file location has been chosen
@@ -120,35 +134,26 @@ protected Execute executionService;
 
         // Extracting files from the response body and saving them to Appian
         Long folderID = executionService.getIntegrationConfiguration().getValue(FOLDER);
-        String fileName = executionService.getIntegrationConfiguration().getValue(SAVED_FILENAME);
+        String fileName = executionService.getIntegrationConfiguration().getValue(SAVED_FILENAME) + extension;
         List<Document> documents = new ArrayList<>();
-        AtomicInteger index = new AtomicInteger(1);
-        ((List<?>)data).forEach(doc -> {
-          if (((Map<?,?>)doc).get("b64_json") != null) {
-            // decoding doc
-            String bytesStr = ((String)((Map<?,?>)doc).get("b64_json"));
-            byte[] decodedBytes = Base64.getDecoder().decode(bytesStr);
-            InputStream inputStream = new ByteArrayInputStream(decodedBytes);
+        byte[] decodedBytes = Base64.getDecoder().decode(documentContent);
+        InputStream inputStream = new ByteArrayInputStream(decodedBytes);
 
-            // If there's more than one document to be saved, add a number to the end
-            String fileNameWithIndex = ((List<?>)data).size() > 1 ?
-                fileName.substring(0, fileName.lastIndexOf(".")) + index.getAndIncrement() + fileName.substring(fileName.lastIndexOf(".")) :
-                fileName;
+        // adding doc to map to be returned to Appian
+        Document document = executionService
+            .getExecutionContext()
+            .getDocumentDownloadService()
+            .downloadDocument(inputStream, folderID, fileName);
+        documents.add(document);
 
-            // adding doc to map to be returned to Appian
-            Document document = executionService
-                .getExecutionContext()
-                .getDocumentDownloadService()
-                .downloadDocument(inputStream, folderID, fileNameWithIndex);
-            documents.add(document);
-          }
-        });
 
         return new HttpResponse(code, message, responseEntity, documents);
       }
 
       // If no document, just return the response
       return new HttpResponse(code, message, responseEntity);
+    } catch (MimeTypeException e) {
+      throw new RuntimeException(e);
     }
   }
 

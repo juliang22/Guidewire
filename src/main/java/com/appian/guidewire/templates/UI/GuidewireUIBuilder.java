@@ -24,6 +24,8 @@ import com.appian.guidewire.templates.GuidewireCSP;
 
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.PathItem;
+import io.swagger.v3.oas.models.media.ArraySchema;
+import io.swagger.v3.oas.models.media.ByteArraySchema;
 import io.swagger.v3.oas.models.media.MediaType;
 import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
@@ -291,6 +293,36 @@ public class GuidewireUIBuilder extends UIBuilder {
               "they exist, they will be returned alongside the root resource.")
           .build());
     }
+
+    Optional<Object> documentInResponse = Optional.ofNullable(get.getResponses())
+        .map(responses -> responses.get("200"))
+        .map(ApiResponse::getContent)
+        .map(content -> content.get("application/json"))
+        .map(MediaType::getSchema)
+        .map(Schema::getProperties)
+        .map(properties -> properties.get("data"))
+        .flatMap(data -> data instanceof ObjectSchema ?
+            Optional.of(((ObjectSchema)data).getProperties()) :
+            Optional.empty())
+        .map(properties -> properties.get("attributes"))
+        .map(Schema::getProperties)
+        .map(properties -> properties.get("contents"));
+
+    if (documentInResponse.isPresent() && documentInResponse.get() instanceof ByteArraySchema) {
+      result.add(simpleIntegrationTemplate.folderProperty(FOLDER)
+          .isExpressionable(true)
+          .isRequired(true)
+          .label("Response File Save Location")
+          .instructionText("Choose the folder you would like to save the response file to.")
+          .build());
+      result.add(simpleIntegrationTemplate.textProperty(SAVED_FILENAME)
+          .isExpressionable(true)
+          .isRequired(true)
+          .label("Response File Name")
+          .instructionText("Choose the name of the file received in the response. Do not include the file extension.")
+          .build());
+    }
+
   }
 
   public void buildPost(List<PropertyDescriptor<?>> result) {

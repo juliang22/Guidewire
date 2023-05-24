@@ -87,6 +87,29 @@ public class Util implements ConstantKeys{
         }
     }
 
+    public static String getExtensionFromContentType(String contentType) {
+        switch (contentType) {
+            case "image/jpeg":
+                return ".jpg";
+            case "image/png":
+                return ".png";
+            case "image/gif":
+                return ".gif";
+            case "text/html":
+                return ".html";
+            case "application/json":
+                return ".json";
+            case "application/xml":
+                return ".xml";
+            case "text/css":
+                return ".css";
+            case "text/plain":
+                return ".txt";
+            default:
+                return ""; // return default extension or null or throw exception
+        }
+    }
+
     // finds the longest common substring at the end of the first string and the beginning of the second string by starting at
     // the end of the first string and the start of the second string and moving towards the start of the first string and the
     // end of the second string respectively. If it finds characters that don't match, it breaks the loop and then constructs the

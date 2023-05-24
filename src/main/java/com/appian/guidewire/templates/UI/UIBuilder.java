@@ -15,6 +15,7 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.Choice;
 import com.appian.connectedsystems.templateframework.sdk.configuration.DisplayHint;
 import com.appian.connectedsystems.templateframework.sdk.configuration.DocumentPropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.LocalTypeDescriptor;
+import com.appian.connectedsystems.templateframework.sdk.configuration.ParagraphHeight;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptorBuilder;
 import com.appian.connectedsystems.templateframework.sdk.configuration.RefreshPolicy;
@@ -290,7 +291,7 @@ public abstract class UIBuilder implements ConstantKeys {
               .isHidden(false)
               .refresh(RefreshPolicy.ALWAYS)
               .description(description)
-              .displayHint(DisplayHint.EXPRESSION)
+              .displayHint(DisplayHint.NORMAL)
               .isExpressionable(true)
               .isRequired(requiredProperties != null && requiredProperties.contains(key))
               .itemType(TypeReference.from(built))
@@ -311,7 +312,7 @@ public abstract class UIBuilder implements ConstantKeys {
           newProperty = simpleIntegrationTemplate.doubleProperty(key);
           break;
         default:
-          newProperty = simpleIntegrationTemplate.textProperty(key);
+          newProperty = simpleIntegrationTemplate.paragraphProperty(key).height(ParagraphHeight.MEDIUM);
           break;
       }
 
