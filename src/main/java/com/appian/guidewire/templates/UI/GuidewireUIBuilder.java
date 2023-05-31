@@ -24,13 +24,13 @@ import com.appian.guidewire.templates.GuidewireCSP;
 
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.PathItem;
-import io.swagger.v3.oas.models.media.ArraySchema;
 import io.swagger.v3.oas.models.media.ByteArraySchema;
 import io.swagger.v3.oas.models.media.MediaType;
 import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.parameters.RequestBody;
 import io.swagger.v3.oas.models.responses.ApiResponse;
+import std.ConstantKeys;
 import std.Util;
 
 public class GuidewireUIBuilder extends UIBuilder {
@@ -328,6 +328,7 @@ public class GuidewireUIBuilder extends UIBuilder {
   public void buildPost(List<PropertyDescriptor<?>> result) {
 
     if (paths.get(pathName).getPost().getRequestBody() == null) {
+      result.add(ConstantKeys.getChecksumUI(CHECKSUM_IN_HEADER));
       result.add(NO_REQ_BODY_UI);
       return;
     }
@@ -343,6 +344,7 @@ public class GuidewireUIBuilder extends UIBuilder {
 
       Set<String> required = schema.get().getRequired() != null ? new HashSet<>(schema.get().getRequired()) : null;
       ReqBodyUIBuilder(result, schema.get().getProperties(), required, new HashMap<>(), POST);
+      return;
     }*/
 
     MediaType documentType = openAPI.getPaths().get(pathName).getPost().getRequestBody().getContent().get("multipart/form-data");
@@ -355,6 +357,8 @@ public class GuidewireUIBuilder extends UIBuilder {
           .instructionText("Insert a document to upload")
           .build());
     }
+
+    result.add(ConstantKeys.getChecksumUI(CHECKSUM_IN_REQ_BODY));
 
     Optional<Schema> schema = (documentType == null) ?
         Optional.ofNullable(paths.get(pathName))
@@ -406,6 +410,8 @@ public class GuidewireUIBuilder extends UIBuilder {
           .build());
     }
 
+    result.add(ConstantKeys.getChecksumUI(CHECKSUM_IN_REQ_BODY));
+
     Optional<Schema> schema = (documentType == null) ?
         Optional.ofNullable(paths.get(pathName))
             .map(PathItem::getPatch)
@@ -435,10 +441,10 @@ public class GuidewireUIBuilder extends UIBuilder {
     }
 
     Set<String> required = schema.get().getRequired() != null ? new HashSet<>(schema.get().getRequired()) : null;
-
     ReqBodyUIBuilder(result, schema.get().getProperties(), required, new HashMap<>(), PATCH);
   }
 
   public void buildDelete(List<PropertyDescriptor<?>> result) {
+    result.add(ConstantKeys.getChecksumUI(CHECKSUM_IN_HEADER));
   }
 }

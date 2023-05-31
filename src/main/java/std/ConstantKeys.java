@@ -151,7 +151,6 @@ public interface ConstantKeys {
   String REQ_BODY_PROPERTIES = "reqBodyProperties";
   String DOCUMENT = "document";
   String PAGESIZE = "pagesize";
-  String NEXT_PAGINATION = "nextPagination";
   String SORT = "sort";
   String SORT_ORDER = "sortOrder";
   String FILTER_FIELD = "filterField";
@@ -170,4 +169,27 @@ public interface ConstantKeys {
     put("Contains", "cn");
   }};
   String SEARCH = "search";
+
+  String CHECKSUM_IN_REQ_BODY = "checksum";
+  String CHECKSUM_IN_HEADER = "GW-Checksum";
+
+  public static TextPropertyDescriptor getChecksumUI(String checksumInReqBodyOrHeader) {
+    return new TextPropertyDescriptor.TextPropertyDescriptorBuilder()
+        .key(checksumInReqBodyOrHeader)
+        .label("Checksum")
+        .placeholder("7a0d9677f11e246bbe3c124889219c50")
+        .instructionText("Use checksum to verify that a resource has not been changed since you last interacted with it. When " +
+            "you submit a request with a checksum, ClaimCenter calculates the checksum and compares that value " +
+            "to the submitted checksum value. Use a GET call for the resource being modified to get the checksum value. Refer to " +
+            "the documentation for more information: https://docs.guidewire" +
+            ".com/cloud/cc/202302/cloudapibf/cloudAPI/topics/102-Optim/05-checksums/c_checksums.html")
+        .description(
+            "If the values match, ClaimCenter determines the resource has not been changed since the caller application last acquired the data. The request is executed.\n" +
+                "If the values do not match, ClaimCenter determines the resource has been changed since the caller application last acquired the data. The request is not executed, and ClaimCenter returns an error")
+        .isExpressionable(true)
+        .build();
+  }
+
+
+
 }

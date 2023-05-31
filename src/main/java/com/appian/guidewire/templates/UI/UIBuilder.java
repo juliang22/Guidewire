@@ -31,6 +31,7 @@ import io.swagger.v3.oas.models.media.BooleanSchema;
 import io.swagger.v3.oas.models.media.IntegerSchema;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.media.StringSchema;
+import io.swagger.v3.oas.models.parameters.Parameter;
 import io.swagger.v3.oas.models.parameters.PathParameter;
 import me.xdrop.fuzzywuzzy.FuzzySearch;
 import me.xdrop.fuzzywuzzy.model.ExtractedResult;
@@ -91,7 +92,10 @@ public abstract class UIBuilder implements ConstantKeys {
   // Find all occurrences of variables inside path (ex. {claimId})
   protected void setPathVarsUI() {
 
-    Util.getOperation(paths.get(pathName), restOperation).getParameters().forEach(param -> {
+    List<Parameter> pathParams = Util.getOperation(paths.get(pathName), restOperation).getParameters();
+    if (pathParams == null)  return;
+
+    pathParams.forEach(param -> {
       if (param instanceof PathParameter) {
         TextPropertyDescriptor ui = simpleIntegrationTemplate.textProperty(param.getName())
             .instructionText("")
@@ -105,6 +109,7 @@ public abstract class UIBuilder implements ConstantKeys {
         pathVarsUI.add(ui);
       }
     });
+
   }
 
   public List<PropertyDescriptor<?>> getPathVarsUI() {
@@ -299,11 +304,22 @@ public abstract class UIBuilder implements ConstantKeys {
       ).build();
 
     } else {
+      String isRequired = requiredProperties != null && requiredProperties.contains(key) ? "(Required) ": "";
+      String description = item.getDescription() != null ?
+          isRequired + item.getDescription().replaceAll("\n", "") :
+          "";
+
       // Base case: Create new property field depending on the type
       PropertyDescriptorBuilder<?> newProperty;
       switch (item.getType()) {
         case ("boolean"):
-          newProperty = simpleIntegrationTemplate.booleanProperty(key).displayMode(BooleanDisplayMode.RADIO_BUTTON);
+/*          newProperty = simpleIntegrationTemplate.booleanProperty(key).displayMode(BooleanDisplayMode.CHECKBOX);*/
+          // Boolean properties are automatically marked as false, need to know when a user actually selects false. Using
+          // dropdown instead
+          newProperty = simpleIntegrationTemplate.textProperty(key).choices(
+              Choice.builder().name("True").value("true").build(),
+              Choice.builder().name("False").value("false").build()
+          );
           break;
         case ("integer"):
           newProperty = simpleIntegrationTemplate.integerProperty(key);
@@ -312,14 +328,13 @@ public abstract class UIBuilder implements ConstantKeys {
           newProperty = simpleIntegrationTemplate.doubleProperty(key);
           break;
         default:
-          newProperty = simpleIntegrationTemplate.paragraphProperty(key).height(ParagraphHeight.MEDIUM);
+          newProperty = simpleIntegrationTemplate
+              .paragraphProperty(key)
+              .height(description.length() >= 125 ? ParagraphHeight.TALL : ParagraphHeight.MEDIUM);
           break;
       }
 
-      String isRequired = requiredProperties != null && requiredProperties.contains(key) ? "(Required) ": "";
-      String description = item.getDescription() != null ?
-          isRequired + item.getDescription().replaceAll("\n", "") :
-          "";
+
       return simpleIntegrationTemplate.localType(key + "Container")
           .property(newProperty
               .label(key)
@@ -327,7 +342,8 @@ public abstract class UIBuilder implements ConstantKeys {
               .isExpressionable(true)
               .refresh(RefreshPolicy.ALWAYS)
               .placeholder(description)
-              .description(description)
+/*              .instructionText(description)*/
+  /*            .description(description)*/
               .build())
           .build();
     }

@@ -8,13 +8,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationError.IntegrationErrorBuilder;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
-import com.appian.connectedsystems.templateframework.sdk.configuration.Document;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyState;
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
 import com.google.gson.Gson;
@@ -130,7 +128,7 @@ public abstract class Execute implements ConstantKeys {
   // buildRequestBodyJSON() helper function to recursively extract user inputted values from Appian property descriptors
   public Map<String,Object> parseReqBodyJSON(String key, PropertyState val) {
 
-    Set<String> notNested = new HashSet<>(Arrays.asList("STRING", "INTEGER", "BOOLEAN", "DOUBLE"));
+    Set<String> notNested = new HashSet<>(Arrays.asList("STRING", "INTEGER", "BOOLEAN", "DOUBLE", "PARAGRAPH"));
     Map<String, Object> propertyMap = new HashMap<>();
 
 /*    if (val == null) return propertyMap;*/
@@ -187,7 +185,14 @@ public abstract class Execute implements ConstantKeys {
       } else {
         // flatValue could be a string or more nested Json of type Map<String, Object>
         Object flatValue = notNested.contains(val.getType().getTypeDisplayName()) ?
-            val.getValue() : parseReqBodyJSON(key, val).get(key);
+            val.getValue() :
+            parseReqBodyJSON(key, val).get(key);
+
+        if (flatValue.equals("true")) {
+          flatValue = true;
+        } else if (flatValue.equals("false")) {
+          flatValue = false;
+        }
 
         // Build the request body json
         builtRequestBody.put(key, flatValue);

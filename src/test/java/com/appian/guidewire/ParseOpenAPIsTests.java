@@ -2,21 +2,46 @@ package com.appian.guidewire;
 
 import static org.junit.Assert.assertNotNull;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.io.IOUtils;
 import org.junit.Test;
 
 import com.appian.guidewire.templates.GuidewireCSP;
 
+import io.swagger.parser.OpenAPIParser;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.media.Schema;
+import io.swagger.v3.parser.OpenAPIV3Parser;
+import io.swagger.v3.parser.core.models.ParseOptions;
+import io.swagger.v3.parser.core.models.SwaggerParseResult;
 import std.Util;
 
 public class ParseOpenAPIsTests {
 
+  @Test
+  public void swagger() {
+
+
+    try (InputStream input = GuidewireCSP.classLoader.getResourceAsStream("com/appian/guidewire/templates/test.json")) {
+      String content = IOUtils.toString(input, StandardCharsets.UTF_8);
+      ParseOptions parseOptions = new ParseOptions();
+      parseOptions.setResolve(true); // implicit
+      parseOptions.setResolveFully(true);
+                  parseOptions.setResolveCombinators(false);
+/*      SwaggerParseResult result = new OpenAPIParser().readContents(content, null, null);*/
+      OpenAPI result = new OpenAPIV3Parser().readContents(content, null, parseOptions).getOpenAPI();
+      System.out.println(result);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
 
 
   @Test

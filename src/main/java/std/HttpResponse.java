@@ -19,8 +19,8 @@ public class HttpResponse {
         this.response = response;
     }
 
-    public HttpResponse(int statusCode, String statusLine, HashMap<String, Object> result, List<Document> documents) {
-        this.response = result;
+    public HttpResponse(int statusCode, String statusLine, HashMap<String, Object> response, List<Document> documents) {
+        this.response = response;
         this.statusLine = statusLine;
         this.statusCode = statusCode;
         this.documents = documents;

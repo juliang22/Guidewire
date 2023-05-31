@@ -39,8 +39,8 @@ protected Execute executionService;
     this.executionService = executionService;
   }
 
-  public static OkHttpClient getHTTPClient(SimpleConfiguration connectedSystemConfiguration, String contentType) {
-
+  public static OkHttpClient getHTTPClient(Execute executionService, String contentType) {
+    SimpleConfiguration connectedSystemConfiguration = executionService.getConnectedSystemConfiguration();
     String username = connectedSystemConfiguration.getValue(USERNAME);
     String password = connectedSystemConfiguration.getValue(PASSWORD);
     String usernamePassword = username + ":" + password;
@@ -56,15 +56,20 @@ protected Execute executionService;
               .newBuilder()
               .addHeader("Content-Type", contentType)
               .addHeader("Authorization", "Basic " + encodedCredentials);
+          if (executionService.getIntegrationConfiguration().getProperty(CHECKSUM_IN_HEADER) != null &&
+              executionService.getIntegrationConfiguration().getValue(CHECKSUM_IN_HEADER) != null) {
+              newRequest.addHeader(CHECKSUM_IN_HEADER, executionService.getIntegrationConfiguration().getValue(CHECKSUM_IN_HEADER));
+          }
           return chain.proceed(newRequest.build());
         })
         .build();
   }
 
-  public static HttpResponse testAuth(SimpleConfiguration connectedSystemConfiguration) throws IOException {
+  public static HttpResponse testAuth(Execute executionService) throws IOException {
+    SimpleConfiguration connectedSystemConfiguration = executionService.getConnectedSystemConfiguration();
     final String testURL = connectedSystemConfiguration.getValue(ROOT_URL) + "/activities";
     Request request = new Request.Builder().url(testURL).build();
-    OkHttpClient client = getHTTPClient(connectedSystemConfiguration, "application/json");
+    OkHttpClient client = getHTTPClient(executionService, "application/json");
     try (Response response = client.newCall(request).execute()) {
       ResponseBody body = response.body();
       if (body == null) {
@@ -159,21 +164,21 @@ protected Execute executionService;
 
   public HttpResponse get(String url) throws IOException {
     Request request = new Request.Builder().url(url).build();
-    OkHttpClient client = getHTTPClient(executionService.getConnectedSystemConfiguration(), "application/json");
+    OkHttpClient client = getHTTPClient(executionService, "application/json");
     return executeRequest(client, request);
   }
 
   public HttpResponse post(String url, RequestBody body)
       throws IOException {
     Request request = new Request.Builder().url(url).post(body).build();
-    OkHttpClient client = getHTTPClient(executionService.getConnectedSystemConfiguration(), "application/json");
+    OkHttpClient client = getHTTPClient(executionService, "application/json");
     return executeRequest(client, request);
   }
 
   public HttpResponse patch(String url, RequestBody body)
       throws IOException {
     Request request = new Request.Builder().url(url).patch(body).build();
-    OkHttpClient client = getHTTPClient(executionService.getConnectedSystemConfiguration(), "application/json");
+    OkHttpClient client = getHTTPClient(executionService, "application/json");
     return executeRequest(client, request);
   }
 
@@ -205,14 +210,14 @@ protected Execute executionService;
     });
 
     // Getting the client/request and executing the request
-    OkHttpClient client = getHTTPClient(executionService.getConnectedSystemConfiguration(), "multipart/form-data");
+    OkHttpClient client = getHTTPClient(executionService, "multipart/form-data");
     Request request = new Request.Builder().url(url).post(multipartBuilder.build()).build();
     return executeRequest(client, request);
   }
 
   public HttpResponse delete(String url) throws IOException {
     Request request = new Request.Builder().url(url).delete().build();
-    OkHttpClient client = getHTTPClient(executionService.getConnectedSystemConfiguration(), "application/json");
+    OkHttpClient client = getHTTPClient(executionService, "application/json");
     return executeRequest(client, request);
   }
 
