@@ -1,4 +1,4 @@
-version '1.0'
+version '1.0.0'
 
 apply plugin: 'java'
 
@@ -33,6 +33,10 @@ jar {
   duplicatesStrategy = DuplicatesStrategy.FAIL
   into('META-INF/lib') {
     from(configurations.runtimeClasspath)
+  }
+
+  into('src') {
+    from (sourceSets.main.allJava)
   }
 
   manifest {

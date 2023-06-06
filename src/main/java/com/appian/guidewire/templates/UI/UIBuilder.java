@@ -10,7 +10,6 @@ import java.util.Set;
 
 import com.appian.connectedsystems.simplified.sdk.SimpleIntegrationTemplate;
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
-import com.appian.connectedsystems.templateframework.sdk.configuration.BooleanDisplayMode;
 import com.appian.connectedsystems.templateframework.sdk.configuration.Choice;
 import com.appian.connectedsystems.templateframework.sdk.configuration.DisplayHint;
 import com.appian.connectedsystems.templateframework.sdk.configuration.DocumentPropertyDescriptor;
@@ -21,6 +20,7 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyD
 import com.appian.connectedsystems.templateframework.sdk.configuration.RefreshPolicy;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TypeReference;
+import com.appian.guidewire.templates.apis.GuidewireIntegrationTemplate;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
@@ -52,6 +52,7 @@ public abstract class UIBuilder implements ConstantKeys {
   protected List<Choice> defaultChoices = new ArrayList<>();
   protected SimpleIntegrationTemplate simpleIntegrationTemplate;
   protected SimpleConfiguration integrationConfiguration;
+  protected SimpleConfiguration connectedSystemConfiguration;
 
   // Methods to implement when building out the API specific details of each request
   public abstract void buildRestCall(String restOperation, List<PropertyDescriptor<?>> result, String pathName);
@@ -66,6 +67,10 @@ public abstract class UIBuilder implements ConstantKeys {
 
   public void setSimpleIntegrationTemplate(SimpleIntegrationTemplate simpleIntegrationTemplate) {
     this.simpleIntegrationTemplate = simpleIntegrationTemplate;
+  }
+
+  public void setConnectedSystemConfiguration(SimpleConfiguration connectedSystemConfiguration) {
+    this.connectedSystemConfiguration = connectedSystemConfiguration;
   }
 
   public void setIntegrationConfiguration(SimpleConfiguration integrationConfiguration) {

@@ -12,7 +12,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.appian.connectedsystems.simplified.sdk.SimpleIntegrationTemplate;
+import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.templateframework.sdk.configuration.BooleanDisplayMode;
 import com.appian.connectedsystems.templateframework.sdk.configuration.Choice;
 import com.appian.connectedsystems.templateframework.sdk.configuration.DisplayHint;
@@ -21,6 +21,7 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyD
 import com.appian.connectedsystems.templateframework.sdk.configuration.RefreshPolicy;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
 import com.appian.guidewire.templates.GuidewireCSP;
+import com.appian.guidewire.templates.apis.GuidewireIntegrationTemplate;
 
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.PathItem;
@@ -34,10 +35,14 @@ import std.ConstantKeys;
 import std.Util;
 
 public class GuidewireUIBuilder extends UIBuilder {
-  public GuidewireUIBuilder(SimpleIntegrationTemplate simpleIntegrationTemplate, String api) {
+  public GuidewireUIBuilder(
+      GuidewireIntegrationTemplate simpleIntegrationTemplate, SimpleConfiguration integrationConfiguration,
+      SimpleConfiguration connectedSystemConfiguration, String api) {
     super();
     /*    setOpenAPI(api);*/
+    setIntegrationConfiguration(integrationConfiguration);
     setSimpleIntegrationTemplate(simpleIntegrationTemplate);
+    setConnectedSystemConfiguration(connectedSystemConfiguration);
     setApi(api);
     setSubApiList(api);
   }
@@ -47,7 +52,8 @@ public class GuidewireUIBuilder extends UIBuilder {
   public void setOpenAPI(String api, String subApi) {
     // TODO: Update with OOTB swagger files
     setSubApi(subApi);
-    setOpenAPI(GuidewireCSP.getOpenAPI(api, subApi));
+
+    setOpenAPI(GuidewireCSP.getOpenAPI(api, subApi) );
     setPaths(openAPI.getPaths());
     setDefaultEndpoints(null);
   }
@@ -55,8 +61,8 @@ public class GuidewireUIBuilder extends UIBuilder {
   public PropertyDescriptor<?>[] build() {
 
     ArrayList<Choice> choices = new ArrayList<>();
-    SUB_API_MAP.get(api).forEach((String subApi) -> {
-      choices.add(Choice.builder().name(Util.camelCaseToTitleCase(subApi)).value(subApi).build());
+    GuidewireCSP.getApiSwaggerMap(api).forEach((subApiKey, openAPIInfo) -> {
+      choices.add(Choice.builder().name(openAPIInfo.getName()).value(subApiKey).build());
     });
 
     TextPropertyDescriptor subApiUI = simpleIntegrationTemplate.textProperty(SUB_API_TYPE)

@@ -15,6 +15,8 @@ import com.appian.connectedsystems.templateframework.sdk.IntegrationError.Integr
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyState;
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
+import com.appian.guidewire.templates.GuidewireCSP;
+import com.appian.guidewire.templates.apis.GuidewireIntegrationTemplate;
 import com.google.gson.Gson;
 
 import std.ConstantKeys;
@@ -48,6 +50,7 @@ public abstract class Execute implements ConstantKeys {
   public abstract void executeDelete() throws IOException ;
 
   public Execute(
+      GuidewireIntegrationTemplate simpleIntegrationTemplate,
       SimpleConfiguration integrationConfiguration,
       SimpleConfiguration connectedSystemConfiguration,
       ExecutionContext executionContext) {
@@ -58,11 +61,11 @@ public abstract class Execute implements ConstantKeys {
     this.httpService = new HTTP(this);
     String[] pathData = integrationConfiguration.getValue(CHOSEN_ENDPOINT).toString().split(":");
     this.api = pathData[0];
-    this.subApi = pathData[3].split("(?<=.)(?=\\p{Lu})")[1].toLowerCase();
+    this.subApi = pathData[3];
     this.restOperation = pathData[1];
     this.pathNameUnmodified = pathData[2];
     this.pathNameModified =
-        connectedSystemConfiguration.getValue(ROOT_URL) + "/rest/" + subApi +"/v1" + pathData[2];
+        connectedSystemConfiguration.getValue(ROOT_URL) + "/rest" + GuidewireCSP.getApiSwaggerMap(api).get(subApi).getKey() + pathNameUnmodified;
     this.gson = new Gson();
     this.reqBodyKey = integrationConfiguration.getProperty(REQ_BODY) != null ?
         integrationConfiguration.getProperty(REQ_BODY).getLabel() :

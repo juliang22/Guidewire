@@ -19,6 +19,9 @@ import std.ConstantKeys;
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.READ_AND_WRITE)
 public class GuidewireIntegrationTemplate extends SimpleIntegrationTemplate implements ConstantKeys {
 
+  // Claims Center Swagger Parsing
+
+
   @Override
   protected SimpleConfiguration getConfiguration(
       SimpleConfiguration integrationConfiguration,
@@ -26,9 +29,14 @@ public class GuidewireIntegrationTemplate extends SimpleIntegrationTemplate impl
       PropertyPath propertyPath,
       ExecutionContext executionContext) {
 
-    String apiType = connectedSystemConfiguration.getValue(API_TYPE).toString();
-    GuidewireUIBuilder restBuilder = new GuidewireUIBuilder(this, apiType);
-    restBuilder.setIntegrationConfiguration(integrationConfiguration);
+
+
+
+
+
+    String apiType = connectedSystemConfiguration.getValue(API_TYPE);
+    GuidewireUIBuilder restBuilder = new GuidewireUIBuilder(this, integrationConfiguration, connectedSystemConfiguration,
+        apiType);
     return integrationConfiguration.setProperties(restBuilder.build());
    }
 
@@ -38,7 +46,8 @@ public class GuidewireIntegrationTemplate extends SimpleIntegrationTemplate impl
       SimpleConfiguration connectedSystemConfiguration,
       ExecutionContext executionContext) {
 
-    GuidewireExecute execute = new GuidewireExecute(integrationConfiguration, connectedSystemConfiguration, executionContext);
+    GuidewireExecute execute = new GuidewireExecute(this, integrationConfiguration, connectedSystemConfiguration,
+        executionContext);
     try {
       return execute.buildExecution();
     } catch (IOException e) {

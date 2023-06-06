@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -19,11 +20,16 @@ import org.apache.tika.mime.MimeTypes;
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.templateframework.sdk.configuration.Document;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
+import com.appian.connectedsystems.templateframework.sdk.connectiontesting.TestConnectionResult;
 import com.appian.guidewire.templates.Execution.Execute;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.swagger.parser.OpenAPIParser;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.parser.core.models.ParseOptions;
+import io.swagger.v3.parser.core.models.SwaggerParseResult;
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
@@ -65,20 +71,66 @@ protected Execute executionService;
         .build();
   }
 
-  public static HttpResponse testAuth(Execute executionService) throws IOException {
-    SimpleConfiguration connectedSystemConfiguration = executionService.getConnectedSystemConfiguration();
-    final String testURL = connectedSystemConfiguration.getValue(ROOT_URL) + "/activities";
-    Request request = new Request.Builder().url(testURL).build();
-    OkHttpClient client = getHTTPClient(executionService, "application/json");
-    try (Response response = client.newCall(request).execute()) {
+  public static Map<String, Object> testAuth(SimpleConfiguration connectedSystemConfiguration, String url) throws IOException {
+
+    String username = connectedSystemConfiguration.getValue(USERNAME);
+    String password = connectedSystemConfiguration.getValue(PASSWORD);
+
+    String usernamePassword = username + ":" + password;
+    String encodedCredentials = Base64.getEncoder().encodeToString(usernamePassword.getBytes());
+
+    Request request = new Request.Builder().url(url).build();
+    OkHttpClient client = new OkHttpClient.Builder().connectTimeout(2, TimeUnit.MINUTES)
+        .connectTimeout(2, TimeUnit.MINUTES)
+        .readTimeout(2, TimeUnit.MINUTES)
+        .callTimeout(2, TimeUnit.MINUTES)
+        .writeTimeout(2, TimeUnit.MINUTES)
+        .addInterceptor(chain -> {
+          Request.Builder newRequest = chain.request()
+              .newBuilder()
+              .addHeader("Content-Type", "application/json")
+              .addHeader("Authorization", "Basic " + encodedCredentials);
+          return chain.proceed(newRequest.build());
+        })
+        .build();
+
+    try {
+      Response response = client.newCall(request).execute();
       ResponseBody body = response.body();
       if (body == null) {
-        return new HttpResponse(204,
-            "Null value returned", new HashMap<String, Object>(){{put("Error","Response is empty");}});
+        Map<String, Object> errorResponse = new HashMap<>();
+        List<String> error = Arrays.asList("Null value return. Check to make sure " +
+            "your Base Url is in the correct format. For example, https://cc-gwcpdev.saappian.zeta1-andromeda.guidewire.net");
+        errorResponse.put("error", error);
+        return errorResponse;
       }
-      HashMap<String,Object> responseEntity = new ObjectMapper().readValue(body.string(), new TypeReference<HashMap<String,Object>>() {});
-      return new HttpResponse(response.code(), response.message(), responseEntity);
+
+      // Set response properties
+      int code = response.code();
+      String message = response.message();
+      String bodyStr = body.string();
+      ObjectMapper mapper = new ObjectMapper();
+
+      // Set error if error is returned in response
+      if (code > 400 || !response.isSuccessful()) {
+        Map<String, Object> errorResponse = new HashMap<>();
+        List<String> errors = Arrays.asList("Error Code: " + code, message, bodyStr);
+        errorResponse.put("error", errors);
+        return errorResponse;
+      }
+
+      // Normal json response sent back
+      if (bodyStr.length() > 0) {
+        Map<String, Object> result = new HashMap<String, Object>(){{ put("result", bodyStr); }};
+        return result;
+      }
+    } catch (IOException e) {
+      // TODO: error handle
+      throw new RuntimeException(e);
     }
+
+    // TODO: base case
+    return null;
   }
 
   public HttpResponse executeRequest(OkHttpClient client, Request request) throws IOException {

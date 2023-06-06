@@ -12,6 +12,7 @@ import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationError;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyState;
+import com.appian.guidewire.templates.apis.GuidewireIntegrationTemplate;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import okhttp3.MediaType;
@@ -21,10 +22,11 @@ import std.Util;
 public class GuidewireExecute extends Execute {
 
   public GuidewireExecute(
+      GuidewireIntegrationTemplate simpleIntegrationTemplate,
       SimpleConfiguration integrationConfiguration,
       SimpleConfiguration connectedSystemConfiguration,
       ExecutionContext executionContext) {
-    super(integrationConfiguration, connectedSystemConfiguration, executionContext);
+    super(simpleIntegrationTemplate, integrationConfiguration, connectedSystemConfiguration, executionContext);
   }
 
   @Override

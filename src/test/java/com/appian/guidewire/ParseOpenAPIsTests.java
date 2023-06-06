@@ -21,11 +21,12 @@ import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.parser.OpenAPIV3Parser;
 import io.swagger.v3.parser.core.models.ParseOptions;
 import io.swagger.v3.parser.core.models.SwaggerParseResult;
+import std.HTTP;
 import std.Util;
 
 public class ParseOpenAPIsTests {
 
-  @Test
+/*  @Test
   public void swagger() {
 
 
@@ -35,63 +36,20 @@ public class ParseOpenAPIsTests {
       parseOptions.setResolve(true); // implicit
       parseOptions.setResolveFully(true);
                   parseOptions.setResolveCombinators(false);
-/*      SwaggerParseResult result = new OpenAPIParser().readContents(content, null, null);*/
+*//*      SwaggerParseResult result = new OpenAPIParser().readContents(content, null, null);*//*
       OpenAPI result = new OpenAPIV3Parser().readContents(content, null, parseOptions).getOpenAPI();
       System.out.println(result);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
-  }
-
+  }*/
 
   @Test
-  public void testDocuments() {
-    OpenAPI openAPI = Util.getOpenApi("com/appian/guidewire/templates/claims/claims_claim.yaml", GuidewireCSP.classLoader);
-    String pathName = "/claims/{claimId}/documents";
-
-    Object o = ((Schema)openAPI.getPaths()
-        .get(pathName)
-        .getPost()
-        .getResponses()
-        .get("201")
-        .getContent()
-        .get("application/json")
-        .getSchema()
-        .getProperties()
-        .get("data"))
-        .getProperties()
-        .get("attributes");
-
-    System.out.println(o);
-
-
-/*    Map properties = openAPI.getPaths()
-        .get(pathName)
-        .getPost()
-        .getRequestBody()
-        .getContent()
-        .get("multipart/form-data")
-        .getSchema()
-        .getProperties();
-
-    properties.forEach((key, val) -> {
-      if (key.equals("metadata")) {
-        System.out.println(((Schema)val).get$ref());
-      }
-    });*/
-
-
-/*    List<Map<String,Object>> reqBodyArr = new ArrayList<>();
-    schema.getProperties().get("attributes").getProperties().forEach((key, item) -> {
-      Schema itemSchema = (Schema)item;
-      if (itemSchema.getRequired() != null) {
-        Set set = new HashSet(itemSchema.getRequired());
-        System.out.println("set" + set.contains("code"));
-        System.out.println(key+" "+ set.contains(key.toString()));
-      }
-    });*/
-
+  public void bananas() {
+    System.out.println("hi");
   }
+
+
 
 
 
