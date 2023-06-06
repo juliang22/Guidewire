@@ -30,7 +30,6 @@ public class GuidewireCSP extends SimpleTestableConnectedSystemTemplate implemen
   private static Map<String, OpenAPIInfo> POLICY_SWAGGER_MAP = new HashMap<>();
   private static Map<String, OpenAPIInfo> BILLING_SWAGGER_MAP = new HashMap<>();
 
-  private static Map<String, Map<String, OpenAPIInfo>> instantiatedConnectedSystemsSwaggerMap = new HashMap<>();
 
   public static Map<String, OpenAPIInfo> getApiSwaggerMap(String apiType) {
     switch (apiType) {
@@ -113,7 +112,7 @@ public class GuidewireCSP extends SimpleTestableConnectedSystemTemplate implemen
           parseOptions.setResolve(true); // implicit
           parseOptions.setResolveFully(true);
           parseOptions.setResolveCombinators(false);
-          OpenAPI openAPI = new OpenAPIV3Parser().readContents(swaggerStr, null, null).getOpenAPI();
+          OpenAPI openAPI = new OpenAPIV3Parser().readContents(swaggerStr, null, parseOptions).getOpenAPI();
 
           OpenAPIInfo apiInfo = new OpenAPIInfo(
               propertiesMap.get("title"),

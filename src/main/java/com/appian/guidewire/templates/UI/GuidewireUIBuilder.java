@@ -5,7 +5,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -185,8 +184,28 @@ public class GuidewireUIBuilder extends UIBuilder {
           .isExpressionable(true)
           .refresh(RefreshPolicy.ALWAYS);
 
+      ((Schema<?>)returnedFieldItems.get().getProperties().get("attributes")).getExtensions();
+      Map<String, Object> extensions = ((Schema<?>)returnedFieldItems.get().getProperties().get("attributes")).getExtensions();
+
+      if (extensions.size() > 0) {
+        List<String> filterProperties = (List)extensions.get("x-gw-filterable");
+        if (filterProperties.size() > 0) hasFiltering.set(true);
+
+        List<String> sortProperties = (List)extensions.get("x-gw-sortable");
+        if (sortProperties.size() > 0) hasSorting.set(true);
+
+        filterProperties.forEach(property -> {
+          filteredChoices.choice(Choice.builder().name(Util.camelCaseToTitleCase(property)).value(property).build());
+        });
+
+        sortProperties.forEach(property -> {
+          sortedChoices.choice(Choice.builder().name(Util.camelCaseToTitleCase(property)).value(property).build());
+        });
+      }
+
+
       // Parsing to find filtering and sorting options available on the call
-      Map<?,?> returnedFields = ((Schema<?>)returnedFieldItems.get().getProperties().get("attributes")).getProperties();
+/*      Map<?,?> returnedFields = ((Schema<?>)returnedFieldItems.get().getProperties().get("attributes")).getProperties();
       returnedFields.forEach((key, val) -> {
 
         Optional<Object> extensions = Optional.ofNullable(((Schema<?>)val).getExtensions())
@@ -204,7 +223,7 @@ public class GuidewireUIBuilder extends UIBuilder {
           hasSorting.set(true);
         }
 
-      });
+      });*/
       // If there are sorting options, add sorting UI
       if (hasSorting.get()) {
         result.add(sortedChoices.isRequired(integrationConfiguration.getValue(SORT_ORDER) != null).build());
