@@ -42,6 +42,7 @@ public abstract class Execute implements ConstantKeys {
   protected HttpResponse HTTPResponse;
   protected Map<String,Object> requestDiagnostic;
   protected HTTP httpService;
+  protected Map<String,Map<String,String>> apiInfoMap;
 
   public abstract IntegrationResponse buildExecution() throws IOException;
   public abstract void executeGet() throws IOException ;
@@ -64,8 +65,9 @@ public abstract class Execute implements ConstantKeys {
     this.subApi = pathData[3];
     this.restOperation = pathData[1];
     this.pathNameUnmodified = pathData[2];
+    this.apiInfoMap = Util.strToOpenAPIInfo(connectedSystemConfiguration.getValue(OPENAPI_INFO));
     this.pathNameModified =
-        connectedSystemConfiguration.getValue(ROOT_URL) + "/rest" + GuidewireCSP.getApiSwaggerMap(api).get(subApi).getKey() + pathNameUnmodified;
+        connectedSystemConfiguration.getValue(ROOT_URL) + "/rest" + apiInfoMap.get(subApi).get("basePath") + pathNameUnmodified;
     this.gson = new Gson();
     this.reqBodyKey = integrationConfiguration.getProperty(REQ_BODY) != null ?
         integrationConfiguration.getProperty(REQ_BODY).getLabel() :

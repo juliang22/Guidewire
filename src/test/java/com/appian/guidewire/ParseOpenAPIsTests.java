@@ -13,6 +13,8 @@ import org.apache.commons.io.IOUtils;
 import org.junit.Test;
 
 import com.appian.guidewire.templates.GuidewireCSP;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.swagger.parser.OpenAPIParser;
 import io.swagger.v3.oas.models.OpenAPI;
@@ -45,8 +47,67 @@ public class ParseOpenAPIsTests {
   }*/
 
   @Test
-  public void bananas() {
-    System.out.println("hi");
+  public void bananas() throws JsonProcessingException {
+    String sampleOpenAPI = "openapi: 3.0.0\n" + "info:\n" + "  title: Sample API\n" + "  version: 1.0.0\n" +
+        "  description: This is a sample API definition using OpenAPI 3.0\n" + "servers:\n" +
+        "  - url: https://api.example.com/v1\n" + "    description: Production server\n" +
+        "  - url: https://api.staging.example.com/v1\n" + "    description: Staging server\n" + "paths:\n" + "  /users:\n" +
+        "    get:\n" + "      summary: Get a list of users\n" + "      operationId: getUsers\n" + "      responses:\n" +
+        "        '200':\n" + "          description: Successful response\n" + "          content:\n" +
+        "            application/json:\n" + "              schema:\n" + "                type: array\n" +
+        "                items:\n" + "                  type: object\n" + "                  properties:\n" +
+        "                    id:\n" + "                      type: integer\n" + "                      description: User ID\n" +
+        "                    name:\n" + "                      type: string\n" +
+        "                      description: User name\n" + "    post:\n" + "      summary: Create a new user\n" +
+        "      operationId: createUser\n" + "      requestBody:\n" + "        required: true\n" + "        content:\n" +
+        "          application/json:\n" + "            schema:\n" + "              type: object\n" +
+        "              properties:\n" + "                name:\n" + "                  type: string\n" +
+        "                  description: User name\n" + "                email:\n" + "                  type: string\n" +
+        "                  format: email\n" + "                  description: User email address\n" + "      responses:\n" +
+        "        '201':\n" + "          description: User created successfully\n" + "        '400':\n" +
+        "          description: Invalid request\n" + "  /users/{id}:\n" + "    get:\n" + "      summary: Get a user by ID\n" +
+        "      operationId: getUserById\n" + "      parameters:\n" + "        - name: id\n" + "          in: path\n" +
+        "          description: User ID\n" + "          required: true\n" + "          schema:\n" +
+        "            type: integer\n" + "      responses:\n" + "        '200':\n" +
+        "          description: Successful response\n" + "          content:\n" + "            application/json:\n" +
+        "              schema:\n" + "                type: object\n" + "                properties:\n" +
+        "                  id:\n" + "                    type: integer\n" + "                    description: User ID\n" +
+        "                  name:\n" + "                    type: string\n" + "                    description: User name\n" +
+        "    put:\n" + "      summary: Update a user by ID\n" + "      operationId: updateUserById\n" + "      parameters:\n" +
+        "        - name: id\n" + "          in: path\n" + "          description: User ID\n" + "          required: true\n" +
+        "          schema:\n" + "            type: integer\n" + "      requestBody:\n" + "        required: true\n" +
+        "        content:\n" + "          application/json:\n" + "            schema:\n" + "              type: object\n" +
+        "              properties:\n" + "                name:\n" + "                  type: string\n" +
+        "                  description: User name\n" + "                email:\n" + "                  type: string\n" +
+        "                  format: email\n" + "                  description: User email address\n" + "      responses:\n" +
+        "        '200':\n" + "          description: User updated successfully\n" + "        '400':\n" +
+        "          description: Invalid request\n";
+    ObjectMapper objectMapper = new ObjectMapper();
+    long startTime, endTime;
+    long executionTimeFunction1, executionTimeFunction2;
+
+    // 1. turn openAPI str into OpenAPI object, turn that object to string, turn that string into OpenAPI object
+    OpenAPI openAPI = Util.getOpenAPI(sampleOpenAPI);
+    String openAPIInfoStr = objectMapper.writeValueAsString(openAPI);
+    startTime = System.currentTimeMillis();
+
+    objectMapper.readValue(openAPIInfoStr, OpenAPI.class);
+    endTime = System.currentTimeMillis();
+    executionTimeFunction1 = endTime - startTime;
+    System.out.println("1. " + executionTimeFunction1);
+
+    // 2.
+    startTime = System.currentTimeMillis();
+    OpenAPI openAPI2 = Util.getOpenAPI(sampleOpenAPI);
+    endTime = System.currentTimeMillis();
+    executionTimeFunction2 = endTime - startTime;
+    System.out.println("2. " + executionTimeFunction2);
+
+
+
+
+
+
   }
 
 

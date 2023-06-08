@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -16,6 +17,7 @@ import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfigurat
 import com.appian.connectedsystems.templateframework.sdk.IntegrationError;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
@@ -110,6 +112,24 @@ public class Util implements ConstantKeys{
             default:
                 return ""; // return default extension or null or throw exception
         }
+    }
+
+    public static Map<String,Map<String,String>> strToOpenAPIInfo(String openAPIInfoStr) {
+        try {
+             return new ObjectMapper().readValue(openAPIInfoStr, Map.class);
+        } catch (IOException e) {
+            // TODO: error handle
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public static OpenAPI getOpenAPI(String openAPIStr) {
+        ParseOptions parseOptions = new ParseOptions();
+        parseOptions.setResolve(true); // implicit
+        parseOptions.setResolveFully(true);
+        parseOptions.setResolveCombinators(false);
+        return new OpenAPIV3Parser().readContents(openAPIStr, null, parseOptions).getOpenAPI();
     }
 
     // finds the longest common substring at the end of the first string and the beginning of the second string by starting at

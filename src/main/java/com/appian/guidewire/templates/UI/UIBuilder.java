@@ -39,13 +39,13 @@ import std.ConstantKeys;
 import std.Util;
 
 public abstract class UIBuilder implements ConstantKeys {
+
   protected String api;
   protected String subApi;
   protected String pathName;
   protected String restOperation;
   protected List<PropertyDescriptor<?>> pathVarsUI = new ArrayList<>();
   protected OpenAPI openAPI = null;
-  protected List<String> subApiList = null;
 
   protected Paths paths;
   protected List<String> choicesForSearch = new ArrayList<>();
@@ -53,6 +53,14 @@ public abstract class UIBuilder implements ConstantKeys {
   protected SimpleIntegrationTemplate simpleIntegrationTemplate;
   protected SimpleConfiguration integrationConfiguration;
   protected SimpleConfiguration connectedSystemConfiguration;
+
+  public UIBuilder(GuidewireIntegrationTemplate simpleIntegrationTemplate,
+      SimpleConfiguration integrationConfiguration,
+      SimpleConfiguration connectedSystemConfiguration) {
+    this.simpleIntegrationTemplate = simpleIntegrationTemplate;
+    this.integrationConfiguration = integrationConfiguration;
+    this.connectedSystemConfiguration = connectedSystemConfiguration;
+  }
 
   // Methods to implement when building out the API specific details of each request
   public abstract void buildRestCall(String restOperation, List<PropertyDescriptor<?>> result, String pathName);
@@ -65,18 +73,6 @@ public abstract class UIBuilder implements ConstantKeys {
 
   public abstract void buildDelete(List<PropertyDescriptor<?>> result);
 
-  public void setSimpleIntegrationTemplate(SimpleIntegrationTemplate simpleIntegrationTemplate) {
-    this.simpleIntegrationTemplate = simpleIntegrationTemplate;
-  }
-
-  public void setConnectedSystemConfiguration(SimpleConfiguration connectedSystemConfiguration) {
-    this.connectedSystemConfiguration = connectedSystemConfiguration;
-  }
-
-  public void setIntegrationConfiguration(SimpleConfiguration integrationConfiguration) {
-    this.integrationConfiguration = integrationConfiguration;
-  }
-
   public void setPathName(String pathName) {
     this.pathName = pathName;
   }
@@ -84,8 +80,6 @@ public abstract class UIBuilder implements ConstantKeys {
   public void setRestOperation(String restOperation) {
     this.restOperation = restOperation;
   }
-
-  public void setSubApiList(String api) {this.subApiList = SUB_API_MAP.get(api);}
 
   public void setApi(String api) {this.api = api;}
 

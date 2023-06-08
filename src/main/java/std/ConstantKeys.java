@@ -18,6 +18,8 @@ public interface ConstantKeys {
   String USERNAME = "username";
   String PASSWORD = "password";
   String ROOT_URL = "rootUrl";
+  String OPENAPI_INFO = "openAPIInfo";
+  String OPENAPISTR = "openAPIStr";
 
   String GUIDEWIRE = "guidewire";
   String SWAGGER_FOLDER_LOCATION = "swaggerFolderLocation";

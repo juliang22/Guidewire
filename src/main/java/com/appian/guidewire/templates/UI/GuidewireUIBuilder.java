@@ -1,8 +1,8 @@
 package com.appian.guidewire.templates.UI;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -19,9 +19,10 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.LocalType
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.RefreshPolicy;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
-import com.appian.guidewire.templates.GuidewireCSP;
 import com.appian.guidewire.templates.apis.GuidewireIntegrationTemplate;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.PathItem;
 import io.swagger.v3.oas.models.media.ByteArraySchema;
@@ -31,37 +32,95 @@ import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.parameters.RequestBody;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import std.ConstantKeys;
+import std.HTTP;
 import std.Util;
 
 public class GuidewireUIBuilder extends UIBuilder {
+
+  protected Map<String,Map<String,String>> apiInfoMap;
+
   public GuidewireUIBuilder(
-      GuidewireIntegrationTemplate simpleIntegrationTemplate, SimpleConfiguration integrationConfiguration,
-      SimpleConfiguration connectedSystemConfiguration, String api) {
-    super();
-    /*    setOpenAPI(api);*/
-    setIntegrationConfiguration(integrationConfiguration);
-    setSimpleIntegrationTemplate(simpleIntegrationTemplate);
-    setConnectedSystemConfiguration(connectedSystemConfiguration);
-    setApi(api);
-    setSubApiList(api);
+      GuidewireIntegrationTemplate simpleIntegrationTemplate,
+      SimpleConfiguration integrationConfiguration,
+      SimpleConfiguration connectedSystemConfiguration) {
+
+    super(simpleIntegrationTemplate, integrationConfiguration, connectedSystemConfiguration);
+    setApi(connectedSystemConfiguration.getValue(API_TYPE));
+
+    if (integrationConfiguration.getProperty(OPENAPI_INFO) != null && integrationConfiguration.getValue(OPENAPI_INFO) != null) {
+      String openAPIInfoStr = integrationConfiguration.getValue(OPENAPI_INFO);
+      this.apiInfoMap = Util.strToOpenAPIInfo(openAPIInfoStr);
+    }
+
   }
 
   // Sets the OpenAPI api and the paths. This is stored statically in the CSP so that it is loaded when the plugin is installed
   // Modify this method and the CSP with relevant API constants and path names
-  public void setOpenAPI(String api, String subApi) {
-    // TODO: Update with OOTB swagger files
-    setSubApi(subApi);
+  public void setOpenAPI(String subApi) {
 
-    setOpenAPI(GuidewireCSP.getOpenAPI(api, subApi) );
+    setSubApi(subApi);
+    OpenAPI openAPI = Util.getOpenAPI(apiInfoMap.get(subApi).get(OPENAPISTR));
+    setOpenAPI(openAPI);
     setPaths(openAPI.getPaths());
     setDefaultEndpoints(null);
   }
 
-  public PropertyDescriptor<?>[] build() {
+  public List<PropertyDescriptor<?>> build() {
+    List<PropertyDescriptor<?>> result = new ArrayList<>();
+
+    if (integrationConfiguration.getProperty(OPENAPI_INFO) == null || integrationConfiguration.getValue(OPENAPI_INFO) == null) {
+      String rootUrl = connectedSystemConfiguration.getValue(ROOT_URL);
+      try {
+        Map<String, Object> initialResponse = HTTP.testAuth(connectedSystemConfiguration, rootUrl + "/rest/apis");
+        if (initialResponse == null || initialResponse.containsKey("error")) {
+          // TODO: error handle
+        }
+
+        Map<String, Map<String,String>> apiInfoMap = new HashMap<>();
+        ObjectMapper objectMapper = new ObjectMapper();
+        Map<String,Object> subApiList = objectMapper.readValue(initialResponse.get("result").toString(), Map.class);
+        subApiList.forEach((api, properties) -> {
+          Map<String, String> subAPIInfoMap = ((Map<String, String>)properties);
+          String apiSwaggerUrl = subAPIInfoMap.get("docs").replace("swagger", "openapi");
+          try {
+            Map<String, Object> apiSwaggerResponse = HTTP.testAuth(connectedSystemConfiguration, apiSwaggerUrl);
+
+            if (apiSwaggerResponse.containsKey("error")) return; // skip to next iteration if there's no available swagger docs
+
+            String openAPIStr = apiSwaggerResponse.get("result").toString();
+            subAPIInfoMap.put(OPENAPISTR, openAPIStr);
+
+            String subApiKey = subAPIInfoMap.get("title").replace(" ", "");
+            apiInfoMap.put(subApiKey, subAPIInfoMap);
+
+          } catch (IOException e) {
+            // TODO: error handle
+            throw new RuntimeException(e);
+          }
+        });
+
+        // TODO: encoding
+        // Saving object containing openAPI info as string and saving it
+        String openAPIInfoStr = objectMapper.writeValueAsString(apiInfoMap);
+
+        TextPropertyDescriptor openAPIInfo = simpleIntegrationTemplate.textProperty(OPENAPI_INFO)
+            .transientChoices(true)
+            .isHidden(true)
+            .choice(Choice.builder().name("OpenAPIInfo").value(openAPIInfoStr).build())
+            .build();
+        integrationConfiguration.setProperties(openAPIInfo).setValue(OPENAPI_INFO, openAPIInfoStr);
+        result.add(openAPIInfo);
+        this.apiInfoMap = Util.strToOpenAPIInfo(openAPIInfoStr);
+      } catch (IOException e) {
+        // TODO: Error handle
+      }
+    }
+
 
     ArrayList<Choice> choices = new ArrayList<>();
-    GuidewireCSP.getApiSwaggerMap(api).forEach((subApiKey, openAPIInfo) -> {
-      choices.add(Choice.builder().name(openAPIInfo.getName()).value(subApiKey).build());
+
+    apiInfoMap.forEach((subApiKey, openAPIInfo) -> {
+      choices.add(Choice.builder().name(openAPIInfo.get("title")).value(subApiKey).build());
     });
 
     TextPropertyDescriptor subApiUI = simpleIntegrationTemplate.textProperty(SUB_API_TYPE)
@@ -71,15 +130,16 @@ public class GuidewireUIBuilder extends UIBuilder {
         .isRequired(true)
         .refresh(RefreshPolicy.ALWAYS)
         .build();
-    List<PropertyDescriptor<?>> result = new ArrayList<>(Collections.singletonList(subApiUI));
+
+    result.add(subApiUI);
 
     // If the subAPI has not been selected, only render the subAPI dropdown
     if (integrationConfiguration.getValue(SUB_API_TYPE) == null) {
-      return result.toArray(new PropertyDescriptor<?>[0]);
+      return result;
     }
 
     String subApi = integrationConfiguration.getValue(SUB_API_TYPE).toString();
-    setOpenAPI(api, subApi);
+    setOpenAPI(subApi);
     TextPropertyDescriptor searchBar = simpleIntegrationTemplate.textProperty(SEARCH)
         .label("Sort Endpoints Dropdown")
         .refresh(RefreshPolicy.ALWAYS)
@@ -91,7 +151,7 @@ public class GuidewireUIBuilder extends UIBuilder {
     String selectedEndpoint = integrationConfiguration.getValue(CHOSEN_ENDPOINT);
     if (selectedEndpoint == null) {
       result.addAll(Arrays.asList(searchBar, endpointChoiceBuilder()));
-      return result.toArray(new PropertyDescriptor<?>[0]);
+      return result;
     }
 
     String[] selectedEndpointStr = selectedEndpoint.split(":");
@@ -103,7 +163,7 @@ public class GuidewireUIBuilder extends UIBuilder {
     if (!apiType.equals(api) || !subApiType.equals(subApi)) {
       integrationConfiguration.setValue(CHOSEN_ENDPOINT, null).setValue(SEARCH, "");
       result.addAll(Arrays.asList(searchBar, endpointChoiceBuilder()));
-      return result.toArray(new PropertyDescriptor<?>[0]);
+      return result;
     }
     // Else if a user selects api then a corresponding endpoint, update label and description accordingly
     result.addAll(Arrays.asList(searchBar, endpointChoiceBuilder()));
@@ -115,7 +175,7 @@ public class GuidewireUIBuilder extends UIBuilder {
 
     // Building the result with path variables, request body, and other functionality needed to make the request
     buildRestCall(restOperation, result, pathName);
-    return result.toArray(new PropertyDescriptor<?>[0]);
+    return result;
   }
 
   public void buildRestCall(String restOperation, List<PropertyDescriptor<?>> result, String pathName) {

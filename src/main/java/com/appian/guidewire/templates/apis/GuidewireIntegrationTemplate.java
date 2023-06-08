@@ -7,6 +7,7 @@ import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfigurat
 import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.TemplateId;
+import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
@@ -19,7 +20,7 @@ import std.ConstantKeys;
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.READ_AND_WRITE)
 public class GuidewireIntegrationTemplate extends SimpleIntegrationTemplate implements ConstantKeys {
 
-  // Claims Center Swagger Parsing
+
 
 
   @Override
@@ -29,15 +30,15 @@ public class GuidewireIntegrationTemplate extends SimpleIntegrationTemplate impl
       PropertyPath propertyPath,
       ExecutionContext executionContext) {
 
+    /*this.textProperty("").transientChoices(true).choice(Choice.builder().name("").value("").build());*/
+    // TODO: transient choices, save OAS to choice value
 
 
 
+    GuidewireUIBuilder restBuilder = new GuidewireUIBuilder(this, integrationConfiguration, connectedSystemConfiguration);
+    PropertyDescriptor<?>[] result = restBuilder.build().toArray(new PropertyDescriptor<?>[0]);
+    return integrationConfiguration.setProperties(result);
 
-
-    String apiType = connectedSystemConfiguration.getValue(API_TYPE);
-    GuidewireUIBuilder restBuilder = new GuidewireUIBuilder(this, integrationConfiguration, connectedSystemConfiguration,
-        apiType);
-    return integrationConfiguration.setProperties(restBuilder.build());
    }
 
   @Override
