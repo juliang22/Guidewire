@@ -20,6 +20,7 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyD
 import com.appian.connectedsystems.templateframework.sdk.configuration.RefreshPolicy;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
 import com.appian.guidewire.templates.apis.GuidewireIntegrationTemplate;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.swagger.v3.oas.models.OpenAPI;
@@ -37,7 +38,8 @@ import std.Util;
 
 public class GuidewireUIBuilder extends UIBuilder {
 
-  protected Map<String,Map<String,String>> apiInfoMap;
+  protected Map<String, Map<String,String>> apiInfoMap;
+  protected ObjectMapper objectMapper = new ObjectMapper();
 
   public GuidewireUIBuilder(
       GuidewireIntegrationTemplate simpleIntegrationTemplate,
@@ -49,9 +51,13 @@ public class GuidewireUIBuilder extends UIBuilder {
 
     if (integrationConfiguration.getProperty(OPENAPI_INFO) != null && integrationConfiguration.getValue(OPENAPI_INFO) != null) {
       String openAPIInfoStr = integrationConfiguration.getValue(OPENAPI_INFO);
-      this.apiInfoMap = Util.strToOpenAPIInfo(openAPIInfoStr);
+      try {
+        this.apiInfoMap = objectMapper.readValue(openAPIInfoStr, Map.class);
+      } catch (JsonProcessingException e) {
+        // TODO error handle
+        throw new RuntimeException(e);
+      }
     }
-
   }
 
   // Sets the OpenAPI api and the paths. This is stored statically in the CSP so that it is loaded when the plugin is installed
@@ -59,7 +65,13 @@ public class GuidewireUIBuilder extends UIBuilder {
   public void setOpenAPI(String subApi) {
 
     setSubApi(subApi);
-    OpenAPI openAPI = Util.getOpenAPI(apiInfoMap.get(subApi).get(OPENAPISTR));
+    OpenAPI openAPI;
+    try {
+      openAPI = objectMapper.readValue(integrationConfiguration.getValue(subApi).toString(), OpenAPI.class);
+    } catch (JsonProcessingException e) {
+      // TODO: error handle
+      throw new RuntimeException(e);
+    }
     setOpenAPI(openAPI);
     setPaths(openAPI.getPaths());
     setDefaultEndpoints(null);
@@ -67,6 +79,9 @@ public class GuidewireUIBuilder extends UIBuilder {
 
   public List<PropertyDescriptor<?>> build() {
     List<PropertyDescriptor<?>> result = new ArrayList<>();
+
+
+
 
     if (integrationConfiguration.getProperty(OPENAPI_INFO) == null || integrationConfiguration.getValue(OPENAPI_INFO) == null) {
       String rootUrl = connectedSystemConfiguration.getValue(ROOT_URL);
@@ -76,53 +91,79 @@ public class GuidewireUIBuilder extends UIBuilder {
           // TODO: error handle
         }
 
-        Map<String, Map<String,String>> apiInfoMap = new HashMap<>();
-        ObjectMapper objectMapper = new ObjectMapper();
-        Map<String,Object> subApiList = objectMapper.readValue(initialResponse.get("result").toString(), Map.class);
-        subApiList.forEach((api, properties) -> {
-          Map<String, String> subAPIInfoMap = ((Map<String, String>)properties);
+
+        Map<String,Map<String, String>> ApiIInfoMap = objectMapper.readValue(initialResponse.get("result").toString(), Map.class);
+        TextPropertyDescriptor.TextPropertyDescriptorBuilder apiInfoMapChoices = simpleIntegrationTemplate
+            .textProperty(OPENAPI_INFO)
+            .isHidden(true);
+        ApiIInfoMap.forEach((subApiPath, subAPIInfoMap) -> {
+
+          try {
+            subAPIInfoMap.put("key", subAPIInfoMap.get("title").replace(" ", ""));
+            String subAPIInfoMapToStr = objectMapper.writeValueAsString(subAPIInfoMap);
+            apiInfoMapChoices.choice(
+                Choice.builder().name(subAPIInfoMap.get("title")).value(subAPIInfoMapToStr).build()
+            );
+          } catch (JsonProcessingException e) {
+            // TODO error handle
+            throw new RuntimeException(e);
+          }
+
+/*          String subApiKey = subAPIInfoMap.get("title").replace(" ", "");
           String apiSwaggerUrl = subAPIInfoMap.get("docs").replace("swagger", "openapi");
+
           try {
             Map<String, Object> apiSwaggerResponse = HTTP.testAuth(connectedSystemConfiguration, apiSwaggerUrl);
 
             if (apiSwaggerResponse.containsKey("error")) return; // skip to next iteration if there's no available swagger docs
 
+            // Getting OpenAPI string, converting to OpenAPI object, storing OpenAPI object as string in a textProperty
             String openAPIStr = apiSwaggerResponse.get("result").toString();
-            subAPIInfoMap.put(OPENAPISTR, openAPIStr);
-
-            String subApiKey = subAPIInfoMap.get("title").replace(" ", "");
-            apiInfoMap.put(subApiKey, subAPIInfoMap);
+            OpenAPI openAPI = Util.getOpenAPI(openAPIStr);
+            TextPropertyDescriptor openAPIObjAsStrStoredAsChoice = simpleIntegrationTemplate.textProperty(subApiKey)
+                .transientChoices(true)
+                .isHidden(true)
+                .choice(Choice.builder().name(subApiKey).value(objectMapper.writeValueAsString(openAPI)).build())
+                .build();
+            integrationConfiguration.setProperties(openAPIObjAsStrStoredAsChoice).setValue(subApiKey, openAPIObjAsStrStoredAsChoice);
+            result.add(openAPIObjAsStrStoredAsChoice);
 
           } catch (IOException e) {
             // TODO: error handle
             throw new RuntimeException(e);
-          }
+          }*/
         });
+
+        integrationConfiguration.setProperties(apiInfoMapChoices.build());
 
         // TODO: encoding
         // Saving object containing openAPI info as string and saving it
-        String openAPIInfoStr = objectMapper.writeValueAsString(apiInfoMap);
-
+/*        String openAPIInfoStr = objectMapper.writeValueAsString(apiInfoMap);
         TextPropertyDescriptor openAPIInfo = simpleIntegrationTemplate.textProperty(OPENAPI_INFO)
             .transientChoices(true)
             .isHidden(true)
             .choice(Choice.builder().name("OpenAPIInfo").value(openAPIInfoStr).build())
             .build();
         integrationConfiguration.setProperties(openAPIInfo).setValue(OPENAPI_INFO, openAPIInfoStr);
-        result.add(openAPIInfo);
-        this.apiInfoMap = Util.strToOpenAPIInfo(openAPIInfoStr);
+        result.add(openAPIInfo);*/
       } catch (IOException e) {
         // TODO: Error handle
       }
     }
 
 
+
+
+
+    // Making subAPI choices for user to select
     ArrayList<Choice> choices = new ArrayList<>();
+
+
+
 
     apiInfoMap.forEach((subApiKey, openAPIInfo) -> {
       choices.add(Choice.builder().name(openAPIInfo.get("title")).value(subApiKey).build());
     });
-
     TextPropertyDescriptor subApiUI = simpleIntegrationTemplate.textProperty(SUB_API_TYPE)
         .label("Guidewire Module")
         .choices(choices.toArray(new Choice[0]))
@@ -130,13 +171,13 @@ public class GuidewireUIBuilder extends UIBuilder {
         .isRequired(true)
         .refresh(RefreshPolicy.ALWAYS)
         .build();
-
     result.add(subApiUI);
 
     // If the subAPI has not been selected, only render the subAPI dropdown
     if (integrationConfiguration.getValue(SUB_API_TYPE) == null) {
       return result;
     }
+
 
     String subApi = integrationConfiguration.getValue(SUB_API_TYPE).toString();
     setOpenAPI(subApi);

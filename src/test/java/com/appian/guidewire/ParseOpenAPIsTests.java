@@ -5,6 +5,7 @@ import static org.junit.Assert.assertNotNull;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -46,6 +47,69 @@ public class ParseOpenAPIsTests {
     }
   }*/
 
+  // 1. Saving OpenAPI obj as a string. During execution, getting that OpenAPI obj as string and converting to OpenAPI obj
+  public long saveObjAsStr(String openAPIStr, ObjectMapper objectMapper) throws JsonProcessingException {
+    long startTime, endTime;
+    OpenAPI openAPI = Util.getOpenAPI(openAPIStr);
+    String openAPIInfoStr = objectMapper.writeValueAsString(openAPI);
+
+    startTime = System.currentTimeMillis();
+    OpenAPI openAPIObj = objectMapper.readValue(openAPIInfoStr, OpenAPI.class);
+    endTime = System.currentTimeMillis();
+    System.out.println(openAPI.getPaths().keySet().size());
+    return endTime - startTime;
+  }
+
+  // 2. Saving OpenAPI str. At execution, getting the openAPI string and converting to OpenAPI obj
+  public long saveJustStr(String openAPIStr, ObjectMapper objectMapper) throws JsonProcessingException {
+    long startTime, endTime;
+
+    startTime = System.currentTimeMillis();
+    String newSampleOpenAPI = openAPIStr;
+    OpenAPI openAPI2 = Util.getOpenAPI(newSampleOpenAPI);
+    endTime = System.currentTimeMillis();
+    System.out.println(openAPI2.getPaths().keySet().size());
+    return (endTime - startTime);
+  }
+
+
+  // 3. Saving map containing OpenAPI object represented as string, converting map to str. At execution, converting that
+  // string map to map, converting OpenAPI obj represented as string back to OpenAPI obj
+  public long saveMapWithOpenAPIObjAsStr(String openAPIStr, ObjectMapper objectMapper) throws JsonProcessingException {
+    long startTime, endTime;
+    Map<String, String> map = new HashMap<>();
+    OpenAPI openAPI = Util.getOpenAPI(openAPIStr);
+    map.put("test", objectMapper.writeValueAsString(openAPI));
+    String mapStr = objectMapper.writeValueAsString(map);
+
+    startTime = System.currentTimeMillis();
+    Map<String, String> mappy = objectMapper.readValue(mapStr, Map.class);
+    OpenAPI openAPI2 = objectMapper.readValue(mappy.get("test"), OpenAPI.class);
+    endTime = System.currentTimeMillis();
+    System.out.println(openAPI2.getPaths().keySet().size());
+    return (endTime - startTime);
+  }
+
+  public long saveMapWithOpenAPIStr(String openAPIStr, ObjectMapper objectMapper) throws JsonProcessingException {
+    long startTime, endTime;
+    Map<String, String> map = new HashMap<>();
+    map.put("test", openAPIStr);
+    String mapStr2 = objectMapper.writeValueAsString(map);
+
+    startTime = System.currentTimeMillis();
+    Map<String, String> mappy = objectMapper.readValue(mapStr2, Map.class);
+    OpenAPI openAPI = Util.getOpenAPI(mappy.get("test"));
+    endTime = System.currentTimeMillis();
+    System.out.println(openAPI.getPaths().keySet().size());
+    return (endTime - startTime);
+  }
+
+
+
+
+
+
+
   @Test
   public void bananas() throws JsonProcessingException {
     String sampleOpenAPI = "openapi: 3.0.0\n" + "info:\n" + "  title: Sample API\n" + "  version: 1.0.0\n" +
@@ -83,25 +147,23 @@ public class ParseOpenAPIsTests {
         "        '200':\n" + "          description: User updated successfully\n" + "        '400':\n" +
         "          description: Invalid request\n";
     ObjectMapper objectMapper = new ObjectMapper();
-    long startTime, endTime;
-    long executionTimeFunction1, executionTimeFunction2;
 
-    // 1. turn openAPI str into OpenAPI object, turn that object to string, turn that string into OpenAPI object
-    OpenAPI openAPI = Util.getOpenAPI(sampleOpenAPI);
-    String openAPIInfoStr = objectMapper.writeValueAsString(openAPI);
-    startTime = System.currentTimeMillis();
+/*    System.out.println("1. " + saveObjAsStr(sampleOpenAPI, objectMapper));*/
+/*    System.out.println("2. " + saveJustStr(sampleOpenAPI, objectMapper));*/
+/*    System.out.println("3. " + saveMapWithOpenAPIObjAsStr(sampleOpenAPI, objectMapper));*/
+    System.out.println("4. " + saveMapWithOpenAPIStr(sampleOpenAPI, objectMapper));
 
-    objectMapper.readValue(openAPIInfoStr, OpenAPI.class);
-    endTime = System.currentTimeMillis();
-    executionTimeFunction1 = endTime - startTime;
-    System.out.println("1. " + executionTimeFunction1);
 
-    // 2.
-    startTime = System.currentTimeMillis();
-    OpenAPI openAPI2 = Util.getOpenAPI(sampleOpenAPI);
-    endTime = System.currentTimeMillis();
-    executionTimeFunction2 = endTime - startTime;
-    System.out.println("2. " + executionTimeFunction2);
+
+
+
+
+
+    // 3. Saving map containing OpenAPI object represented as string, converting map to str. At execution, converting that
+    // string map to map, converting OpenAPI obj represented as string back to OpenAPI obj
+
+
+    // 4.
 
 
 
