@@ -1,14 +1,109 @@
 package com.appian.guidewire;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
+
+import org.apache.commons.io.IOUtils;
 import org.junit.Test;
+import org.openapitools.empoa.gson.OASGsonSerializer;
+import org.openapitools.empoa.gson.intermal.serializers.OpenAPISerializer;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.Gson;
 
+import io.swagger.util.Yaml;
 import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.parser.OpenAPIV3Parser;
+import io.swagger.v3.parser.core.models.ParseOptions;
 import std.Util;
 
 public class ParseOpenAPIsTests {
+
+  public static String compress(String str) throws IOException {
+    if ((str == null) || (str.length() == 0)) {
+      return str;
+    }
+    ByteArrayOutputStream obj = new ByteArrayOutputStream();
+    try (GZIPOutputStream gzip = new GZIPOutputStream(obj)) {
+      gzip.write(str.getBytes("UTF-8"));
+    }
+    return Base64.getEncoder().encodeToString(obj.toByteArray());
+  }
+
+  public static String decompress(String str) throws IOException {
+    if ((str == null) || (str.length() == 0)) {
+      return str;
+    }
+    String outStr = "";
+    byte[] compressed = Base64.getDecoder().decode(str);
+    try (GZIPInputStream gis = new GZIPInputStream(new ByteArrayInputStream(compressed));
+        ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+      byte[] buffer = new byte[256];
+      int len;
+      while ((len = gis.read(buffer)) != -1) {
+        bos.write(buffer, 0, len);
+      }
+      outStr = bos.toString("UTF-8");
+    }
+    return outStr;
+  }
+
+
+
+
+
+  @Test
+  public void swagger() throws IOException, ClassNotFoundException {
+
+    ClassLoader classLoader = ParseOpenAPIsTests.class.getClassLoader();
+    InputStream input = classLoader.getResourceAsStream("com/appian/guidewire/templates/claims.yaml");
+    String swaggerStr = IOUtils.toString(input, StandardCharsets.UTF_8);
+    OpenAPI openAPI = Util.getOpenAPI(swaggerStr);
+
+    String yaml = Yaml.pretty().writeValueAsString(openAPI);
+    System.out.println(yaml.length());
+    ObjectMapper objectMapper = new ObjectMapper();
+
+
+    long startTime = System.nanoTime();
+    OpenAPI openAPI1 = objectMapper.readValue(yaml, OpenAPI.class);
+    System.out.println(openAPI1.getPaths().size());
+    System.out.println("Swagger str to obj: " + (System.nanoTime() - startTime)/1000000 + " milliseconds");
+
+/*    OpenAPI openAPI = Util.getOpenAPI(swaggerStr);*/
+/*    String resultStr = new ObjectMapper().writeValueAsString(openAPI);*/
+
+    // Compress the string
+     startTime = System.nanoTime();
+    String compressed = compress(swaggerStr);
+    System.out.println("Compression Time: " + (System.nanoTime() - startTime)/1000000 + " milliseconds");
+
+    // Decompress the string
+    startTime = System.nanoTime();
+    String decompressed = decompress(compressed);
+    System.out.println("Decompression Time: " + (System.nanoTime() - startTime)/1000000 + " milliseconds");
+
+
+
+
+    // Serialize, compress and encode
+/*    Gson gson = OASGsonSerializer.instance();
+    String json = gson.toJson(openAPI);*/
+
+
+
+    
+
+  }
 
 
 

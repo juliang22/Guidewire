@@ -152,7 +152,11 @@ public class GuidewireUIBuilder extends UIBuilder {
     // Load from memory (user searching or clicking other endpoints) or get swagger file of the subApi from guidewire and
     // saving it in a hidden property. Property is transient and will not save permanently after saving the integration object
     // to conserve memory. Reopening integration will trigger another api call.
+
+    long startTime = System.nanoTime();
     String swaggerInfoMapAsStr = integrationConfiguration.getValue(OPENAPI_INFO);
+    System.out.println("Getting swagger str from properties: " + (System.nanoTime() - startTime)/1000000 + " milliseconds");
+
     if (swaggerInfoMapAsStr == null || !objectMapper.readValue(swaggerInfoMapAsStr, Map.class).keySet().contains(subApi)) {
       String swaggerUrl = subAPIInfoMap.get("docs");
       Map<String, Object> apiSwaggerResponse = HTTP.testAuth(connectedSystemConfiguration, swaggerUrl);
@@ -163,7 +167,11 @@ public class GuidewireUIBuilder extends UIBuilder {
       String swaggerStr = apiSwaggerResponse.get("result").toString();
       Map<String, String> swaggerInfoMap = new HashMap<>();
       swaggerInfoMap.put(subApi, swaggerStr);
+
+      startTime = System.nanoTime();
       swaggerInfoMapAsStr = objectMapper.writeValueAsString(swaggerInfoMap);
+      System.out.println("Saving to map: " + (System.nanoTime() - startTime)/1000000 + " milliseconds");
+
       TextPropertyDescriptor openAPIInfo = simpleIntegrationTemplate.textProperty(OPENAPI_INFO)
           .transientChoices(true)
           .isHidden(true)
@@ -174,8 +182,15 @@ public class GuidewireUIBuilder extends UIBuilder {
           .setValue(SEARCH, "");
     }
 
+    startTime = System.nanoTime();
     Map<String, String> swaggerMap = objectMapper.readValue(swaggerInfoMapAsStr, Map.class);
+    System.out.println("Reading from map: " + (System.nanoTime() - startTime)/1000000 + " milliseconds");
+
+
+    startTime = System.nanoTime();
     OpenAPI openAPI = Util.getOpenAPI(swaggerMap.get(subApi));
+    System.out.println("Getting openAPI: " + (System.nanoTime() - startTime)/1000000 + " milliseconds");
+
     setOpenAPI(openAPI);
     setPaths(openAPI.getPaths());
     setDefaultEndpoints(null);

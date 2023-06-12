@@ -10,6 +10,9 @@ dependencies {
   compileOnly 'com.appian:connected-systems-core:1.8.2'
   compileOnly 'org.slf4j:slf4j-api:2.0.5'
 
+/*  implementation 'org.openapitools.empoa:empoa-jackson-serializer:2.1.0' //testing sreialization*/
+  implementation 'org.openapitools.empoa:empoa-gson-serializer:2.1.0'
+
   implementation 'com.appian:connected-systems-client:1.2.0'
   implementation 'com.google.guava:guava:31.1-jre'
   implementation 'me.xdrop:fuzzywuzzy:1.4.0'
