@@ -13,6 +13,7 @@ import com.appian.connectedsystems.templateframework.sdk.IntegrationError;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyState;
 import com.appian.guidewire.templates.apis.GuidewireIntegrationTemplate;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import okhttp3.MediaType;
@@ -25,7 +26,7 @@ public class GuidewireExecute extends Execute {
       GuidewireIntegrationTemplate simpleIntegrationTemplate,
       SimpleConfiguration integrationConfiguration,
       SimpleConfiguration connectedSystemConfiguration,
-      ExecutionContext executionContext) {
+      ExecutionContext executionContext) throws JsonProcessingException {
     super(simpleIntegrationTemplate, integrationConfiguration, connectedSystemConfiguration, executionContext);
   }
 

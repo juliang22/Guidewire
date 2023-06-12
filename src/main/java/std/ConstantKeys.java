@@ -35,6 +35,7 @@ public interface ConstantKeys {
   String API_VERSION = "v1";
 
   // Sub API Types
+  String SUB_API_KEY = "subApiKey";
   // ClaimCenter
   String CLAIMS_ADMIN = "claimsAdmin";
   String CLAIMS_ASYNC = "claimsAsync";

@@ -114,15 +114,7 @@ public class Util implements ConstantKeys{
         }
     }
 
-    public static Map<String,Map<String,String>> strToOpenAPIInfo(String openAPIInfoStr) {
-        try {
-             return new ObjectMapper().readValue(openAPIInfoStr, Map.class);
-        } catch (IOException e) {
-            // TODO: error handle
-            e.printStackTrace();
-        }
-        return null;
-    }
+
 
     public static OpenAPI getOpenAPI(String openAPIStr) {
         ParseOptions parseOptions = new ParseOptions();

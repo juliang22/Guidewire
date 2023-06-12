@@ -10,6 +10,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.templateframework.sdk.configuration.BooleanDisplayMode;
@@ -32,58 +34,31 @@ import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.parameters.RequestBody;
 import io.swagger.v3.oas.models.responses.ApiResponse;
+import io.swagger.v3.oas.models.responses.ApiResponses;
 import std.ConstantKeys;
 import std.HTTP;
 import std.Util;
 
 public class GuidewireUIBuilder extends UIBuilder {
 
-  protected Map<String, Map<String,String>> apiInfoMap;
   protected ObjectMapper objectMapper = new ObjectMapper();
 
   public GuidewireUIBuilder(
       GuidewireIntegrationTemplate simpleIntegrationTemplate,
       SimpleConfiguration integrationConfiguration,
-      SimpleConfiguration connectedSystemConfiguration) {
+      SimpleConfiguration connectedSystemConfiguration) throws JsonProcessingException {
 
     super(simpleIntegrationTemplate, integrationConfiguration, connectedSystemConfiguration);
     setApi(connectedSystemConfiguration.getValue(API_TYPE));
 
-    if (integrationConfiguration.getProperty(OPENAPI_INFO) != null && integrationConfiguration.getValue(OPENAPI_INFO) != null) {
-      String openAPIInfoStr = integrationConfiguration.getValue(OPENAPI_INFO);
-      try {
-        this.apiInfoMap = objectMapper.readValue(openAPIInfoStr, Map.class);
-      } catch (JsonProcessingException e) {
-        // TODO error handle
-        throw new RuntimeException(e);
-      }
-    }
+
   }
 
-  // Sets the OpenAPI api and the paths. This is stored statically in the CSP so that it is loaded when the plugin is installed
-  // Modify this method and the CSP with relevant API constants and path names
-  public void setOpenAPI(String subApi) {
 
-    setSubApi(subApi);
-    OpenAPI openAPI;
-    try {
-      openAPI = objectMapper.readValue(integrationConfiguration.getValue(subApi).toString(), OpenAPI.class);
-    } catch (JsonProcessingException e) {
-      // TODO: error handle
-      throw new RuntimeException(e);
-    }
-    setOpenAPI(openAPI);
-    setPaths(openAPI.getPaths());
-    setDefaultEndpoints(null);
-  }
-
-  public List<PropertyDescriptor<?>> build() {
+  public List<PropertyDescriptor<?>> build() throws IOException {
     List<PropertyDescriptor<?>> result = new ArrayList<>();
 
-
-
-
-    if (integrationConfiguration.getProperty(OPENAPI_INFO) == null || integrationConfiguration.getValue(OPENAPI_INFO) == null) {
+ /*   if (integrationConfiguration.getProperty(OPENAPI_INFO) == null || integrationConfiguration.getValue(OPENAPI_INFO) == null) {
       String rootUrl = connectedSystemConfiguration.getValue(ROOT_URL);
       try {
         Map<String, Object> initialResponse = HTTP.testAuth(connectedSystemConfiguration, rootUrl + "/rest/apis");
@@ -91,104 +66,128 @@ public class GuidewireUIBuilder extends UIBuilder {
           // TODO: error handle
         }
 
-
-        Map<String,Map<String, String>> ApiIInfoMap = objectMapper.readValue(initialResponse.get("result").toString(), Map.class);
-        TextPropertyDescriptor.TextPropertyDescriptorBuilder apiInfoMapChoices = simpleIntegrationTemplate
-            .textProperty(OPENAPI_INFO)
-            .isHidden(true);
-        ApiIInfoMap.forEach((subApiPath, subAPIInfoMap) -> {
-
-          try {
-            subAPIInfoMap.put("key", subAPIInfoMap.get("title").replace(" ", ""));
-            String subAPIInfoMapToStr = objectMapper.writeValueAsString(subAPIInfoMap);
-            apiInfoMapChoices.choice(
-                Choice.builder().name(subAPIInfoMap.get("title")).value(subAPIInfoMapToStr).build()
-            );
-          } catch (JsonProcessingException e) {
-            // TODO error handle
-            throw new RuntimeException(e);
-          }
-
-/*          String subApiKey = subAPIInfoMap.get("title").replace(" ", "");
+        Map<String, Map<String,String>> apiInfoMap = new HashMap<>();
+        Map<String,Object> subApiList = objectMapper.readValue(initialResponse.get("result").toString(), Map.class);
+        subApiList.forEach((api, properties) -> {
+          Map<String, String> subAPIInfoMap = ((Map<String, String>)properties);
           String apiSwaggerUrl = subAPIInfoMap.get("docs").replace("swagger", "openapi");
-
           try {
             Map<String, Object> apiSwaggerResponse = HTTP.testAuth(connectedSystemConfiguration, apiSwaggerUrl);
 
             if (apiSwaggerResponse.containsKey("error")) return; // skip to next iteration if there's no available swagger docs
 
-            // Getting OpenAPI string, converting to OpenAPI object, storing OpenAPI object as string in a textProperty
             String openAPIStr = apiSwaggerResponse.get("result").toString();
-            OpenAPI openAPI = Util.getOpenAPI(openAPIStr);
-            TextPropertyDescriptor openAPIObjAsStrStoredAsChoice = simpleIntegrationTemplate.textProperty(subApiKey)
-                .transientChoices(true)
-                .isHidden(true)
-                .choice(Choice.builder().name(subApiKey).value(objectMapper.writeValueAsString(openAPI)).build())
-                .build();
-            integrationConfiguration.setProperties(openAPIObjAsStrStoredAsChoice).setValue(subApiKey, openAPIObjAsStrStoredAsChoice);
-            result.add(openAPIObjAsStrStoredAsChoice);
+            subAPIInfoMap.put(OPENAPISTR, openAPIStr);
+
+            String subApiKey = subAPIInfoMap.get("title").replace(" ", "");
+            apiInfoMap.put(subApiKey, subAPIInfoMap);
 
           } catch (IOException e) {
             // TODO: error handle
             throw new RuntimeException(e);
-          }*/
+          }
         });
-
-        integrationConfiguration.setProperties(apiInfoMapChoices.build());
 
         // TODO: encoding
         // Saving object containing openAPI info as string and saving it
-/*        String openAPIInfoStr = objectMapper.writeValueAsString(apiInfoMap);
+        String openAPIInfoStr = objectMapper.writeValueAsString(apiInfoMap);
+
         TextPropertyDescriptor openAPIInfo = simpleIntegrationTemplate.textProperty(OPENAPI_INFO)
             .transientChoices(true)
             .isHidden(true)
             .choice(Choice.builder().name("OpenAPIInfo").value(openAPIInfoStr).build())
             .build();
         integrationConfiguration.setProperties(openAPIInfo).setValue(OPENAPI_INFO, openAPIInfoStr);
-        result.add(openAPIInfo);*/
+        result.add(openAPIInfo);
+        this.apiInfoMap = Util.strToOpenAPIInfo(openAPIInfoStr);
       } catch (IOException e) {
         // TODO: Error handle
       }
-    }
+    }*/
 
 
-
-
-
-    // Making subAPI choices for user to select
-    ArrayList<Choice> choices = new ArrayList<>();
-
-
-
-
-    apiInfoMap.forEach((subApiKey, openAPIInfo) -> {
-      choices.add(Choice.builder().name(openAPIInfo.get("title")).value(subApiKey).build());
-    });
-    TextPropertyDescriptor subApiUI = simpleIntegrationTemplate.textProperty(SUB_API_TYPE)
+    TextPropertyDescriptor.TextPropertyDescriptorBuilder subApiChoicesUI = simpleIntegrationTemplate.textProperty(SUB_API_TYPE)
         .label("Guidewire Module")
-        .choices(choices.toArray(new Choice[0]))
         .description("Select the GuideWire API to access. Create a separate connected system for each additional API.")
         .isRequired(true)
-        .refresh(RefreshPolicy.ALWAYS)
-        .build();
-    result.add(subApiUI);
+        .refresh(RefreshPolicy.ALWAYS);
 
-    // If the subAPI has not been selected, only render the subAPI dropdown
-    if (integrationConfiguration.getValue(SUB_API_TYPE) == null) {
+    // On initial load, get list of subApis and set a dropdown property of subApis
+    if (integrationConfiguration.getProperty(SUB_API_TYPE) == null) {
+      String rootUrl = connectedSystemConfiguration.getValue(ROOT_URL);
+      Map<String, Object> initialResponse = HTTP.testAuth(connectedSystemConfiguration, rootUrl + "/rest/apis");
+      if (initialResponse == null || initialResponse.containsKey("error")) {
+        // TODO: error handle
+      }
+
+      Map<String,Map<String,String>> subApiList = objectMapper.readValue(initialResponse.get("result").toString(), Map.class);
+      for (Map.Entry<String,Map<String,String>> subApiProperties : subApiList.entrySet()) {
+        Map<String,String> subAPIInfoMap = subApiProperties.getValue();
+
+        // Filter out all unusable swagger files
+        Pattern pattern = Pattern.compile("/system/|/event/|/apis");
+        Matcher matcher = pattern.matcher(subAPIInfoMap.get("basePath"));
+        if (!matcher.find()) {
+          subAPIInfoMap.put(SUB_API_KEY, subAPIInfoMap.get("title").replace(" ", ""));
+          subAPIInfoMap.put("docs", subAPIInfoMap.get("docs").replace("swagger", "openapi"));
+          String subAPIInfoMapStr = objectMapper.writeValueAsString(subAPIInfoMap);
+          subApiChoicesUI.choice(Choice.builder().name(subAPIInfoMap.get("title")).value(subAPIInfoMapStr).build());
+        }
+      }
+      result.add(subApiChoicesUI.build());
       return result;
     }
 
+    // If the subAPI has not been selected, retrieve list of subApis and only render the subAPI dropdown
+    result.add(integrationConfiguration.getProperty(SUB_API_TYPE));
+    if (integrationConfiguration.getValue(SUB_API_TYPE) == null)  {
+      return result;
+    }
 
-    String subApi = integrationConfiguration.getValue(SUB_API_TYPE).toString();
-    setOpenAPI(subApi);
+    // User has selected subAPI module. Set subApi and get OpenAPI info either from memory or from endpoint
+    String subAPIInfoMapStr = integrationConfiguration.getValue(SUB_API_TYPE);
+    Map<String,String> subAPIInfoMap =  objectMapper.readValue(subAPIInfoMapStr, Map.class);
+    setSubApi(subAPIInfoMap.get(SUB_API_KEY));
+
+    // Load from memory (user searching or clicking other endpoints) or get swagger file of the subApi from guidewire and
+    // saving it in a hidden property. Property is transient and will not save permanently after saving the integration object
+    // to conserve memory. Reopening integration will trigger another api call.
+    String swaggerInfoMapAsStr = integrationConfiguration.getValue(OPENAPI_INFO);
+    if (swaggerInfoMapAsStr == null || !objectMapper.readValue(swaggerInfoMapAsStr, Map.class).keySet().contains(subApi)) {
+      String swaggerUrl = subAPIInfoMap.get("docs");
+      Map<String, Object> apiSwaggerResponse = HTTP.testAuth(connectedSystemConfiguration, swaggerUrl);
+      if (apiSwaggerResponse == null || apiSwaggerResponse.containsKey("error")) {
+        // TODO: error handle
+      }
+
+      String swaggerStr = apiSwaggerResponse.get("result").toString();
+      Map<String, String> swaggerInfoMap = new HashMap<>();
+      swaggerInfoMap.put(subApi, swaggerStr);
+      swaggerInfoMapAsStr = objectMapper.writeValueAsString(swaggerInfoMap);
+      TextPropertyDescriptor openAPIInfo = simpleIntegrationTemplate.textProperty(OPENAPI_INFO)
+          .transientChoices(true)
+          .isHidden(true)
+/*          .choice(Choice.builder().name("OpenAPIInfo").value(swaggerInfoMapAsStr).build())*/
+          .build();
+      integrationConfiguration.setProperties(openAPIInfo)
+          .setValue(OPENAPI_INFO, swaggerInfoMapAsStr)
+          .setValue(SEARCH, "");
+    }
+
+    Map<String, String> swaggerMap = objectMapper.readValue(swaggerInfoMapAsStr, Map.class);
+    OpenAPI openAPI = Util.getOpenAPI(swaggerMap.get(subApi));
+    setOpenAPI(openAPI);
+    setPaths(openAPI.getPaths());
+    setDefaultEndpoints(null);
+
+
+    // If no endpoint is selected, just build the endpoints dropdown
     TextPropertyDescriptor searchBar = simpleIntegrationTemplate.textProperty(SEARCH)
-        .label("Sort Endpoints Dropdown")
+        .label("Sort Endpoints")
         .refresh(RefreshPolicy.ALWAYS)
-        .instructionText("Sort the endpoints dropdown below with a relevant search query")
+        .instructionText("Sort the endpoints dropdown below with a relevant search query.")
         .placeholder("Sort Query")
         .build();
-
-    // If no endpoint is selected, just build the api dropdown
     String selectedEndpoint = integrationConfiguration.getValue(CHOSEN_ENDPOINT);
     if (selectedEndpoint == null) {
       result.addAll(Arrays.asList(searchBar, endpointChoiceBuilder()));
@@ -261,15 +260,20 @@ public class GuidewireUIBuilder extends UIBuilder {
         .build());
 
     // Filtering and Sorting
-    Optional<Schema> returnedFieldItems = Optional.ofNullable(get.getResponses().get("200").getContent().get("application/json"))
+    Optional<Map<String,Object>> extensions = Optional.ofNullable(get.getResponses())
+        .map(responses -> responses.get("200"))
+        .map(ApiResponse::getContent)
+        .map(content -> content.get("application/json"))
         .map(MediaType::getSchema)
         .map(Schema::getProperties)
         .map(map -> map.get("data"))
-        .map(schema -> ((Schema)schema).getItems());
+        .map(schema -> ((Schema)schema).getItems())
+        .map(Schema::getProperties)
+        .map(properties -> (Schema<?>)properties.get("attributes"))
+        .map(Schema::getExtensions);
 
-    if (returnedFieldItems.isPresent()) {
-      AtomicBoolean hasSorting = new AtomicBoolean(false);
-      AtomicBoolean hasFiltering = new AtomicBoolean(false);
+    // Parsing to find filtering and sorting options available on the call
+    if (extensions.isPresent() && extensions.get().size() > 0) {
 
       // Building up sorting and filtering options
       TextPropertyDescriptor.TextPropertyDescriptorBuilder sortedChoices = simpleIntegrationTemplate.textProperty(SORT)
@@ -285,92 +289,60 @@ public class GuidewireUIBuilder extends UIBuilder {
           .isExpressionable(true)
           .refresh(RefreshPolicy.ALWAYS);
 
-      ((Schema<?>)returnedFieldItems.get().getProperties().get("attributes")).getExtensions();
-      Map<String, Object> extensions = ((Schema<?>)returnedFieldItems.get().getProperties().get("attributes")).getExtensions();
+        // If there are filtering options, add filtering UI
+        List<String> filterProperties = (List)extensions.get().get("x-gw-filterable");
+        if (filterProperties != null && filterProperties.size() > 0) {
+          filterProperties.forEach(property -> {
+            filteredChoices.choice(Choice.builder().name(Util.camelCaseToTitleCase(property)).value(property).build());
+          });
+          TextPropertyDescriptor.TextPropertyDescriptorBuilder filteringOperatorsBuilder = simpleIntegrationTemplate
+              .textProperty(FILTER_OPERATOR)
+              .instructionText("Select an operator to filter the results")
+              .refresh(RefreshPolicy.ALWAYS)
+              .isExpressionable(true);
+          FILTERING_OPTIONS.entrySet().forEach(option -> {
+            filteringOperatorsBuilder.choice(Choice.builder().name(option.getKey()).value(option.getValue()).build());
+          });
 
-      if (extensions.size() > 0) {
-        List<String> filterProperties = (List)extensions.get("x-gw-filterable");
-        if (filterProperties.size() > 0) hasFiltering.set(true);
+          // If any of the options are selected, the set will have more items than just null and the rest of the fields become
+          // required
+          Set<String> requiredSet = new HashSet<>(
+              Arrays.asList(integrationConfiguration.getValue(FILTER_FIELD), integrationConfiguration.getValue(FILTER_OPERATOR),
+                  integrationConfiguration.getValue(FILTER_VALUE)));
+          boolean isRequired = requiredSet.size() > 1;
 
-        List<String> sortProperties = (List)extensions.get("x-gw-sortable");
-        if (sortProperties.size() > 0) hasSorting.set(true);
-
-        filterProperties.forEach(property -> {
-          filteredChoices.choice(Choice.builder().name(Util.camelCaseToTitleCase(property)).value(property).build());
-        });
-
-        sortProperties.forEach(property -> {
-          sortedChoices.choice(Choice.builder().name(Util.camelCaseToTitleCase(property)).value(property).build());
-        });
-      }
-
-
-      // Parsing to find filtering and sorting options available on the call
-/*      Map<?,?> returnedFields = ((Schema<?>)returnedFieldItems.get().getProperties().get("attributes")).getProperties();
-      returnedFields.forEach((key, val) -> {
-
-        Optional<Object> extensions = Optional.ofNullable(((Schema<?>)val).getExtensions())
-            .map(schema -> schema.get("x-gw-extensions"));
-        Optional<?> filterable = extensions.map(extensionMap -> ((LinkedHashMap<?,?>)extensionMap).get("filterable"));
-        Optional<?> sortable = extensions.map(extensionMap -> ((LinkedHashMap<?,?>)extensionMap).get("sortable"));
-
-        if (filterable.isPresent()) {
-          filteredChoices.choice(Choice.builder().name(Util.camelCaseToTitleCase(key.toString())).value(key.toString()).build());
-          hasFiltering.set(true);
+          // Add sorting fields to the UI
+          result.add(filteredChoices.isRequired(isRequired).build());
+          result.add(filteringOperatorsBuilder.isRequired(isRequired).build());
+          result.add(simpleIntegrationTemplate.textProperty(FILTER_VALUE)
+              .instructionText("Insert the query to filter the chosen field")
+              .isRequired(isRequired)
+              .refresh(RefreshPolicy.ALWAYS)
+              .isExpressionable(true)
+              .refresh(RefreshPolicy.ALWAYS)
+              .placeholder("22")
+              .build());
         }
 
-        if (sortable.isPresent()) {
-          sortedChoices.choice(Choice.builder().name(Util.camelCaseToTitleCase(key.toString())).value(key.toString()).build());
-          hasSorting.set(true);
+        // If there are sorting options, add sorting UI
+        List<String> sortProperties = (List)extensions.get().get("x-gw-sortable");
+        if (sortProperties != null && sortProperties.size() > 0) {
+          sortProperties.forEach(property -> {
+            sortedChoices.choice(Choice.builder().name(Util.camelCaseToTitleCase(property)).value(property).build());
+          });
+          result.add(sortedChoices.isRequired(integrationConfiguration.getValue(SORT_ORDER) != null).build());
+          Choice[] sortOrder = {Choice.builder().name("Ascending").value("+").build(),
+              Choice.builder().name("Descending").value("-").build()};
+          result.add(simpleIntegrationTemplate.textProperty(SORT_ORDER)
+              .label("Sort Order of Response")
+              .choices(sortOrder)
+              .isExpressionable(true)
+              .isRequired(integrationConfiguration.getValue(SORT) != null)
+              .displayHint(DisplayHint.NORMAL)
+              .instructionText("Select the sort order. Default sort order is ascending")
+              .refresh(RefreshPolicy.ALWAYS)
+              .build());
         }
-
-      });*/
-      // If there are sorting options, add sorting UI
-      if (hasSorting.get()) {
-        result.add(sortedChoices.isRequired(integrationConfiguration.getValue(SORT_ORDER) != null).build());
-        Choice[] sortOrder = {Choice.builder().name("Ascending").value("+").build(),
-            Choice.builder().name("Descending").value("-").build()};
-        result.add(simpleIntegrationTemplate.textProperty(SORT_ORDER)
-            .label("Sort Order of Response")
-            .choices(sortOrder)
-            .isExpressionable(true)
-            .isRequired(integrationConfiguration.getValue(SORT) != null)
-            .displayHint(DisplayHint.NORMAL)
-            .instructionText("Select the sort order. Default sort order is ascending")
-            .refresh(RefreshPolicy.ALWAYS)
-            .build());
-      }
-
-      // If there are filtering options, add filtering UI
-      if (hasFiltering.get()) {
-        TextPropertyDescriptor.TextPropertyDescriptorBuilder filteringOperatorsBuilder = simpleIntegrationTemplate
-            .textProperty(FILTER_OPERATOR)
-            .instructionText("Select an operator to filter the results")
-            .refresh(RefreshPolicy.ALWAYS)
-            .isExpressionable(true);
-        FILTERING_OPTIONS.entrySet().forEach(option -> {
-          filteringOperatorsBuilder.choice(Choice.builder().name(option.getKey()).value(option.getValue()).build());
-        });
-
-        // If any of the options are selected, the set will have more items than just null and the rest of the fields become
-        // required
-        Set<String> requiredSet = new HashSet<>(
-            Arrays.asList(integrationConfiguration.getValue(FILTER_FIELD), integrationConfiguration.getValue(FILTER_OPERATOR),
-                integrationConfiguration.getValue(FILTER_VALUE)));
-        boolean isRequired = requiredSet.size() > 1;
-
-        // Add sorting fields to the UI
-        result.add(filteredChoices.isRequired(isRequired).build());
-        result.add(filteringOperatorsBuilder.isRequired(isRequired).build());
-        result.add(simpleIntegrationTemplate.textProperty(FILTER_VALUE)
-            .instructionText("Insert the query to filter the chosen field")
-            .isRequired(isRequired)
-            .refresh(RefreshPolicy.ALWAYS)
-            .isExpressionable(true)
-            .refresh(RefreshPolicy.ALWAYS)
-            .placeholder("22")
-            .build());
-      }
     }
 
     // Included resources

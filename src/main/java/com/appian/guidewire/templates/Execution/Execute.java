@@ -17,6 +17,8 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyS
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
 import com.appian.guidewire.templates.GuidewireCSP;
 import com.appian.guidewire.templates.apis.GuidewireIntegrationTemplate;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 
 import std.ConstantKeys;
@@ -42,7 +44,7 @@ public abstract class Execute implements ConstantKeys {
   protected HttpResponse HTTPResponse;
   protected Map<String,Object> requestDiagnostic;
   protected HTTP httpService;
-  protected Map<String,Map<String,String>> apiInfoMap;
+  protected Map<String,String> apiInfoMap;
 
   public abstract IntegrationResponse buildExecution() throws IOException;
   public abstract void executeGet() throws IOException ;
@@ -54,7 +56,7 @@ public abstract class Execute implements ConstantKeys {
       GuidewireIntegrationTemplate simpleIntegrationTemplate,
       SimpleConfiguration integrationConfiguration,
       SimpleConfiguration connectedSystemConfiguration,
-      ExecutionContext executionContext) {
+      ExecutionContext executionContext) throws JsonProcessingException {
     this.start = System.currentTimeMillis();
     this.connectedSystemConfiguration = connectedSystemConfiguration;
     this.integrationConfiguration = integrationConfiguration;
@@ -65,9 +67,10 @@ public abstract class Execute implements ConstantKeys {
     this.subApi = pathData[3];
     this.restOperation = pathData[1];
     this.pathNameUnmodified = pathData[2];
-    this.apiInfoMap = Util.strToOpenAPIInfo(connectedSystemConfiguration.getValue(OPENAPI_INFO));
+    String subApiInfoStr = integrationConfiguration.getValue(SUB_API_TYPE);
+    this.apiInfoMap = new ObjectMapper().readValue(subApiInfoStr, Map.class);
     this.pathNameModified =
-        connectedSystemConfiguration.getValue(ROOT_URL) + "/rest" + apiInfoMap.get(subApi).get("basePath") + pathNameUnmodified;
+        connectedSystemConfiguration.getValue(ROOT_URL) + "/rest" + apiInfoMap.get("basePath") + pathNameUnmodified;
     this.gson = new Gson();
     this.reqBodyKey = integrationConfiguration.getProperty(REQ_BODY) != null ?
         integrationConfiguration.getProperty(REQ_BODY).getLabel() :

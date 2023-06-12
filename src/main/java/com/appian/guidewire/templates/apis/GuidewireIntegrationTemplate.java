@@ -13,6 +13,7 @@ import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTem
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
 import com.appian.guidewire.templates.Execution.GuidewireExecute;
 import com.appian.guidewire.templates.UI.GuidewireUIBuilder;
+import com.fasterxml.jackson.core.JsonProcessingException;
 
 import std.ConstantKeys;
 
@@ -33,10 +34,19 @@ public class GuidewireIntegrationTemplate extends SimpleIntegrationTemplate impl
     /*this.textProperty("").transientChoices(true).choice(Choice.builder().name("").value("").build());*/
     // TODO: transient choices, save OAS to choice value
 
+    GuidewireUIBuilder restBuilder = null;
+    try {
+      restBuilder = new GuidewireUIBuilder(this, integrationConfiguration, connectedSystemConfiguration);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
 
-
-    GuidewireUIBuilder restBuilder = new GuidewireUIBuilder(this, integrationConfiguration, connectedSystemConfiguration);
-    PropertyDescriptor<?>[] result = restBuilder.build().toArray(new PropertyDescriptor<?>[0]);
+    PropertyDescriptor<?>[] result = new PropertyDescriptor[0];
+    try {
+      result = restBuilder.build().toArray(new PropertyDescriptor<?>[0]);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
     return integrationConfiguration.setProperties(result);
 
    }
@@ -47,8 +57,14 @@ public class GuidewireIntegrationTemplate extends SimpleIntegrationTemplate impl
       SimpleConfiguration connectedSystemConfiguration,
       ExecutionContext executionContext) {
 
-    GuidewireExecute execute = new GuidewireExecute(this, integrationConfiguration, connectedSystemConfiguration,
-        executionContext);
+    GuidewireExecute execute = null;
+    try {
+      execute = new GuidewireExecute(this, integrationConfiguration, connectedSystemConfiguration,
+          executionContext);
+    } catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
+
     try {
       return execute.buildExecution();
     } catch (IOException e) {
