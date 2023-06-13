@@ -58,54 +58,6 @@ public class GuidewireUIBuilder extends UIBuilder {
   public List<PropertyDescriptor<?>> build() throws IOException {
     List<PropertyDescriptor<?>> result = new ArrayList<>();
 
- /*   if (integrationConfiguration.getProperty(OPENAPI_INFO) == null || integrationConfiguration.getValue(OPENAPI_INFO) == null) {
-      String rootUrl = connectedSystemConfiguration.getValue(ROOT_URL);
-      try {
-        Map<String, Object> initialResponse = HTTP.testAuth(connectedSystemConfiguration, rootUrl + "/rest/apis");
-        if (initialResponse == null || initialResponse.containsKey("error")) {
-          // TODO: error handle
-        }
-
-        Map<String, Map<String,String>> apiInfoMap = new HashMap<>();
-        Map<String,Object> subApiList = objectMapper.readValue(initialResponse.get("result").toString(), Map.class);
-        subApiList.forEach((api, properties) -> {
-          Map<String, String> subAPIInfoMap = ((Map<String, String>)properties);
-          String apiSwaggerUrl = subAPIInfoMap.get("docs").replace("swagger", "openapi");
-          try {
-            Map<String, Object> apiSwaggerResponse = HTTP.testAuth(connectedSystemConfiguration, apiSwaggerUrl);
-
-            if (apiSwaggerResponse.containsKey("error")) return; // skip to next iteration if there's no available swagger docs
-
-            String openAPIStr = apiSwaggerResponse.get("result").toString();
-            subAPIInfoMap.put(OPENAPISTR, openAPIStr);
-
-            String subApiKey = subAPIInfoMap.get("title").replace(" ", "");
-            apiInfoMap.put(subApiKey, subAPIInfoMap);
-
-          } catch (IOException e) {
-            // TODO: error handle
-            throw new RuntimeException(e);
-          }
-        });
-
-        // TODO: encoding
-        // Saving object containing openAPI info as string and saving it
-        String openAPIInfoStr = objectMapper.writeValueAsString(apiInfoMap);
-
-        TextPropertyDescriptor openAPIInfo = simpleIntegrationTemplate.textProperty(OPENAPI_INFO)
-            .transientChoices(true)
-            .isHidden(true)
-            .choice(Choice.builder().name("OpenAPIInfo").value(openAPIInfoStr).build())
-            .build();
-        integrationConfiguration.setProperties(openAPIInfo).setValue(OPENAPI_INFO, openAPIInfoStr);
-        result.add(openAPIInfo);
-        this.apiInfoMap = Util.strToOpenAPIInfo(openAPIInfoStr);
-      } catch (IOException e) {
-        // TODO: Error handle
-      }
-    }*/
-
-
     TextPropertyDescriptor.TextPropertyDescriptorBuilder subApiChoicesUI = simpleIntegrationTemplate.textProperty(SUB_API_TYPE)
         .label("Guidewire Module")
         .description("Select the GuideWire API to access. Create a separate connected system for each additional API.")
@@ -125,7 +77,7 @@ public class GuidewireUIBuilder extends UIBuilder {
         Map<String,String> subAPIInfoMap = subApiProperties.getValue();
 
         // Filter out all unusable swagger files
-        Pattern pattern = Pattern.compile("/system/|/event/|/apis");
+        Pattern pattern = Pattern.compile("/system/|/event/|/apis|/composite");
         Matcher matcher = pattern.matcher(subAPIInfoMap.get("basePath"));
         if (!matcher.find()) {
           subAPIInfoMap.put(SUB_API_KEY, subAPIInfoMap.get("title").replace(" ", ""));
@@ -184,17 +136,17 @@ public class GuidewireUIBuilder extends UIBuilder {
 
     startTime = System.nanoTime();
     Map<String, String> swaggerMap = objectMapper.readValue(swaggerInfoMapAsStr, Map.class);
-    System.out.println("Reading from map: " + (System.nanoTime() - startTime)/1000000 + " milliseconds");
+    System.out.println("Property val to map: " + (System.nanoTime() - startTime)/1000000 + " milliseconds");
 
 
+    String swaggerStr = swaggerMap.get(subApi);
     startTime = System.nanoTime();
-    OpenAPI openAPI = Util.getOpenAPI(swaggerMap.get(subApi));
+    OpenAPI openAPI = Util.getOpenAPI(swaggerStr);
     System.out.println("Getting openAPI: " + (System.nanoTime() - startTime)/1000000 + " milliseconds");
 
     setOpenAPI(openAPI);
     setPaths(openAPI.getPaths());
     setDefaultEndpoints(null);
-
 
     // If no endpoint is selected, just build the endpoints dropdown
     TextPropertyDescriptor searchBar = simpleIntegrationTemplate.textProperty(SEARCH)

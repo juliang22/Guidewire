@@ -58,6 +58,9 @@ public class GuidewireCSP extends SimpleTestableConnectedSystemTemplate implemen
             .build(),
         textProperty(OPENAPI_INFO)
             .isHidden(true)
+            .build(),
+        textProperty("banana")
+            .isHidden(true)
             .build()
     );
 

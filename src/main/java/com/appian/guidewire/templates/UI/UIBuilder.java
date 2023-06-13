@@ -385,6 +385,9 @@ public abstract class UIBuilder implements ConstantKeys {
       customEndpoints.forEach(endpoint -> {
         String name = endpoint.getRestOperation() + " - " + endpoint.getSummary();
 
+        // TODO. Save choicesForSearch in value of a hidden property, only run this if that doesn't exist (first run), use that
+        //  val in endpointChoiceBuilder
+
         // Builds up choices for search on initial run with all paths
         choicesForSearch.add(endpoint.getCustomEndpoint());
 
@@ -428,7 +431,7 @@ public abstract class UIBuilder implements ConstantKeys {
         .isRequired(true)
         .refresh(RefreshPolicy.ALWAYS)
         .label("Select Operation")
-        .transientChoices(true)
+/*        .transientChoices(true)*/
         .instructionText(instructionText)
         .choices(choices.size() > 0 ? choices.toArray(new Choice[0]) : defaultChoices.toArray(new Choice[0]))
         .build();

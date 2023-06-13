@@ -67,9 +67,12 @@ public class ParseOpenAPIsTests {
     ClassLoader classLoader = ParseOpenAPIsTests.class.getClassLoader();
     InputStream input = classLoader.getResourceAsStream("com/appian/guidewire/templates/claims.yaml");
     String swaggerStr = IOUtils.toString(input, StandardCharsets.UTF_8);
-    OpenAPI openAPI = Util.getOpenAPI(swaggerStr);
 
-    String yaml = Yaml.pretty().writeValueAsString(openAPI);
+    long startTime = System.nanoTime();
+    OpenAPI openAPI = Util.getOpenAPI(swaggerStr);
+    System.out.println("Getting OpenAPI obj: " + (System.nanoTime() - startTime)/1000000 + " milliseconds");
+
+/*    String yaml = Yaml.pretty().writeValueAsString(openAPI);
     System.out.println(yaml.length());
     ObjectMapper objectMapper = new ObjectMapper();
 
@@ -77,13 +80,14 @@ public class ParseOpenAPIsTests {
     long startTime = System.nanoTime();
     OpenAPI openAPI1 = objectMapper.readValue(yaml, OpenAPI.class);
     System.out.println(openAPI1.getPaths().size());
-    System.out.println("Swagger str to obj: " + (System.nanoTime() - startTime)/1000000 + " milliseconds");
+    System.out.println("Swagger str to obj: " + (System.nanoTime() - startTime)/1000000 + " milliseconds");*/
 
 /*    OpenAPI openAPI = Util.getOpenAPI(swaggerStr);*/
 /*    String resultStr = new ObjectMapper().writeValueAsString(openAPI);*/
 
     // Compress the string
-     startTime = System.nanoTime();
+
+    startTime = System.nanoTime();
     String compressed = compress(swaggerStr);
     System.out.println("Compression Time: " + (System.nanoTime() - startTime)/1000000 + " milliseconds");
 

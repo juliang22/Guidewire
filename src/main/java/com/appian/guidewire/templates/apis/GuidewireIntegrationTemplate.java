@@ -1,6 +1,8 @@
 package com.appian.guidewire.templates.apis;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import com.appian.connectedsystems.simplified.sdk.SimpleIntegrationTemplate;
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
@@ -9,6 +11,7 @@ import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.TemplateId;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
+import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyState;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
 import com.appian.guidewire.templates.Execution.GuidewireExecute;
@@ -31,8 +34,14 @@ public class GuidewireIntegrationTemplate extends SimpleIntegrationTemplate impl
       PropertyPath propertyPath,
       ExecutionContext executionContext) {
 
-    /*this.textProperty("").transientChoices(true).choice(Choice.builder().name("").value("").build());*/
-    // TODO: transient choices, save OAS to choice value
+
+    connectedSystemConfiguration.setValue("banana", "yayyy???");
+/*    Map<String,PropertyState> mappy = new HashMap<>();
+    PropertyState propertyStateAtPath = integrationConfiguration.toConfiguration()
+        .getRootState()
+        .getPropertyStateAtPath(propertyPath);
+    mappy.put("banana2", propertyStateAtPath);
+    connectedSystemConfiguration.toConfiguration().getRootState().setValue()*/
 
     GuidewireUIBuilder restBuilder = null;
     try {
