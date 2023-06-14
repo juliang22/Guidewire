@@ -64,9 +64,9 @@ public abstract class Execute implements ConstantKeys {
     this.httpService = new HTTP(this);
     String[] pathData = integrationConfiguration.getValue(CHOSEN_ENDPOINT).toString().split(":");
     this.api = pathData[0];
-    this.subApi = pathData[3];
     this.restOperation = pathData[1];
     this.pathNameUnmodified = pathData[2];
+    this.subApi = pathData[3];
     String subApiInfoStr = integrationConfiguration.getValue(SUB_API_TYPE);
     this.apiInfoMap = new ObjectMapper().readValue(subApiInfoStr, Map.class);
     this.pathNameModified =

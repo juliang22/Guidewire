@@ -68,8 +68,8 @@ protected Execute executionService;
 
   public static Map<String, Object> testAuth(SimpleConfiguration connectedSystemConfiguration, String url) throws IOException {
 
-    String username = connectedSystemConfiguration.getValue(USERNAME);
-    String password = connectedSystemConfiguration.getValue(PASSWORD);
+    String username = connectedSystemConfiguration.getValue(USERNAME).toString().trim();
+    String password = connectedSystemConfiguration.getValue(PASSWORD).toString().trim();
 
     String usernamePassword = username + ":" + password;
     String encodedCredentials = Base64.getEncoder().encodeToString(usernamePassword.getBytes());

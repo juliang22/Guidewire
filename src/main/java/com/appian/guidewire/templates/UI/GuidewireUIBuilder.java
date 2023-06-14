@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -17,7 +16,6 @@ import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfigurat
 import com.appian.connectedsystems.templateframework.sdk.configuration.BooleanDisplayMode;
 import com.appian.connectedsystems.templateframework.sdk.configuration.Choice;
 import com.appian.connectedsystems.templateframework.sdk.configuration.DisplayHint;
-import com.appian.connectedsystems.templateframework.sdk.configuration.LocalTypeDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.RefreshPolicy;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
@@ -34,7 +32,8 @@ import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.parameters.RequestBody;
 import io.swagger.v3.oas.models.responses.ApiResponse;
-import io.swagger.v3.oas.models.responses.ApiResponses;
+import me.xdrop.fuzzywuzzy.FuzzySearch;
+import me.xdrop.fuzzywuzzy.model.ExtractedResult;
 import std.ConstantKeys;
 import std.HTTP;
 import std.Util;
@@ -50,8 +49,6 @@ public class GuidewireUIBuilder extends UIBuilder {
 
     super(simpleIntegrationTemplate, integrationConfiguration, connectedSystemConfiguration);
     setApi(connectedSystemConfiguration.getValue(API_TYPE));
-
-
   }
 
 
@@ -64,12 +61,12 @@ public class GuidewireUIBuilder extends UIBuilder {
         .isRequired(true)
         .refresh(RefreshPolicy.ALWAYS);
 
-    // On initial load, get list of subApis and set a dropdown property of subApis
+    // On initial load, get list of subApis modules and set a dropdown property
     if (integrationConfiguration.getProperty(SUB_API_TYPE) == null) {
       String rootUrl = connectedSystemConfiguration.getValue(ROOT_URL);
       Map<String, Object> initialResponse = HTTP.testAuth(connectedSystemConfiguration, rootUrl + "/rest/apis");
       if (initialResponse == null || initialResponse.containsKey("error")) {
-        // TODO: error handle
+        integrationConfiguration.setErrors(Arrays.asList("Error in connected system. Please verify that your authentication credentials are correct"));
       }
 
       Map<String,Map<String,String>> subApiList = objectMapper.readValue(initialResponse.get("result").toString(), Map.class);
@@ -90,98 +87,157 @@ public class GuidewireUIBuilder extends UIBuilder {
       return result;
     }
 
-    // If the subAPI has not been selected, retrieve list of subApis and only render the subAPI dropdown
+    // If the subAPI module has not been selected, retrieve list of subApis and only render the subAPI dropdown
     result.add(integrationConfiguration.getProperty(SUB_API_TYPE));
     if (integrationConfiguration.getValue(SUB_API_TYPE) == null)  {
       return result;
     }
 
-    // User has selected subAPI module. Set subApi and get OpenAPI info either from memory or from endpoint
+    // User has selected subAPI module. Set subApi and get OpenAPI spec/info either from memory or from endpoint
     String subAPIInfoMapStr = integrationConfiguration.getValue(SUB_API_TYPE);
     Map<String,String> subAPIInfoMap =  objectMapper.readValue(subAPIInfoMapStr, Map.class);
     setSubApi(subAPIInfoMap.get(SUB_API_KEY));
 
-    // Load from memory (user searching or clicking other endpoints) or get swagger file of the subApi from guidewire and
-    // saving it in a hidden property. Property is transient and will not save permanently after saving the integration object
-    // to conserve memory. Reopening integration will trigger another api call.
-
-    long startTime = System.nanoTime();
+    // Load swagger from memory (user searching or selecting another subapi module) or get swagger file of the subApi from
+    // guidewire and save it in a hidden property. Property is transient and will not save permanently after saving the
+    // integration object to conserve memory. Reopening integration will trigger another api call to get the spec.
     String swaggerInfoMapAsStr = integrationConfiguration.getValue(OPENAPI_INFO);
-    System.out.println("Getting swagger str from properties: " + (System.nanoTime() - startTime)/1000000 + " milliseconds");
-
-    if (swaggerInfoMapAsStr == null || !objectMapper.readValue(swaggerInfoMapAsStr, Map.class).keySet().contains(subApi)) {
+    boolean firstRunOrSelectedAnotherSubApiModule = swaggerInfoMapAsStr == null ||
+        !objectMapper.readValue(swaggerInfoMapAsStr, Map.class).containsKey(subApi);
+    if (firstRunOrSelectedAnotherSubApiModule) {
       String swaggerUrl = subAPIInfoMap.get("docs");
       Map<String, Object> apiSwaggerResponse = HTTP.testAuth(connectedSystemConfiguration, swaggerUrl);
       if (apiSwaggerResponse == null || apiSwaggerResponse.containsKey("error")) {
-        // TODO: error handle
+        integrationConfiguration.setErrors((List)apiSwaggerResponse.get("error"));
+        return result;
       }
 
+      // Create map of subapi module name to  map of subapi module info and save as hidden property
       String swaggerStr = apiSwaggerResponse.get("result").toString();
       Map<String, String> swaggerInfoMap = new HashMap<>();
       swaggerInfoMap.put(subApi, swaggerStr);
-
-      startTime = System.nanoTime();
       swaggerInfoMapAsStr = objectMapper.writeValueAsString(swaggerInfoMap);
-      System.out.println("Saving to map: " + (System.nanoTime() - startTime)/1000000 + " milliseconds");
-
       TextPropertyDescriptor openAPIInfo = simpleIntegrationTemplate.textProperty(OPENAPI_INFO)
           .transientChoices(true)
           .isHidden(true)
-/*          .choice(Choice.builder().name("OpenAPIInfo").value(swaggerInfoMapAsStr).build())*/
           .build();
       integrationConfiguration.setProperties(openAPIInfo)
           .setValue(OPENAPI_INFO, swaggerInfoMapAsStr)
-          .setValue(SEARCH, "");
+          .setValue(SEARCH, "")
+          .setValue(ENDPOINTS_FOR_SEARCH, null)
+          .setValue(CHOSEN_ENDPOINT, null);
     }
 
-    startTime = System.nanoTime();
     Map<String, String> swaggerMap = objectMapper.readValue(swaggerInfoMapAsStr, Map.class);
-    System.out.println("Property val to map: " + (System.nanoTime() - startTime)/1000000 + " milliseconds");
-
-
     String swaggerStr = swaggerMap.get(subApi);
-    startTime = System.nanoTime();
-    OpenAPI openAPI = Util.getOpenAPI(swaggerStr);
-    System.out.println("Getting openAPI: " + (System.nanoTime() - startTime)/1000000 + " milliseconds");
 
-    setOpenAPI(openAPI);
-    setPaths(openAPI.getPaths());
-    setDefaultEndpoints(null);
+    TextPropertyDescriptor.TextPropertyDescriptorBuilder listOfEndpointsUI = simpleIntegrationTemplate
+        .textProperty(CHOSEN_ENDPOINT)
+        .isRequired(true)
+        .refresh(RefreshPolicy.ALWAYS)
+        .label("Select Operation");
 
-    // If no endpoint is selected, just build the endpoints dropdown
-    TextPropertyDescriptor searchBar = simpleIntegrationTemplate.textProperty(SEARCH)
+    result.add(simpleIntegrationTemplate.textProperty(SEARCH)
         .label("Sort Endpoints")
         .refresh(RefreshPolicy.ALWAYS)
         .instructionText("Sort the endpoints dropdown below with a relevant search query.")
         .placeholder("Sort Query")
-        .build();
+        .build());
+
+    // If subapi module selected on initial run or new subapi module selected, get list of endpoints
+    if (integrationConfiguration.getProperty(CHOSEN_ENDPOINT) == null) {
+
+      long startTime = System.nanoTime();
+      OpenAPI openAPI = Util.getOpenAPI(swaggerStr);
+      System.out.println("Getting openAPI: " + (System.nanoTime() - startTime)/1000000 + " milliseconds");
+      setOpenAPI(openAPI);
+      setPaths(openAPI.getPaths());
+
+      List<String> listOfChoicesForSearch = new ArrayList<>();
+      paths.forEach((pathName, path) -> {
+        if (PATHS_TO_REMOVE.contains(pathName))
+          return;
+
+        Map<String,Operation> operations = new HashMap<>();
+        operations.put(GET, path.getGet());
+        operations.put(POST, path.getPost());
+        operations.put(PATCH, path.getPatch());
+        operations.put(DELETE, path.getDelete());
+
+        operations.forEach((restOperation, openAPIOperation) -> {
+          if (openAPIOperation != null) {
+            // filter out deprecated endpoints
+            if (openAPIOperation.getDeprecated() != null && openAPIOperation.getDeprecated()) return;
+
+            String name = restOperation + " - " + openAPIOperation.getSummary();
+            String value = api + ":" + restOperation + ":" + pathName + ":" + subApi + ":" + openAPIOperation.getSummary() +
+                ":" + openAPIOperation.getDescription();
+
+            // Builds up endpoint choices and choices list for search on initial run with all paths
+            listOfEndpointsUI.choice(Choice.builder().name(name).value(value).build());
+            listOfChoicesForSearch.add(value);
+          }
+        });
+      });
+
+      integrationConfiguration
+          .setProperties(simpleIntegrationTemplate.textProperty(ENDPOINTS_FOR_SEARCH).isHidden(true).build())
+          .setValue(ENDPOINTS_FOR_SEARCH, objectMapper.writeValueAsString(listOfChoicesForSearch));
+      result.add(listOfEndpointsUI.build());
+      return result;
+    }
+
+    String searchQuery = integrationConfiguration.getValue(SEARCH);
+    String listOfChoicesForSearchStr = integrationConfiguration.getValue(ENDPOINTS_FOR_SEARCH);
+    List<String> listOfChoicesForSearch = objectMapper.readValue(listOfChoicesForSearchStr, List.class);
     String selectedEndpoint = integrationConfiguration.getValue(CHOSEN_ENDPOINT);
+
+    // If there isn't a search query, render default endpoints list
+    if (searchQuery == null || searchQuery.equals("")) {
+      // rebuild default choices from listOfChoicesForSearch (as the choices themselves change order and listOfChoicesForSearch
+      // is stable)
+      listOfChoicesForSearch.forEach(choice -> {
+        String[] pathInfo = choice.split(":");
+        String restOperation = pathInfo[1];
+        String summary = pathInfo[4];
+        listOfEndpointsUI.choice(new Choice.ChoiceBuilder().name(restOperation + " - " + summary).value(choice).build());
+      });
+    } else {
+      // If there is a search query, sort the dropdown with the query
+      List<ExtractedResult> extractedResults = FuzzySearch.extractSorted(searchQuery, listOfChoicesForSearch);
+      for (ExtractedResult choice : extractedResults) {
+        String[] pathInfo = choice.getString().split(":");
+        String restOperation = pathInfo[1];
+        String summary = pathInfo[4];
+        listOfEndpointsUI.choice(new Choice.ChoiceBuilder().name(restOperation + " - " + summary).value(choice.getString()).build());
+      }
+    }
+
+    // If the endpoints list has already been generated but no endpoint is selected, just build the endpoints dropdown
     if (selectedEndpoint == null) {
-      result.addAll(Arrays.asList(searchBar, endpointChoiceBuilder()));
+      result.add(listOfEndpointsUI.build());
       return result;
     }
 
-    String[] selectedEndpointStr = selectedEndpoint.split(":");
-    String apiType = selectedEndpointStr[0];
-    String restOperation = selectedEndpointStr[1];
-    String pathName = selectedEndpointStr[2];
-    String subApiType = selectedEndpointStr[3];
-    // If a user switched to another api after they selected an endpoint, set the endpoint and search to null
-    if (!apiType.equals(api) || !subApiType.equals(subApi)) {
-      integrationConfiguration.setValue(CHOSEN_ENDPOINT, null).setValue(SEARCH, "");
-      result.addAll(Arrays.asList(searchBar, endpointChoiceBuilder()));
-      return result;
-    }
-    // Else if a user selects api then a corresponding endpoint, update label and description accordingly
-    result.addAll(Arrays.asList(searchBar, endpointChoiceBuilder()));
-    String KEY_OF_REQ_BODY = Util.removeSpecialCharactersFromPathName(pathName);
+    // If an endpoint is selected, the instructionText will update to the REST call and path name
+    String[] pathInfo = selectedEndpoint.split(":");
+    String restOperation = pathInfo[1];
+    String chosenPath = pathInfo[2];
+    String description = pathInfo[5];
+    String instructionText = restOperation + " " + chosenPath + " " + description;
+    listOfEndpointsUI.instructionText(instructionText);
+    result.add(listOfEndpointsUI.build());
+
+    OpenAPI openAPI = Util.getOpenAPI(swaggerStr);
+    setOpenAPI(openAPI);
+    setPaths(openAPI.getPaths());
+
+    String KEY_OF_REQ_BODY = Util.removeSpecialCharactersFromPathName(chosenPath);
+/*    integrationConfiguration
+        .setProperties(simpleIntegrationTemplate.textProperty(REQ_BODY).isHidden(true).build())
+        .setValue(REQ_BODY,KEY_OF_REQ_BODY);*/
     result.add(simpleIntegrationTemplate.textProperty(REQ_BODY).label(KEY_OF_REQ_BODY).isHidden(true).build());
-    // The key of the request body is dynamic so when I need to get it in the execute function:
-    // key = integrationConfiguration.getProperty(REQ_BODY).getLabel();
-    // integrationConfiguration.getProperty(key);
-
-    // Building the result with path variables, request body, and other functionality needed to make the request
-    buildRestCall(restOperation, result, pathName);
+    buildRestCall(restOperation, result, chosenPath);
     return result;
   }
 
@@ -312,18 +368,21 @@ public class GuidewireUIBuilder extends UIBuilder {
         }
     }
 
-    // Included resources
+    // Include Total UI
     result.add(simpleIntegrationTemplate.booleanProperty(INCLUDE_TOTAL)
-            .label("Include Total")
-            .isExpressionable(true)
-            .displayMode(BooleanDisplayMode.RADIO_BUTTON)
-            .instructionText("Used to request that results should include a count of the total number of results available, " +
-                "which may be more than the total number of results currently being returned.")
-            .description("If not specified, the default is considered to be `false.` This value can only be set when there is " +
-                "more than one element returned. If the number of resources to total is sufficiently large, using the includeTotal " +
-                "parameter can affect performance. Guidewire recommends you use this parameter only when there is a need for it, and " +
-                "only when the number of resources to total is unlikely to affect performance.")
+        .label("Include Total")
+        .isExpressionable(true)
+        .displayMode(BooleanDisplayMode.RADIO_BUTTON)
+        .instructionText("Used to request that results should include a count of the total number of results available, " +
+            "which may be more than the total number of results currently being returned.")
+        .description("This value can only be set when there is more than one element returned. If not specified, the default is" +
+            " considered to be `false.` If the number of resources to total is sufficiently large, using the includeTotal " +
+            "parameter can affect performance. Guidewire recommends you use this parameter only when there is a need for it, and " +
+            "only when the number of resources to total is unlikely to affect performance.")
         .build());
+
+    // Included resources TODO: currently not working because guidewire docs are wrong
+/*
     Optional<Object> hasIncludedResources = Optional.ofNullable(get.getResponses())
         .map(schema -> schema.get("200"))
         .map(ApiResponse::getContent)
@@ -357,7 +416,7 @@ public class GuidewireUIBuilder extends UIBuilder {
               "Select the related resources below that you would like to be attached to the call. If " +
               "they exist, they will be returned alongside the root resource.")
           .build());
-    }
+    }*/
 
     Optional<Object> documentInResponse = Optional.ofNullable(get.getResponses())
         .map(responses -> responses.get("200"))

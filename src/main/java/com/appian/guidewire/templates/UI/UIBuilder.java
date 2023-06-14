@@ -48,8 +48,8 @@ public abstract class UIBuilder implements ConstantKeys {
   protected OpenAPI openAPI = null;
 
   protected Paths paths;
-  protected List<String> choicesForSearch = new ArrayList<>();
-  protected List<Choice> defaultChoices = new ArrayList<>();
+/*  protected List<String> choicesForSearch = new ArrayList<>();
+  protected List<Choice> defaultChoices = new ArrayList<>();*/
   protected SimpleIntegrationTemplate simpleIntegrationTemplate;
   protected SimpleConfiguration integrationConfiguration;
   protected SimpleConfiguration connectedSystemConfiguration;
@@ -349,7 +349,7 @@ public abstract class UIBuilder implements ConstantKeys {
 
   // Runs on initialization to set the default paths for the dropdown as well as a list of strings of choices used for
   // sorting when a query is entered
-  public void setDefaultEndpoints(List<CustomEndpoint> customEndpoints) {
+  /*public void setDefaultEndpoints(List<CustomEndpoint> customEndpoints) {
     // Build search choices when no search query has been entered
     // Check if rest call exists on path and add each rest call of path to list of choices
     Map<String,Operation> operations = new HashMap<>();
@@ -431,9 +431,9 @@ public abstract class UIBuilder implements ConstantKeys {
         .isRequired(true)
         .refresh(RefreshPolicy.ALWAYS)
         .label("Select Operation")
-/*        .transientChoices(true)*/
+*//*        .transientChoices(true)*//*
         .instructionText(instructionText)
         .choices(choices.size() > 0 ? choices.toArray(new Choice[0]) : defaultChoices.toArray(new Choice[0]))
         .build();
-  }
+  }*/
 }

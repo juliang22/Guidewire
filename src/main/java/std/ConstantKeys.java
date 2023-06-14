@@ -20,9 +20,7 @@ public interface ConstantKeys {
   String ROOT_URL = "rootUrl";
   String OPENAPI_INFO = "openAPIInfo";
   String OPENAPISTR = "openAPIStr";
-
-  String GUIDEWIRE = "guidewire";
-  String SWAGGER_FOLDER_LOCATION = "swaggerFolderLocation";
+  String ENDPOINTS_FOR_SEARCH = "endpointsForSearch";
 
   String CHOSEN_ENDPOINT = "chosenEndpoint";
 
@@ -138,8 +136,6 @@ public interface ConstantKeys {
   // folder/filename setting
   String FOLDER = "folder";
   String SAVED_FILENAME = "savedFileName";
-  String OUTPUT_FILENAME = "outputFileName";
-  String IS_FILE_EXPECTED = "isFileExpected";
 
   String NO_REQ_BODY = "noReqBody";
 
@@ -192,7 +188,5 @@ public interface ConstantKeys {
         .isExpressionable(true)
         .build();
   }
-
-
 
 }
