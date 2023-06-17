@@ -17,13 +17,13 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.BooleanDi
 import com.appian.connectedsystems.templateframework.sdk.configuration.Choice;
 import com.appian.connectedsystems.templateframework.sdk.configuration.DisplayHint;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
+import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
 import com.appian.connectedsystems.templateframework.sdk.configuration.RefreshPolicy;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
 import com.appian.guidewire.templates.apis.GuidewireIntegrationTemplate;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.PathItem;
 import io.swagger.v3.oas.models.media.ByteArraySchema;
@@ -45,15 +45,27 @@ public class GuidewireUIBuilder extends UIBuilder {
   public GuidewireUIBuilder(
       GuidewireIntegrationTemplate simpleIntegrationTemplate,
       SimpleConfiguration integrationConfiguration,
-      SimpleConfiguration connectedSystemConfiguration) throws JsonProcessingException {
+      SimpleConfiguration connectedSystemConfiguration,
+      PropertyPath propertyPath) throws JsonProcessingException {
 
-    super(simpleIntegrationTemplate, integrationConfiguration, connectedSystemConfiguration);
+    super(simpleIntegrationTemplate, integrationConfiguration, connectedSystemConfiguration, propertyPath);
     setApi(connectedSystemConfiguration.getValue(API_TYPE));
   }
 
+  public SimpleConfiguration setPropertiesAndValues(List<PropertyDescriptor<?>> properties, Map<String, String> values) {
+    integrationConfiguration.setProperties(properties.toArray(new PropertyDescriptor<?>[0]));
+    if (values.size() > 0) {
+      values.forEach((key, val) -> {
+        integrationConfiguration.setValue(key, val);
+      });
+    }
+    return integrationConfiguration;
+  }
 
-  public List<PropertyDescriptor<?>> build() throws IOException {
-    List<PropertyDescriptor<?>> result = new ArrayList<>();
+  public SimpleConfiguration build() throws IOException {
+    List<PropertyDescriptor<?>> properties = new ArrayList<>(); // build properties to pass into .setProperties()
+    Map<String, String> values = new HashMap<>(); // build values to pass into .setValues()
+
 
     TextPropertyDescriptor.TextPropertyDescriptorBuilder subApiChoicesUI = simpleIntegrationTemplate.textProperty(SUB_API_TYPE)
         .label("Guidewire Module")
@@ -63,6 +75,7 @@ public class GuidewireUIBuilder extends UIBuilder {
 
     // On initial load, get list of subApis modules and set a dropdown property
     if (integrationConfiguration.getProperty(SUB_API_TYPE) == null) {
+      // Get list of available subApis and their information map
       String rootUrl = connectedSystemConfiguration.getValue(ROOT_URL);
       Map<String, Object> initialResponse = HTTP.testAuth(connectedSystemConfiguration, rootUrl + "/rest/apis");
       if (initialResponse == null || initialResponse.containsKey("error")) {
@@ -76,60 +89,53 @@ public class GuidewireUIBuilder extends UIBuilder {
         // Filter out all unusable swagger files
         Pattern pattern = Pattern.compile("/system/|/event/|/apis|/composite");
         Matcher matcher = pattern.matcher(subAPIInfoMap.get("basePath"));
-        if (!matcher.find()) {
-          subAPIInfoMap.put(SUB_API_KEY, subAPIInfoMap.get("title").replace(" ", ""));
-          subAPIInfoMap.put("docs", subAPIInfoMap.get("docs").replace("swagger", "openapi"));
-          String subAPIInfoMapStr = objectMapper.writeValueAsString(subAPIInfoMap);
-          subApiChoicesUI.choice(Choice.builder().name(subAPIInfoMap.get("title")).value(subAPIInfoMapStr).build());
-        }
+        if (matcher.find()) continue;
+
+        // Build and save map of all the subApi module choices with value of a map of all the subApi info
+        subAPIInfoMap.put(SUB_API_KEY, subAPIInfoMap.get("title").replace(" ", ""));
+        subAPIInfoMap.put("docs", subAPIInfoMap.get("docs").replace("swagger", "openapi"));
+        String subAPIInfoMapStr = objectMapper.writeValueAsString(subAPIInfoMap);
+        subApiChoicesUI.choice(Choice.builder().name(subAPIInfoMap.get("title")).value(subAPIInfoMapStr).build());
       }
-      result.add(subApiChoicesUI.build());
-      return result;
+      properties.add(subApiChoicesUI.build());
+      return setPropertiesAndValues(properties, values);
     }
 
     // If the subAPI module has not been selected, retrieve list of subApis and only render the subAPI dropdown
-    result.add(integrationConfiguration.getProperty(SUB_API_TYPE));
-    if (integrationConfiguration.getValue(SUB_API_TYPE) == null)  {
-      return result;
+    properties.add(integrationConfiguration.getProperty(SUB_API_TYPE));
+    String subAPIInfoMapStr = integrationConfiguration.getValue(SUB_API_TYPE);
+    if (subAPIInfoMapStr == null)  {
+      return setPropertiesAndValues(properties, values);
     }
 
-    // User has selected subAPI module. Set subApi and get OpenAPI spec/info either from memory or from endpoint
-    String subAPIInfoMapStr = integrationConfiguration.getValue(SUB_API_TYPE);
-    Map<String,String> subAPIInfoMap =  objectMapper.readValue(subAPIInfoMapStr, Map.class);
-    setSubApi(subAPIInfoMap.get(SUB_API_KEY));
-
+    // User has selected subAPI module. Set subApi and get OpenAPI spec/info either from memory or from endpoint.
     // Load swagger from memory (user searching or selecting another subapi module) or get swagger file of the subApi from
     // guidewire and save it in a hidden property. Property is transient and will not save permanently after saving the
     // integration object to conserve memory. Reopening integration will trigger another api call to get the spec.
+
+    // User selected subApi module on first run, refresh, or user selected another subapi module
+    TextPropertyDescriptor openAPIInfo = simpleIntegrationTemplate.textProperty(OPENAPI_INFO)
+        .transientChoices(true)
+        .isHidden(true)
+        .build();
+    properties.add(openAPIInfo);
+
+    Map<String,String> subAPIInfoMap =  objectMapper.readValue(subAPIInfoMapStr, Map.class);
+    setSubApi(subAPIInfoMap.get(SUB_API_KEY));
     String swaggerInfoMapAsStr = integrationConfiguration.getValue(OPENAPI_INFO);
-    boolean firstRunOrSelectedAnotherSubApiModule = swaggerInfoMapAsStr == null ||
-        !objectMapper.readValue(swaggerInfoMapAsStr, Map.class).containsKey(subApi);
-    if (firstRunOrSelectedAnotherSubApiModule) {
-      String swaggerUrl = subAPIInfoMap.get("docs");
-      Map<String, Object> apiSwaggerResponse = HTTP.testAuth(connectedSystemConfiguration, swaggerUrl);
-      if (apiSwaggerResponse == null || apiSwaggerResponse.containsKey("error")) {
-        integrationConfiguration.setErrors((List)apiSwaggerResponse.get("error"));
-        return result;
-      }
+    Map<String, String> swaggerInfoMap = swaggerInfoMapAsStr != null  ?
+        objectMapper.readValue(swaggerInfoMapAsStr, Map.class) :
+        new HashMap<>();
+    boolean userSelectedAnotherSubapiModule = swaggerInfoMap.size() > 0 && !swaggerInfoMap.containsKey(subApi);
 
-      // Create map of subapi module name to  map of subapi module info and save as hidden property
-      String swaggerStr = apiSwaggerResponse.get("result").toString();
-      Map<String, String> swaggerInfoMap = new HashMap<>();
-      swaggerInfoMap.put(subApi, swaggerStr);
-      swaggerInfoMapAsStr = objectMapper.writeValueAsString(swaggerInfoMap);
-      TextPropertyDescriptor openAPIInfo = simpleIntegrationTemplate.textProperty(OPENAPI_INFO)
-          .transientChoices(true)
-          .isHidden(true)
-          .build();
-      integrationConfiguration.setProperties(openAPIInfo)
-          .setValue(OPENAPI_INFO, swaggerInfoMapAsStr)
-          .setValue(SEARCH, "")
-          .setValue(ENDPOINTS_FOR_SEARCH, null)
-          .setValue(CHOSEN_ENDPOINT, null);
-    }
-
-    Map<String, String> swaggerMap = objectMapper.readValue(swaggerInfoMapAsStr, Map.class);
-    String swaggerStr = swaggerMap.get(subApi);
+    // Search bar UI and hidden property used for searching added to property list
+    properties.add(simpleIntegrationTemplate.textProperty(SEARCH)
+        .label("Sort Endpoints")
+        .refresh(RefreshPolicy.ALWAYS)
+        .instructionText("Sort the endpoints dropdown below with a relevant search query.")
+        .placeholder("Sort Query")
+        .build());
+    properties.add(simpleIntegrationTemplate.textProperty(ENDPOINTS_FOR_SEARCH).isHidden(true).build());
 
     TextPropertyDescriptor.TextPropertyDescriptorBuilder listOfEndpointsUI = simpleIntegrationTemplate
         .textProperty(CHOSEN_ENDPOINT)
@@ -137,21 +143,33 @@ public class GuidewireUIBuilder extends UIBuilder {
         .refresh(RefreshPolicy.ALWAYS)
         .label("Select Operation");
 
-    result.add(simpleIntegrationTemplate.textProperty(SEARCH)
-        .label("Sort Endpoints")
-        .refresh(RefreshPolicy.ALWAYS)
-        .instructionText("Sort the endpoints dropdown below with a relevant search query.")
-        .placeholder("Sort Query")
-        .build());
+    if (swaggerInfoMapAsStr == null || userSelectedAnotherSubapiModule) {
+      if (userSelectedAnotherSubapiModule) {
+        integrationConfiguration.setValue(CHOSEN_ENDPOINT, null);
+        swaggerInfoMap.clear();
+      }
 
-    // If subapi module selected on initial run or new subapi module selected, get list of endpoints
-    if (integrationConfiguration.getProperty(CHOSEN_ENDPOINT) == null) {
+      String swaggerUrl = subAPIInfoMap.get("docs");
+      Map<String, Object> apiSwaggerResponse = HTTP.testAuth(connectedSystemConfiguration, swaggerUrl);
+      if (apiSwaggerResponse == null || apiSwaggerResponse.containsKey("error")) {
+        integrationConfiguration.setErrors((List)apiSwaggerResponse.get("error"));
+        return setPropertiesAndValues(properties, values);
+      }
 
+      // Create map of subApi module name to map of subApi module info and save as hidden property
+      String swaggerStr = apiSwaggerResponse.get("result").toString();
+      swaggerInfoMap.put(subApi, swaggerStr);
+      swaggerInfoMapAsStr = objectMapper.writeValueAsString(swaggerInfoMap);
+      values.put(OPENAPI_INFO, swaggerInfoMapAsStr);
+      values.put(SEARCH, "");
+/*      values.put(ENDPOINTS_FOR_SEARCH, null);*/
+
+
+
+      // If subApi module selected on initial run, refresh, or new subApi module selected, get list of endpoints
       long startTime = System.nanoTime();
-      OpenAPI openAPI = Util.getOpenAPI(swaggerStr);
+      setOpenAPI(Util.getOpenAPI(swaggerStr));
       System.out.println("Getting openAPI: " + (System.nanoTime() - startTime)/1000000 + " milliseconds");
-      setOpenAPI(openAPI);
-      setPaths(openAPI.getPaths());
 
       List<String> listOfChoicesForSearch = new ArrayList<>();
       paths.forEach((pathName, path) -> {
@@ -180,17 +198,21 @@ public class GuidewireUIBuilder extends UIBuilder {
         });
       });
 
-      integrationConfiguration
-          .setProperties(simpleIntegrationTemplate.textProperty(ENDPOINTS_FOR_SEARCH).isHidden(true).build())
-          .setValue(ENDPOINTS_FOR_SEARCH, objectMapper.writeValueAsString(listOfChoicesForSearch));
-      result.add(listOfEndpointsUI.build());
-      return result;
+      properties.add(listOfEndpointsUI.build());
+      values.put(ENDPOINTS_FOR_SEARCH, objectMapper.writeValueAsString(listOfChoicesForSearch));
+      return setPropertiesAndValues(properties, values);
     }
+
+    if (propertyPath != null) {
+      swaggerInfoMapAsStr = objectMapper.writeValueAsString(swaggerInfoMap);
+      values.put(OPENAPI_INFO, swaggerInfoMapAsStr);
+    }
+
 
     String searchQuery = integrationConfiguration.getValue(SEARCH);
     String listOfChoicesForSearchStr = integrationConfiguration.getValue(ENDPOINTS_FOR_SEARCH);
+    values.put(ENDPOINTS_FOR_SEARCH, listOfChoicesForSearchStr);
     List<String> listOfChoicesForSearch = objectMapper.readValue(listOfChoicesForSearchStr, List.class);
-    String selectedEndpoint = integrationConfiguration.getValue(CHOSEN_ENDPOINT);
 
     // If there isn't a search query, render default endpoints list
     if (searchQuery == null || searchQuery.equals("")) {
@@ -214,9 +236,11 @@ public class GuidewireUIBuilder extends UIBuilder {
     }
 
     // If the endpoints list has already been generated but no endpoint is selected, just build the endpoints dropdown
+    String selectedEndpoint = integrationConfiguration.getValue(CHOSEN_ENDPOINT);
     if (selectedEndpoint == null) {
-      result.add(listOfEndpointsUI.build());
-      return result;
+
+      properties.add(listOfEndpointsUI.build());
+      return setPropertiesAndValues(properties, values);
     }
 
     // If an endpoint is selected, the instructionText will update to the REST call and path name
@@ -226,19 +250,13 @@ public class GuidewireUIBuilder extends UIBuilder {
     String description = pathInfo[5];
     String instructionText = restOperation + " " + chosenPath + " " + description;
     listOfEndpointsUI.instructionText(instructionText);
-    result.add(listOfEndpointsUI.build());
+    properties.add(listOfEndpointsUI.build());
+    Map<String, String> swaggerMap = objectMapper.readValue(swaggerInfoMapAsStr, Map.class);
 
-    OpenAPI openAPI = Util.getOpenAPI(swaggerStr);
-    setOpenAPI(openAPI);
-    setPaths(openAPI.getPaths());
-
-    String KEY_OF_REQ_BODY = Util.removeSpecialCharactersFromPathName(chosenPath);
-/*    integrationConfiguration
-        .setProperties(simpleIntegrationTemplate.textProperty(REQ_BODY).isHidden(true).build())
-        .setValue(REQ_BODY,KEY_OF_REQ_BODY);*/
-    result.add(simpleIntegrationTemplate.textProperty(REQ_BODY).label(KEY_OF_REQ_BODY).isHidden(true).build());
-    buildRestCall(restOperation, result, chosenPath);
-    return result;
+    String swaggerStr = swaggerMap.get(subApi);
+    if (openAPI == null) setOpenAPI(Util.getOpenAPI(swaggerStr));
+    buildRestCall(restOperation, properties, chosenPath);
+    return setPropertiesAndValues(properties, values);
   }
 
   public void buildRestCall(String restOperation, List<PropertyDescriptor<?>> result, String pathName) {
@@ -269,7 +287,6 @@ public class GuidewireUIBuilder extends UIBuilder {
     Operation get = paths.get(pathName).getGet();
 
     // Pagination
-    // result.add(simpleIntegrationTemplate.textProperty(PADDING).isReadOnly(true).label("").build());
     result.add(simpleIntegrationTemplate.textProperty(PAGESIZE)
         .label("Pagination")
         .instructionText("Return 'n' number of items in the response or pass in a link to the 'next' or 'prev' set of items as " +

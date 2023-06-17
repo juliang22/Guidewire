@@ -1,6 +1,7 @@
 package com.appian.guidewire.templates.apis;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -34,31 +35,14 @@ public class GuidewireIntegrationTemplate extends SimpleIntegrationTemplate impl
       PropertyPath propertyPath,
       ExecutionContext executionContext) {
 
-
-    connectedSystemConfiguration.setValue("banana", "yayyy???");
-/*    Map<String,PropertyState> mappy = new HashMap<>();
-    PropertyState propertyStateAtPath = integrationConfiguration.toConfiguration()
-        .getRootState()
-        .getPropertyStateAtPath(propertyPath);
-    mappy.put("banana2", propertyStateAtPath);
-    connectedSystemConfiguration.toConfiguration().getRootState().setValue()*/
-
-    GuidewireUIBuilder restBuilder = null;
     try {
-      restBuilder = new GuidewireUIBuilder(this, integrationConfiguration, connectedSystemConfiguration);
+      return new GuidewireUIBuilder(this, integrationConfiguration, connectedSystemConfiguration, propertyPath).build();
     } catch (IOException e) {
-      throw new RuntimeException(e);
+      return integrationConfiguration.setErrors(
+          Arrays.asList("Error in connected system. Please verify that your authentication credentials are correct", e.getMessage())
+      );
     }
-
-    PropertyDescriptor<?>[] result = new PropertyDescriptor[0];
-    try {
-      result = restBuilder.build().toArray(new PropertyDescriptor<?>[0]);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-    return integrationConfiguration.setProperties(result);
-
-   }
+  }
 
   @Override
   protected IntegrationResponse execute(

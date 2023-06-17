@@ -15,7 +15,6 @@ import com.appian.connectedsystems.templateframework.sdk.IntegrationError.Integr
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyState;
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
-import com.appian.guidewire.templates.GuidewireCSP;
 import com.appian.guidewire.templates.apis.GuidewireIntegrationTemplate;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -72,9 +71,7 @@ public abstract class Execute implements ConstantKeys {
     this.pathNameModified =
         connectedSystemConfiguration.getValue(ROOT_URL) + "/rest" + apiInfoMap.get("basePath") + pathNameUnmodified;
     this.gson = new Gson();
-    this.reqBodyKey = integrationConfiguration.getProperty(REQ_BODY) != null ?
-        integrationConfiguration.getProperty(REQ_BODY).getLabel() :
-        null;
+    this.reqBodyKey = Util.removeSpecialCharactersFromPathName(pathNameUnmodified);
     buildPathNameWithPathVars();
   }
 
@@ -115,7 +112,7 @@ public abstract class Execute implements ConstantKeys {
     Map<String,Object> requestDiagnostic = new HashMap<>();
     requestDiagnostic.put("Operation: ", pathNameUnmodified);
     requestDiagnostic.put("Operation with Path Params: ", pathNameModified);
-    if (this.reqBodyKey != null) {
+    if (integrationConfiguration.getProperty(reqBodyKey) != null) {
       requestDiagnostic.put("Request Body", this.builtRequestBody);
     }
     this.requestDiagnostic = requestDiagnostic;

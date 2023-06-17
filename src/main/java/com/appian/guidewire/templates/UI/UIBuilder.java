@@ -17,6 +17,7 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.LocalType
 import com.appian.connectedsystems.templateframework.sdk.configuration.ParagraphHeight;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptorBuilder;
+import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
 import com.appian.connectedsystems.templateframework.sdk.configuration.RefreshPolicy;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TypeReference;
@@ -53,13 +54,16 @@ public abstract class UIBuilder implements ConstantKeys {
   protected SimpleIntegrationTemplate simpleIntegrationTemplate;
   protected SimpleConfiguration integrationConfiguration;
   protected SimpleConfiguration connectedSystemConfiguration;
+  protected PropertyPath propertyPath;
 
   public UIBuilder(GuidewireIntegrationTemplate simpleIntegrationTemplate,
       SimpleConfiguration integrationConfiguration,
-      SimpleConfiguration connectedSystemConfiguration) {
+      SimpleConfiguration connectedSystemConfiguration,
+      PropertyPath propertyPath) {
     this.simpleIntegrationTemplate = simpleIntegrationTemplate;
     this.integrationConfiguration = integrationConfiguration;
     this.connectedSystemConfiguration = connectedSystemConfiguration;
+    this.propertyPath = propertyPath;
   }
 
   // Methods to implement when building out the API specific details of each request
@@ -85,8 +89,10 @@ public abstract class UIBuilder implements ConstantKeys {
 
   public void setSubApi(String subApi) {this.subApi = subApi;}
 
-  public void setOpenAPI(OpenAPI openAPI) {this.openAPI = openAPI; }
-  public void setPaths(Paths paths) {this.paths = paths;}
+  public void setOpenAPI(OpenAPI openAPI) {
+    this.openAPI = openAPI;
+    this.paths = openAPI.getPaths();
+  }
 
   // Find all occurrences of variables inside path (ex. {claimId})
   protected void setPathVarsUI() {

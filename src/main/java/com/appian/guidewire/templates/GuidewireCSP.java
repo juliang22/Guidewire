@@ -11,7 +11,6 @@ import com.appian.connectedsystems.simplified.sdk.connectiontesting.SimpleTestab
 import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
 import com.appian.connectedsystems.templateframework.sdk.TemplateId;
 import com.appian.connectedsystems.templateframework.sdk.configuration.Choice;
-import com.appian.connectedsystems.templateframework.sdk.configuration.ConfigurationDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.connectiontesting.TestConnectionResult;
@@ -44,11 +43,13 @@ public class GuidewireCSP extends SimpleTestableConnectedSystemTemplate implemen
             .label("Base Url")
             .instructionText("Enter the base url of your Guidewire instance. For example, https://cc-gwcpdev.saappian.zeta1-andromeda.guidewire.net")
             .isRequired(true)
+            .isReadOnly(connectedSystemConfiguration.toConfiguration().getTypes().size() == 0 ? false : true)
             .build(),
         textProperty(USERNAME)
             .label("Username")
             .instructionText("Enter your Guidewire username")
             .isRequired(true)
+            .isReadOnly(connectedSystemConfiguration.toConfiguration().getTypes().size() == 0 ? false : true)
             .build(),
         textProperty(PASSWORD)
             .label("Password")
@@ -57,9 +58,6 @@ public class GuidewireCSP extends SimpleTestableConnectedSystemTemplate implemen
             .masked(true)
             .build(),
         textProperty(OPENAPI_INFO)
-            .isHidden(true)
-            .build(),
-        textProperty("banana")
             .isHidden(true)
             .build()
     );
