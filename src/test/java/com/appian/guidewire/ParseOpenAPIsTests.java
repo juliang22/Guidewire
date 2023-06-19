@@ -70,7 +70,7 @@ public class ParseOpenAPIsTests {
 
     long startTime = System.nanoTime();
     OpenAPI openAPI = Util.getOpenAPI(swaggerStr);
-    System.out.println("Getting OpenAPI obj: " + (System.nanoTime() - startTime)/1000000 + " milliseconds");
+    System.out.println("Getting OpenAPI obj: " + (System.nanoTime() - startTime)/1000000 + " milliseconds. ");
 
 /*    String yaml = Yaml.pretty().writeValueAsString(openAPI);
     System.out.println(yaml.length());
@@ -89,12 +89,12 @@ public class ParseOpenAPIsTests {
 
     startTime = System.nanoTime();
     String compressed = compress(swaggerStr);
-    System.out.println("Compression Time: " + (System.nanoTime() - startTime)/1000000 + " milliseconds");
+    System.out.println("Compression Time: " + (System.nanoTime() - startTime)/1000000 + " milliseconds." + "Str Length:" + compressed.length());
 
     // Decompress the string
     startTime = System.nanoTime();
     String decompressed = decompress(compressed);
-    System.out.println("Decompression Time: " + (System.nanoTime() - startTime)/1000000 + " milliseconds");
+    System.out.println("Decompression Time: " + (System.nanoTime() - startTime)/1000000 + " milliseconds" + "Str Length:" + decompressed.length());
 
 
 

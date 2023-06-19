@@ -14,6 +14,9 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.Choice;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.connectiontesting.TestConnectionResult;
+import com.appiancorp.services.ServiceContext;
+import com.appiancorp.suiteapi.common.ServiceLocator;
+import com.appiancorp.suiteapi.content.ContentService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import std.ConstantKeys;
@@ -22,9 +25,18 @@ import std.HTTP;
 @TemplateId(name="GuidewireCSP")
 public class GuidewireCSP extends SimpleTestableConnectedSystemTemplate implements ConstantKeys {
 
+  GuidewireCSP() {
+    ServiceContext sc = ServiceLocator.getAdministratorServiceContext();
+    ContentService cs = ServiceLocator.getContentService(sc);
+    
+    System.out.println(cs.getAdministratorGroup());
+  }
+
   @Override
   protected SimpleConfiguration getConfiguration(
       SimpleConfiguration connectedSystemConfiguration, ExecutionContext executionContext) {
+
+
 
     List<TextPropertyDescriptor> defaultProperties = Arrays.asList(
         textProperty(API_TYPE).choices(Choice.builder().name("Claims Center").value(CLAIMS).build(),

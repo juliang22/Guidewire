@@ -212,6 +212,7 @@ public class Util implements ConstantKeys{
 
     public static String getPathProperties(PathItem path, String restOperation, String property) {
 
+
         Operation chosenOpenApiPath = getOperation(path, restOperation);
         String result = "";
         switch (property) {
