@@ -1,15 +1,20 @@
 package std;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 import org.apache.commons.io.IOUtils;
 
@@ -208,6 +213,35 @@ public class Util implements ConstantKeys{
                 break;
         }
         return chosenOpenApiPath;
+    }
+
+    public static String compress(String str) throws IOException {
+        if ((str == null) || (str.length() == 0)) {
+            return str;
+        }
+        ByteArrayOutputStream obj = new ByteArrayOutputStream();
+        try (GZIPOutputStream gzip = new GZIPOutputStream(obj)) {
+            gzip.write(str.getBytes("UTF-8"));
+        }
+        return Base64.getEncoder().encodeToString(obj.toByteArray());
+    }
+
+    public static String decompress(String str) throws IOException {
+        if ((str == null) || (str.length() == 0)) {
+            return str;
+        }
+        String outStr = "";
+        byte[] compressed = Base64.getDecoder().decode(str);
+        try (GZIPInputStream gis = new GZIPInputStream(new ByteArrayInputStream(compressed));
+            ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+            byte[] buffer = new byte[256];
+            int len;
+            while ((len = gis.read(buffer)) != -1) {
+                bos.write(buffer, 0, len);
+            }
+            outStr = bos.toString("UTF-8");
+        }
+        return outStr;
     }
 
     public static String getPathProperties(PathItem path, String restOperation, String property) {

@@ -8,6 +8,8 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.Map;
+import java.util.Optional;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -17,11 +19,19 @@ import org.openapitools.empoa.gson.OASGsonSerializer;
 import org.openapitools.empoa.gson.intermal.serializers.OpenAPISerializer;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.gson.Gson;
 
 import io.swagger.util.Yaml;
 import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.Operation;
+import io.swagger.v3.oas.models.PathItem;
+import io.swagger.v3.oas.models.media.MediaType;
+import io.swagger.v3.oas.models.media.ObjectSchema;
+import io.swagger.v3.oas.models.media.Schema;
+import io.swagger.v3.oas.models.parameters.RequestBody;
 import io.swagger.v3.parser.OpenAPIV3Parser;
 import io.swagger.v3.parser.core.models.ParseOptions;
 import std.Util;
@@ -65,12 +75,55 @@ public class ParseOpenAPIsTests {
   public void swagger() throws IOException, ClassNotFoundException {
 
     ClassLoader classLoader = ParseOpenAPIsTests.class.getClassLoader();
-    InputStream input = classLoader.getResourceAsStream("com/appian/guidewire/templates/claims.yaml");
+    InputStream input = classLoader.getResourceAsStream("com/appian/guidewire/templates/claimsv2.json");
     String swaggerStr = IOUtils.toString(input, StandardCharsets.UTF_8);
 
     long startTime = System.nanoTime();
     OpenAPI openAPI = Util.getOpenAPI(swaggerStr);
     System.out.println("Getting OpenAPI obj: " + (System.nanoTime() - startTime)/1000000 + " milliseconds. ");
+
+    startTime = System.nanoTime();
+    Optional<Schema> schema = Optional.ofNullable(openAPI.getPaths().get("/claims/{claimId}/activities"))
+        .map(PathItem::getPost)
+        .map(Operation::getRequestBody)
+        .map(RequestBody::getContent)
+        .map(content -> content.get("application/json"))
+        .map(MediaType::getSchema)
+        .map(Schema::getProperties)
+        .map(properties -> properties.get("data"))
+        .map(data -> ((ObjectSchema)data).getProperties())
+        .map(dataMap -> dataMap.get("attributes"));
+    System.out.println("Getting props: " + (System.nanoTime() - startTime)/1000000 + " milliseconds. ");
+
+
+    ObjectMapper mapper = new ObjectMapper();
+    startTime = System.nanoTime();
+    JsonNode map = mapper.readValue(swaggerStr, JsonNode.class);
+    System.out.println("My own parsing, getting openapi parser: " + (System.nanoTime() - startTime)/1000000 + " milliseconds. ");
+
+    startTime = System.nanoTime();
+    JsonNode allSchemas = map.get("components").get("schemas");
+    JsonNode jsonNode = map.get("paths")
+        .get("/claims/{claimId}/activities")
+        .get("post")
+        .get("requestBody")
+        .get("content")
+        .get("application/json")
+        .get("schema");
+    JsonNode jsonNode1 = allSchemas.get("ActivityRequest").get("properties").get("data");
+    JsonNode data = map.get("components").get("schemas").get("ActivityData").get("properties").get("attributes");
+    allSchemas.get("Activity").get("properties").forEach(prop -> {
+      System.out.println(prop);
+    });
+
+
+
+    System.out.println("My own parsing, getting props: " + (System.nanoTime() - startTime)/1000000 + " milliseconds. ");
+
+
+
+
+
 
 /*    String yaml = Yaml.pretty().writeValueAsString(openAPI);
     System.out.println(yaml.length());

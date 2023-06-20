@@ -158,7 +158,8 @@ public class GuidewireUIBuilder extends UIBuilder {
 
       // Create map of subApi module name to map of subApi module info and save as hidden property
       String swaggerStr = apiSwaggerResponse.get("result").toString();
-      swaggerInfoMap.put(subApi, swaggerStr);
+      String compressedSwaggerStr = Util.compress(swaggerStr);
+      swaggerInfoMap.put(subApi, compressedSwaggerStr);
       swaggerInfoMapAsStr = objectMapper.writeValueAsString(swaggerInfoMap);
       values.put(OPENAPI_INFO, swaggerInfoMapAsStr);
       values.put(SEARCH, "");
@@ -253,7 +254,8 @@ public class GuidewireUIBuilder extends UIBuilder {
     properties.add(listOfEndpointsUI.build());
     Map<String, String> swaggerMap = objectMapper.readValue(swaggerInfoMapAsStr, Map.class);
 
-    String swaggerStr = swaggerMap.get(subApi);
+    String compressedSwaggerStr = swaggerMap.get(subApi);
+    String swaggerStr = Util.decompress(compressedSwaggerStr);
     if (openAPI == null) setOpenAPI(Util.getOpenAPI(swaggerStr));
     buildRestCall(restOperation, properties, chosenPath);
     return setPropertiesAndValues(properties, values);
