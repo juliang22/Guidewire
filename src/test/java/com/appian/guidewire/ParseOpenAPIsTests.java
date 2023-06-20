@@ -1,87 +1,128 @@
 package com.appian.guidewire;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.GZIPOutputStream;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.commons.io.IOUtils;
 import org.junit.Test;
-import org.openapitools.empoa.gson.OASGsonSerializer;
-import org.openapitools.empoa.gson.intermal.serializers.OpenAPISerializer;
 
+import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.google.gson.Gson;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 
-import io.swagger.util.Yaml;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.PathItem;
 import io.swagger.v3.oas.models.media.MediaType;
 import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
+import io.swagger.v3.oas.models.parameters.Parameter;
+import io.swagger.v3.oas.models.parameters.PathParameter;
 import io.swagger.v3.oas.models.parameters.RequestBody;
-import io.swagger.v3.parser.OpenAPIV3Parser;
-import io.swagger.v3.parser.core.models.ParseOptions;
+import std.ConstantKeys;
 import std.Util;
 
-public class ParseOpenAPIsTests {
+public class ParseOpenAPIsTests implements ConstantKeys {
 
-  public static String compress(String str) throws IOException {
-    if ((str == null) || (str.length() == 0)) {
-      return str;
+  public String formatParsingPath(JsonNode root, String[] path) {
+
+    StringBuilder formattedPath = new StringBuilder("/");
+    for (String loc : path) {
+      String formattedLoc = loc.replace("/", "~1"); // Formatting "/" to work with .at()
+      formattedPath.append(formattedLoc);
+      formattedPath.append("/");
     }
-    ByteArrayOutputStream obj = new ByteArrayOutputStream();
-    try (GZIPOutputStream gzip = new GZIPOutputStream(obj)) {
-      gzip.write(str.getBytes("UTF-8"));
-    }
-    return Base64.getEncoder().encodeToString(obj.toByteArray());
+    return formattedPath.toString();
   }
 
-  public static String decompress(String str) throws IOException {
-    if ((str == null) || (str.length() == 0)) {
-      return str;
-    }
-    String outStr = "";
-    byte[] compressed = Base64.getDecoder().decode(str);
-    try (GZIPInputStream gis = new GZIPInputStream(new ByteArrayInputStream(compressed));
-        ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-      byte[] buffer = new byte[256];
-      int len;
-      while ((len = gis.read(buffer)) != -1) {
-        bos.write(buffer, 0, len);
+  public JsonNode parse(JsonNode root, List<String> path) throws IOException {
+    ClassLoader classLoader = ParseOpenAPIsTests.class.getClassLoader();
+    InputStream input = classLoader.getResourceAsStream("com/appian/guidewire/templates/claimsv2.json");
+    String swaggerStr = IOUtils.toString(input, StandardCharsets.UTF_8);
+
+    JsonNode openApi = new ObjectMapper().readValue(swaggerStr, JsonNode.class);
+
+
+    JsonNode currNode = root;
+
+    for (int i = 0; i < path.size(); i++) {
+      String loc = path.get(i);
+      currNode = currNode.get(loc);
+      if (currNode == null) return null;
+
+      if (currNode.has(REF)) {
+        String newLoc = currNode.get(REF).asText().replace("#/", "/");
+        currNode = openApi.at(newLoc);
       }
-      outStr = bos.toString("UTF-8");
     }
-    return outStr;
+    return currNode;
+  }
+
+  public List<JsonNode> getRefs(JsonNode arrOfRefStrs, JsonNode root) {
+    if (arrOfRefStrs == null || arrOfRefStrs.size() == 0) return null;
+
+    List<JsonNode> refNodeArr = new ArrayList<>();
+    arrOfRefStrs.forEach(refNode -> {
+      Optional.ofNullable(refNode.get("$ref"))
+          .ifPresent(refStr -> {
+            String refLocation = refStr.asText().replace("#/", "/");
+            refNodeArr.add(root.at(refLocation));
+          });
+    });
+    return refNodeArr;
+  }
+
+@Test
+public void testingParsing() throws IOException {
+  ClassLoader classLoader = ParseOpenAPIsTests.class.getClassLoader();
+  InputStream input = classLoader.getResourceAsStream("com/appian/guidewire/templates/claimsv2.json");
+  String swaggerStr = IOUtils.toString(input, StandardCharsets.UTF_8);
+
+  JsonNode openApi = new ObjectMapper().readValue(swaggerStr, JsonNode.class);
+  JsonNode paths = openApi.get("paths");
+  String pathName = "/claims/{claimId}/documents/{documentId}/content";
+  JsonNode get = parse(paths, Arrays.asList(pathName, GET));
+
+  JsonNode data = parse(get, Arrays.asList(RESPONSES, "200", CONTENT, APPLICATION_JSON, SCHEMA, PROPERTIES, DATA));
+  String hasDocs = parse(data, Arrays.asList(ITEMS)) == null ?
+      parse(data, Arrays.asList(PROPERTIES, ATTRIBUTES, "title")).asText() :
+      parse(data, Arrays.asList(ITEMS, PROPERTIES, ATTRIBUTES, "title")).asText();
+
+  if (hasDocs.equals("Document")) {
+
   }
 
 
-
-
+}
 
   @Test
-  public void swagger() throws IOException, ClassNotFoundException {
+  public void swagger() throws IOException  {
 
     ClassLoader classLoader = ParseOpenAPIsTests.class.getClassLoader();
     InputStream input = classLoader.getResourceAsStream("com/appian/guidewire/templates/claimsv2.json");
     String swaggerStr = IOUtils.toString(input, StandardCharsets.UTF_8);
 
+    // Getting OpenAPI obj
     long startTime = System.nanoTime();
     OpenAPI openAPI = Util.getOpenAPI(swaggerStr);
     System.out.println("Getting OpenAPI obj: " + (System.nanoTime() - startTime)/1000000 + " milliseconds. ");
 
+
+
+    // Parsing OpenAPI obj
     startTime = System.nanoTime();
     Optional<Schema> schema = Optional.ofNullable(openAPI.getPaths().get("/claims/{claimId}/activities"))
         .map(PathItem::getPost)
@@ -96,71 +137,87 @@ public class ParseOpenAPIsTests {
     System.out.println("Getting props: " + (System.nanoTime() - startTime)/1000000 + " milliseconds. ");
 
 
+    // Getting Jackson parser obj
     ObjectMapper mapper = new ObjectMapper();
     startTime = System.nanoTime();
     JsonNode map = mapper.readValue(swaggerStr, JsonNode.class);
     System.out.println("My own parsing, getting openapi parser: " + (System.nanoTime() - startTime)/1000000 + " milliseconds. ");
 
+    // Parsing Jackson parser obj with Optionals
     startTime = System.nanoTime();
-    JsonNode allSchemas = map.get("components").get("schemas");
-    JsonNode jsonNode = map.get("paths")
-        .get("/claims/{claimId}/activities")
-        .get("post")
-        .get("requestBody")
-        .get("content")
-        .get("application/json")
-        .get("schema");
-    JsonNode jsonNode1 = allSchemas.get("ActivityRequest").get("properties").get("data");
-    JsonNode data = map.get("components").get("schemas").get("ActivityData").get("properties").get("attributes");
-    allSchemas.get("Activity").get("properties").forEach(prop -> {
-      System.out.println(prop);
-    });
+    Optional<JsonNode> allSchemas = Optional.ofNullable(map)
+        .map(c -> c.get("components"))
+        .map(s -> s.get("schema"));
 
+    Optional<JsonNode> schema1 = Optional.ofNullable(map)
+        .map(p -> p.get("paths"))
+        .map(p -> p.get("/claims/{claimId}/activities"))
+        .map(p -> p.get("post"))
+        .map(p -> p.get("requestBody"))
+        .map(p -> p.get("content"))
+        .map(p -> p.get("application/json"))
+        .map(p -> p.get("schema"));
 
+    if (allSchemas.isPresent()) {
+      allSchemas
+          .map(p -> p.get("ActivityRequest"))
+          .map(p -> p.get("properties"))
+          .map(p -> p.get("data"));
+    }
 
+    if (allSchemas.isPresent()) {
+      allSchemas
+          .map(p -> p.get("ActivityData"))
+          .map(p -> p.get("properties"))
+          .map(p -> p.get("attributes"));
+    }
     System.out.println("My own parsing, getting props: " + (System.nanoTime() - startTime)/1000000 + " milliseconds. ");
 
 
+    // Parsing Jackson obj with .at()
+    startTime = System.nanoTime();
+    String pathName = "/claims/{claimId}/activities";
+    List<String> path = Arrays.asList(PATHS, pathName, POST, REQUEST_BODY, CONTENT, APPLICATION_JSON, SCHEMA, PROPERTIES, DATA,
+        PROPERTIES, ATTRIBUTES);
+    JsonNode res = parse(map, path);
+    System.out.println("My own parsing2, getting props: " + (System.nanoTime() - startTime)/1000000 + " milliseconds. ");
 
 
-
-
-/*    String yaml = Yaml.pretty().writeValueAsString(openAPI);
-    System.out.println(yaml.length());
-    ObjectMapper objectMapper = new ObjectMapper();
-
-
-    long startTime = System.nanoTime();
-    OpenAPI openAPI1 = objectMapper.readValue(yaml, OpenAPI.class);
-    System.out.println(openAPI1.getPaths().size());
-    System.out.println("Swagger str to obj: " + (System.nanoTime() - startTime)/1000000 + " milliseconds");*/
-
-/*    OpenAPI openAPI = Util.getOpenAPI(swaggerStr);*/
-/*    String resultStr = new ObjectMapper().writeValueAsString(openAPI);*/
 
     // Compress the string
-
     startTime = System.nanoTime();
-    String compressed = compress(swaggerStr);
+    String compressed = Util.compress(swaggerStr);
     System.out.println("Compression Time: " + (System.nanoTime() - startTime)/1000000 + " milliseconds." + "Str Length:" + compressed.length());
 
     // Decompress the string
     startTime = System.nanoTime();
-    String decompressed = decompress(compressed);
+    String decompressed = Util.decompress(compressed);
     System.out.println("Decompression Time: " + (System.nanoTime() - startTime)/1000000 + " milliseconds" + "Str Length:" + decompressed.length());
-
-
-
-
-    // Serialize, compress and encode
-/*    Gson gson = OASGsonSerializer.instance();
-    String json = gson.toJson(openAPI);*/
-
-
-
-    
-
   }
+
+
+
+
+  @Test
+  public void testPathVars() throws IOException {
+
+    ClassLoader classLoader = ParseOpenAPIsTests.class.getClassLoader();
+    InputStream input = classLoader.getResourceAsStream("com/appian/guidewire/templates/claimsv2.json");
+    String swaggerStr = IOUtils.toString(input, StandardCharsets.UTF_8);
+
+    JsonNode openAPI2 = new ObjectMapper().readValue(swaggerStr, JsonNode.class);
+    JsonNode paths2 = Optional.ofNullable(openAPI2)
+        .map(openapi -> openapi.get("paths"))
+        .orElse(null);
+
+    String pathName = "/claims/{claimId}/activities";
+    Optional.ofNullable(parse(paths2, Arrays.asList(pathName, PARAMETERS)))
+        .map(parameters -> getRefs(parameters, openAPI2))
+        .ifPresent(refs -> refs.forEach(ref -> {
+          System.out.println(ref.get("name"));
+        }));
+  }
+
 
 
 
@@ -228,316 +285,4 @@ public class ParseOpenAPIsTests {
 
   }
 
-
-
-
-
-/*@Test
-  public void getGetOptions() {
-
-  OpenAPI claimsOpenApi = Util.getOpenApi("com/appian/guidewire/templates/claims/claims_claim.yaml", GuidewireCSP.classLoader);
-  *//*String pathName = "/claim-infos";*//*
-  String pathName = "/claim-infos/{claimInfoId}";
-  Operation get = claimsOpenApi.getPaths().get(pathName).getGet();
-
-  Map returnedFieldProperties = get.getResponses()
-      .get("200")
-      .getContent()
-      .get("application/json")
-      .getSchema()
-      .getProperties();
-
-  if (returnedFieldProperties != null) {
-    Schema returnedFieldItems= ((Schema)returnedFieldProperties.get("data")).getItems();
-    if (returnedFieldItems!= null) {
-      Map returnedFields = ((Schema)returnedFieldItems
-          .getProperties()
-          .get("attributes"))
-          .getProperties();
-
-      returnedFields.forEach((key, val) -> {
-        Map extensions = ((Schema)val).getExtensions();
-        if (extensions != null && extensions.get("x-gw-extensions") instanceof LinkedHashMap) {
-          Object isFilterable = ((LinkedHashMap<?,?>)extensions.get("x-gw-extensions")).get("filterable");
-          Object isSortable = ((LinkedHashMap<?,?>)extensions.get("x-gw-extensions")).get("sortable");
-          if (isFilterable != null) {
-            System.out.println(key + " is filterable");
-          }
-          if (isSortable != null) {
-            System.out.println(key + " is sortable");
-          } else {
-            System.out.println("KEY "+ key);
-          }
-        }
-      });
-    }
-
-  }
-
-
-  Schema hasIncludedResources = ((Schema)get.getResponses()
-      .get("200")
-      .getContent()
-      .get("application/json")
-      .getSchema()
-      .getProperties()
-      .get("included"));
-  if (hasIncludedResources != null) {
-    Set included = hasIncludedResources.getProperties().keySet();
-    System.out.println(included);
-  }
-  // TODO: directions for pageOffset with the next keyword in links (for data source queries for sync)
-  // TODO: set includeTotal to true
-  // TODO: Maximum pageSize doesn't seem to exist anywhere
-
-
-
-
- *//* get.getParameters().forEach((queryParam) -> {
-*//**//*        System.out.println("HERE"+queryParams.getIn() +queryParams.getName());*//**//*
-
-        if (queryParam.getName().equals("include")) {          System.out.println("INLCUDES"+((Schema)get
-              .getResponses()
-              .get("200")
-              .getContent()
-              .get("application/json")
-              .getSchema()
-              .getProperties()
-              .get("included")));
-
-          Map included = ((Schema)get
-              .getResponses()
-              .get("200")
-              .getContent()
-              .get("application/json")
-              .getSchema()
-              .getProperties()
-              .get("included")).getProperties();
-          System.out.println("Param "+ queryParam.getName() + " "+ included.keySet());
-        } else if (queryParam.getName().equals("filter")) {
-          // TODO: only when x-gw-extensions: filterable: true
-          System.out.println("Param "+ queryParam.getName());
-        } else if (queryParam.getName().equals("pageSize")) {
-          System.out.println("Param "+ queryParam.getName());
-        } else if (queryParam.getName().equals("sort")) {
-          // TODO: only when x-gw-extensions: sortable: true
-          System.out.println("Param "+ queryParam.getName());
-        } else if (queryParam.getName().equals("fields")) {
-          // TODO: only when x-gw-extensions: sortable: true
-
-          System.out.println("Param "+ queryParam.getName());
-        }
-      }
-  );*//*
-
-}*/
-
-
-
-
-
-
-/*
-  @Test
-  public void pets() {
-    OpenAPI openAPI = Util.getOpenApi("com/appian/guidewire/templates/petstore3.yaml");
-    Schema schema =
-        openAPI.getPaths().get("/user/createWithList").getPost().getRequestBody().getContent().get("application/json").getSchema();
-    System.out.println(schema.getItems());
-  }
-
-  @Test
-  public void test_ParseMany() throws Exception {
-      OpenAPI openAPI = Util.getOpenApi("com/appian/guidewire/templates/claims_claim.yaml");
-        openAPI.getPaths().entrySet().forEach(s -> {
-            PathItem path = s.getValue();
-
-            if(s.getKey().equals("/batch")) return;
-            if(s.getKey().equals("/policies/{policyId}/contingencies/{contingencyId}/documents")) return;
-            if(s.getKey().equals("/policies/{policyId}/documents")) return;
-
-            if(s.getKey().equals("/claims/{claimId}/documents/{policyId}/contingencies/{contingencyId}/documents")) return;
-            if(s.getKey().equals("/claims/{claimId}/documents")) return;
-            if(s.getKey().equals("/claims/{claimId}/documents/{documentId}")) return;
-            if(s.getKey().equals("/claims/{claimId}/documents/{documentId}/documents")) return;
-
-
-            if (path.getPost() != null && path.getPost().getRequestBody() != null) {
-
-
-
-              String ref = openAPI.getPaths()
-                  .get("/claims/{claimId}/activities")
-                  .getPost()
-                  .getRequestBody()
-                  .getContent()
-                  .get("application/json")
-                  .getSchema()
-                  .get$ref();
-
-              ref = ref.substring(ref.lastIndexOf("/")+1);
-
-
-
-              Schema data = (Schema)openAPI.getComponents().getSchemas().get(ref).getProperties().get("data");
-
-              String newRef = data.get$ref().substring(data.get$ref().lastIndexOf("/")+1);
-              System.out.println(newRef);
-              Schema attributes = (Schema) openAPI.getComponents().getSchemas().get(newRef).getProperties().get(
-                  "attributes");
-              String lastOne = attributes.get$ref();
-              String lastOneStr = lastOne.substring(lastOne.lastIndexOf("/")+1);
-              System.out.println(lastOneStr);
-              System.out.println(openAPI.getComponents().getSchemas().get(lastOneStr).getProperties());
-
-
-
-
-
-                Object schema = path.getPost()
-                    .getRequestBody()
-                    .getContent()
-                    .get("application/json")
-                    .getSchema()
-                    .getProperties()
-                    .get("data");
-                ((ObjectSchema)schema).getProperties().get("attributes").getProperties().forEach((key, item) -> {
-                    Schema itemSchema = ((Schema)item);
-
-                    if (itemSchema.getType().equals("object")) {
-                        System.out.println(key + " : " + itemSchema.getType());
-                        itemSchema.getProperties().forEach((innerKey, innerItem) -> {
-                            Schema innerItemSchema = ((Schema)innerItem);
-                            System.out.println("        "+innerKey + " : " + innerItemSchema.getType());
-
-                        });
-                    } else {
-                        System.out.println(key + " : " + itemSchema.getType());
-                    }
-                });
-            }
-
-            if (path.getPatch() != null) {
-                System.out.println("PATCH");
-                Object schema = path.getPatch()
-                    .getRequestBody()
-                    .getContent()
-                    .get("application/json")
-                    .getSchema()
-                    .getProperties()
-                    .get("data");
-                ((ObjectSchema)schema).getProperties().get("attributes").getProperties().forEach((key, item) -> {
-                    Schema itemSchema = ((Schema)item);
-
-                    if (itemSchema.getType().equals("object")) {
-                        System.out.println(key + " : " + itemSchema.getType());
-                        itemSchema.getProperties().forEach((innerKey, innerItem) -> {
-                            Schema innerItemSchema = ((Schema)innerItem);
-                            System.out.println("        "+innerKey + " : " + innerItemSchema.getType());
-
-                        });
-                    } else {
-                        System.out.println(key + " : " + itemSchema.getType());
-                    }
-                });
-            }
-        });
-  }
-
-  public void isObj(Object key, Schema itemSchema) {
-    System.out.println(key + " : " + itemSchema.getType());
-
-    if (itemSchema.getProperties() == null) {
-      return;
-    }
-
-    itemSchema.getProperties().forEach((innerKey, innerItem) -> {
-      Schema innerItemSchema = ((Schema)innerItem);
-      System.out.println("        " + innerKey + " : " + innerItemSchema.getType());
-    });
-  }
-
-
-    *//*        System.out.println(ParseOpenAPI.initializePaths(ConstantKeys.CLAIMS));*//*
-
-    // Checks if parser works on all post/patch paths
-    // - Works for policy_policies.yaml (which doesn't have patch paths for some reason, might have to try
-    // getting the openapi 3.0 schema from that endpoint. Excludes document paths which have a
-    // different parsing structure.
-    // - Almost working for Claims, excluding documents and
-    // /claims/{claimId}/service-requests/{serviceRequestId}/invoices has a different structure to work
-    // out, Will come back to it once I actually need to build requestBodies
-    *//*  OpenAPI openAPI = Util.getOpenApi("com/appian/guidewire/templates/policy_policies.yaml");
-        openAPI.getPaths().entrySet().forEach(s -> {
-            PathItem path = s.getValue();
-
-            if(s.getKey().equals("/batch")) return;
-            if(s.getKey().equals("/policies/{policyId}/contingencies/{contingencyId}/documents")) return;
-            if(s.getKey().equals("/policies/{policyId}/documents")) return;
-
-            if(s.getKey().equals("/claims/{claimId}/documents/{policyId}/contingencies/{contingencyId}/documents")) return;
-            if(s.getKey().equals("/claims/{claimId}/documents")) return;
-            if(s.getKey().equals("/claims/{claimId}/documents/{documentId}")) return;
-            if(s.getKey().equals("/claims/{claimId}/documents/{documentId}/documents")) return;
-
-            System.out.println(s.getKey());
-            if (path.getPost() != null && path.getPost().getRequestBody() != null) {
-                Object schema = path.getPost()
-                    .getRequestBody()
-                    .getContent()
-                    .get("application/json")
-                    .getSchema()
-                    .getProperties()
-                    .get("data");
-                ((ObjectSchema)schema).getProperties().get("attributes").getProperties().forEach((key, item) -> {
-                    Schema itemSchema = ((Schema)item);
-
-                    if (itemSchema.getType().equals("object")) {
-                        System.out.println(key + " : " + itemSchema.getType());
-                        itemSchema.getProperties().forEach((innerKey, innerItem) -> {
-                            Schema innerItemSchema = ((Schema)innerItem);
-                            System.out.println("        "+innerKey + " : " + innerItemSchema.getType());
-
-                        });
-                    } else {
-                        System.out.println(key + " : " + itemSchema.getType());
-                    }
-                });
-            }
-
-            if (path.getPatch() != null) {
-                System.out.println("PATCH");
-                Object schema = path.getPatch()
-                    .getRequestBody()
-                    .getContent()
-                    .get("application/json")
-                    .getSchema()
-                    .getProperties()
-                    .get("data");
-                ((ObjectSchema)schema).getProperties().get("attributes").getProperties().forEach((key, item) -> {
-                    Schema itemSchema = ((Schema)item);
-
-                    if (itemSchema.getType().equals("object")) {
-                        System.out.println(key + " : " + itemSchema.getType());
-                        itemSchema.getProperties().forEach((innerKey, innerItem) -> {
-                            Schema innerItemSchema = ((Schema)innerItem);
-                            System.out.println("        "+innerKey + " : " + innerItemSchema.getType());
-
-                        });
-                    } else {
-                        System.out.println(key + " : " + itemSchema.getType());
-                    }
-                });
-            }
-        });*//*
-
-
-
-
-
-
-
-    *//*        assertNotNull(openAPI);*//*
-
-  }*/
 }

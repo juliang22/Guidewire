@@ -10,11 +10,14 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
+
+import javax.swing.text.html.Option;
 
 import org.apache.commons.io.IOUtils;
 
@@ -22,7 +25,10 @@ import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfigurat
 import com.appian.connectedsystems.templateframework.sdk.IntegrationError;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
@@ -173,18 +179,6 @@ public class Util implements ConstantKeys{
         return pathName.replace("/", "").replace("{", "").replace("}", "");
     }
 
-    public static OpenAPI getOpenApi(String api, ClassLoader classLoader) {
-        try (InputStream input = classLoader.getResourceAsStream(api)) {
-            String content = IOUtils.toString(input, StandardCharsets.UTF_8);
-            ParseOptions parseOptions = new ParseOptions();
-            parseOptions.setResolve(true); // implicit
-            parseOptions.setResolveFully(true);
-/*            parseOptions.setResolveCombinators(false);*/
-            return new OpenAPIV3Parser().readContents(content, null, parseOptions).getOpenAPI();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
 
     public static String filterRules(String str) {
         return str == null ?
@@ -210,6 +204,25 @@ public class Util implements ConstantKeys{
                 break;
             case DELETE:
                 chosenOpenApiPath = path.getDelete();
+                break;
+        }
+        return chosenOpenApiPath;
+    }
+
+    public static JsonNode getOperation2(JsonNode path, String restOperation) {
+        JsonNode chosenOpenApiPath = null;
+        switch(restOperation) {
+            case GET:
+                chosenOpenApiPath = path.get(GET);
+                break;
+            case POST:
+                chosenOpenApiPath = path.get(POST);
+                break;
+            case PATCH:
+                chosenOpenApiPath = path.get(PATCH);
+                break;
+            case DELETE:
+                chosenOpenApiPath = path.get(DELETE);
                 break;
         }
         return chosenOpenApiPath;

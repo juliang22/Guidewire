@@ -22,11 +22,10 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.RefreshPo
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
 import com.appian.guidewire.templates.apis.GuidewireIntegrationTemplate;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
 
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.PathItem;
-import io.swagger.v3.oas.models.media.ByteArraySchema;
 import io.swagger.v3.oas.models.media.MediaType;
 import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
@@ -40,7 +39,7 @@ import std.Util;
 
 public class GuidewireUIBuilder extends UIBuilder {
 
-  protected ObjectMapper objectMapper = new ObjectMapper();
+
 
   public GuidewireUIBuilder(
       GuidewireIntegrationTemplate simpleIntegrationTemplate,
@@ -158,6 +157,18 @@ public class GuidewireUIBuilder extends UIBuilder {
 
       // Create map of subApi module name to map of subApi module info and save as hidden property
       String swaggerStr = apiSwaggerResponse.get("result").toString();
+
+      try {
+        setOpenAPI2(swaggerStr);
+        if (openAPI2 == null || paths2 == null) {
+          return setPropertiesAndValues(properties, values);
+        }
+      } catch (JsonProcessingException e) {
+        integrationConfiguration.setErrors(Arrays.asList("Unable to fetch API information. Check that connected system " +
+            "credentials are properly formatted", e.getMessage()));
+        return setPropertiesAndValues(properties, values);
+      }
+
       String compressedSwaggerStr = Util.compress(swaggerStr);
       swaggerInfoMap.put(subApi, compressedSwaggerStr);
       swaggerInfoMapAsStr = objectMapper.writeValueAsString(swaggerInfoMap);
@@ -188,7 +199,7 @@ public class GuidewireUIBuilder extends UIBuilder {
             // filter out deprecated endpoints
             if (openAPIOperation.getDeprecated() != null && openAPIOperation.getDeprecated()) return;
 
-            String name = restOperation + " - " + openAPIOperation.getSummary();
+            String name = restOperation.toUpperCase() + " - " + openAPIOperation.getSummary();
             String value = api + ":" + restOperation + ":" + pathName + ":" + subApi + ":" + openAPIOperation.getSummary() +
                 ":" + openAPIOperation.getDescription();
 
@@ -223,7 +234,9 @@ public class GuidewireUIBuilder extends UIBuilder {
         String[] pathInfo = choice.split(":");
         String restOperation = pathInfo[1];
         String summary = pathInfo[4];
-        listOfEndpointsUI.choice(new Choice.ChoiceBuilder().name(restOperation + " - " + summary).value(choice).build());
+        listOfEndpointsUI.choice(
+            new Choice.ChoiceBuilder().name(restOperation.toUpperCase() + " - " + summary).value(choice).build()
+        );
       });
     } else {
       // If there is a search query, sort the dropdown with the query
@@ -232,7 +245,9 @@ public class GuidewireUIBuilder extends UIBuilder {
         String[] pathInfo = choice.getString().split(":");
         String restOperation = pathInfo[1];
         String summary = pathInfo[4];
-        listOfEndpointsUI.choice(new Choice.ChoiceBuilder().name(restOperation + " - " + summary).value(choice.getString()).build());
+        listOfEndpointsUI.choice(
+            new Choice.ChoiceBuilder().name(restOperation.toUpperCase() + " - " + summary).value(choice.getString()).build()
+        );
       }
     }
 
@@ -249,42 +264,215 @@ public class GuidewireUIBuilder extends UIBuilder {
     String restOperation = pathInfo[1];
     String chosenPath = pathInfo[2];
     String description = pathInfo[5];
-    String instructionText = restOperation + " " + chosenPath + " " + description;
+    String instructionText = restOperation.toUpperCase() + " " + chosenPath + " " + description;
     listOfEndpointsUI.instructionText(instructionText);
     properties.add(listOfEndpointsUI.build());
     Map<String, String> swaggerMap = objectMapper.readValue(swaggerInfoMapAsStr, Map.class);
 
     String compressedSwaggerStr = swaggerMap.get(subApi);
     String swaggerStr = Util.decompress(compressedSwaggerStr);
-    if (openAPI == null) setOpenAPI(Util.getOpenAPI(swaggerStr));
+    if (openAPI == null) {
+      setOpenAPI(Util.getOpenAPI(swaggerStr));
+
+
+      try {
+        setOpenAPI2(swaggerStr);
+        if (openAPI2 == null || paths2 == null) {
+          return setPropertiesAndValues(properties, values);
+        }
+      } catch (JsonProcessingException e) {
+        integrationConfiguration.setErrors(Arrays.asList("Unable to fetch API information. Check that connected system " +
+            "credentials are properly formatted", e.getMessage()));
+        return setPropertiesAndValues(properties, values);
+      }
+
+
+    }
     buildRestCall(restOperation, properties, chosenPath);
     return setPropertiesAndValues(properties, values);
   }
 
-  public void buildRestCall(String restOperation, List<PropertyDescriptor<?>> result, String pathName) {
+  public void buildRestCall(String restOperation, List<PropertyDescriptor<?>> properties, String pathName) {
     setPathName(pathName);
     setRestOperation(restOperation);
     setPathVarsUI();
     if (getPathVarsUI().size() > 0) {
-      result.addAll(getPathVarsUI());
+      properties.addAll(getPathVarsUI());
     }
 
     switch (restOperation) {
       case (GET):
-        buildGet(result);
+        buildGet(properties);
         break;
       case (POST):
-        buildPost(result);
+        buildPost(properties);
         break;
       case (PATCH):
-        buildPatch(result);
+        buildPatch(properties);
         break;
       case (DELETE):
-        buildDelete(result);
+        buildDelete(properties);
     }
   }
 
-  public void buildGet(List<PropertyDescriptor<?>> result) {
+  public void buildGet(List<PropertyDescriptor<?>> properties) {
+
+    JsonNode get = parse(paths2, Arrays.asList(pathName, GET));
+
+    // Pagination
+    properties.add(simpleIntegrationTemplate.textProperty(PAGESIZE)
+        .label("Pagination")
+        .instructionText("Return 'n' number of items in the response or pass in a link to the 'next' or 'prev' set of items as " +
+            "shown here: https://docs.guidewire.com/cloud/cc/202302/cloudapibf/cloudAPI/topics/101-Fund/03-query-parameters" +
+            "/c_the-pagination-query-parameters.html.")
+        .description("Every resource type has a default pageSize. This value is used when the query does not specify a pageSize. " +
+            "To paginate through results, pass the href within the 'next' parameter of 'links', found in the result of the " +
+            "initial call to the resource.")
+        .isExpressionable(true)
+        .placeholder("25 or /common/v1/activities?pageSize=25")
+        .build());
+
+    // Filtering and Sorting
+    JsonNode extensions = parse(get, Arrays.asList(RESPONSES, "200", CONTENT, APPLICATION_JSON, SCHEMA, PROPERTIES, DATA, ITEMS,
+        PROPERTIES, ATTRIBUTES));
+
+    if (extensions != null && (extensions.has("x-gw-filterable") || extensions.has("x-gw-sortable"))) {
+      // Building up sorting and filtering options
+      TextPropertyDescriptor.TextPropertyDescriptorBuilder sortedChoices = simpleIntegrationTemplate.textProperty(SORT)
+          .label("Sort Response")
+          .instructionText("Sort response by selecting a field in the dropdown. If the dropdown is empty," +
+              " there are no sortable fields available")
+          .isExpressionable(true)
+          .refresh(RefreshPolicy.ALWAYS);
+      TextPropertyDescriptor.TextPropertyDescriptorBuilder filteredChoices = simpleIntegrationTemplate.textProperty(FILTER_FIELD)
+          .label("Filter Response")
+          .instructionText("Filter response by selecting a field in the dropdown. If the dropdown is " +
+              "empty, there are no filterable fields available")
+          .isExpressionable(true)
+          .refresh(RefreshPolicy.ALWAYS);
+
+      // If there are filtering options, add filtering UI
+      JsonNode filterProperties = extensions.get("x-gw-filterable");
+      if (filterProperties != null && filterProperties.size() > 0) {
+        filterProperties.forEach(property -> {
+          filteredChoices.choice(
+              Choice.builder().name(Util.camelCaseToTitleCase(property.asText())).value(property.asText()).build()
+          );
+        });
+        TextPropertyDescriptor.TextPropertyDescriptorBuilder filteringOperatorsBuilder = simpleIntegrationTemplate
+            .textProperty(FILTER_OPERATOR)
+            .instructionText("Select an operator to filter the results")
+            .refresh(RefreshPolicy.ALWAYS)
+            .isExpressionable(true);
+        FILTERING_OPTIONS.entrySet().forEach(option -> {
+          filteringOperatorsBuilder.choice(Choice.builder().name(option.getKey()).value(option.getValue()).build());
+        });
+        // If any of the options are selected, the set will have more items than just null and the rest of the fields become
+        // required
+        Set<String> requiredSet = new HashSet<>(
+            Arrays.asList(integrationConfiguration.getValue(FILTER_FIELD), integrationConfiguration.getValue(FILTER_OPERATOR),
+                integrationConfiguration.getValue(FILTER_VALUE)));
+        boolean isRequired = requiredSet.size() > 1;
+
+        // Add filtering fields to the UI
+        properties.add(filteredChoices.isRequired(isRequired).build());
+        properties.add(filteringOperatorsBuilder.isRequired(isRequired).build());
+        properties.add(simpleIntegrationTemplate.textProperty(FILTER_VALUE)
+            .instructionText("Insert the query to filter the chosen field")
+            .isRequired(isRequired)
+            .refresh(RefreshPolicy.ALWAYS)
+            .isExpressionable(true)
+            .refresh(RefreshPolicy.ALWAYS)
+            .placeholder("22")
+            .build());
+      }
+
+      // If there are sorting options, add sorting UI
+      JsonNode sortProperties = extensions.get("x-gw-sortable");
+      if (sortProperties != null && sortProperties.size() > 0) {
+        sortProperties.forEach(property -> {
+          sortedChoices.choice(
+              Choice.builder().name(Util.camelCaseToTitleCase(property.asText())).value(property.asText()).build()
+          );
+        });
+        properties.add(sortedChoices.isRequired(integrationConfiguration.getValue(SORT_ORDER) != null).build());
+        Choice[] sortOrder = {Choice.builder().name("Ascending").value("+").build(),
+            Choice.builder().name("Descending").value("-").build()};
+        properties.add(simpleIntegrationTemplate.textProperty(SORT_ORDER)
+            .label("Sort Order of Response")
+            .choices(sortOrder)
+            .isExpressionable(true)
+            .isRequired(integrationConfiguration.getValue(SORT) != null)
+            .displayHint(DisplayHint.NORMAL)
+            .instructionText("Select the sort order. Default sort order is ascending")
+            .refresh(RefreshPolicy.ALWAYS)
+            .build());
+      }
+    }
+
+    // Include Total UI
+    properties.add(simpleIntegrationTemplate.booleanProperty(INCLUDE_TOTAL)
+        .label("Include Total")
+        .isExpressionable(true)
+        .displayMode(BooleanDisplayMode.RADIO_BUTTON)
+        .instructionText("Used to request that results should include a count of the total number of results available, " +
+            "which may be more than the total number of results currently being returned.")
+        .description("This value can only be set when there is more than one element returned. If not specified, the default is" +
+            " considered to be `false.` If the number of resources to total is sufficiently large, using the includeTotal " +
+            "parameter can affect performance. Guidewire recommends you use this parameter only when there is a need for it, and " +
+            "only when the number of resources to total is unlikely to affect performance.")
+        .build());
+
+
+    JsonNode documentInResponse = parse(get, Arrays.asList(RESPONSES, "200", CONTENT, APPLICATION_JSON, SCHEMA, PROPERTIES, DATA,
+        PROPERTIES, ATTRIBUTES, PROPERTIES, CONTENTS, FORMAT));
+    if (documentInResponse != null && documentInResponse.asText().equals("byte")) {
+      properties.add(simpleIntegrationTemplate.folderProperty(FOLDER)
+          .isExpressionable(true)
+          .isRequired(true)
+          .label("Response File Save Location")
+          .instructionText("Choose the folder you would like to save the response file to.")
+          .build());
+      properties.add(simpleIntegrationTemplate.textProperty(SAVED_FILENAME)
+          .isExpressionable(true)
+          .isRequired(true)
+          .label("Response File Name")
+          .instructionText("Choose the name of the file received in the response. Do not include the file extension.")
+          .build());
+    }
+
+/*
+
+    Optional<Object> documentInResponse = Optional.ofNullable(get.getResponses())
+        .map(responses -> responses.get("200"))
+        .map(ApiResponse::getContent)
+        .map(content -> content.get("application/json"))
+        .map(MediaType::getSchema)
+        .map(Schema::getProperties)
+        .map(properties -> properties.get("data"))
+        .flatMap(data -> data instanceof ObjectSchema ?
+            Optional.of(((ObjectSchema)data).getProperties()) :
+            Optional.empty())
+        .map(properties -> properties.get("attributes"))
+        .map(Schema::getProperties)
+        .map(properties -> properties.get("contents"));
+
+    if (documentInResponse.isPresent() && documentInResponse.get() instanceof ByteArraySchema) {
+      result.add(simpleIntegrationTemplate.folderProperty(FOLDER)
+          .isExpressionable(true)
+          .isRequired(true)
+          .label("Response File Save Location")
+          .instructionText("Choose the folder you would like to save the response file to.")
+          .build());
+      result.add(simpleIntegrationTemplate.textProperty(SAVED_FILENAME)
+          .isExpressionable(true)
+          .isRequired(true)
+          .label("Response File Name")
+          .instructionText("Choose the name of the file received in the response. Do not include the file extension.")
+          .build());
+
+
+    ////////////////////////OLD BELOW
 
     Operation get = paths.get(pathName).getGet();
 
@@ -401,7 +589,7 @@ public class GuidewireUIBuilder extends UIBuilder {
         .build());
 
     // Included resources TODO: currently not working because guidewire docs are wrong
-/*
+*//*
     Optional<Object> hasIncludedResources = Optional.ofNullable(get.getResponses())
         .map(schema -> schema.get("200"))
         .map(ApiResponse::getContent)
@@ -435,7 +623,7 @@ public class GuidewireUIBuilder extends UIBuilder {
               "Select the related resources below that you would like to be attached to the call. If " +
               "they exist, they will be returned alongside the root resource.")
           .build());
-    }*/
+    }*//*
 
     Optional<Object> documentInResponse = Optional.ofNullable(get.getResponses())
         .map(responses -> responses.get("200"))
@@ -464,7 +652,7 @@ public class GuidewireUIBuilder extends UIBuilder {
           .label("Response File Name")
           .instructionText("Choose the name of the file received in the response. Do not include the file extension.")
           .build());
-    }
+    }*/
 
   }
 

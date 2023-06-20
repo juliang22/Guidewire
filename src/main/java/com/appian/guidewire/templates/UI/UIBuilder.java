@@ -1,7 +1,7 @@
 package com.appian.guidewire.templates.UI;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -18,14 +18,14 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.Paragraph
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptorBuilder;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
-import com.appian.connectedsystems.templateframework.sdk.configuration.RefreshPolicy;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TypeReference;
 import com.appian.guidewire.templates.apis.GuidewireIntegrationTemplate;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.swagger.v3.oas.models.OpenAPI;
-import io.swagger.v3.oas.models.Operation;
-import io.swagger.v3.oas.models.PathItem;
 import io.swagger.v3.oas.models.Paths;
 import io.swagger.v3.oas.models.media.ArraySchema;
 import io.swagger.v3.oas.models.media.BooleanSchema;
@@ -34,8 +34,6 @@ import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.media.StringSchema;
 import io.swagger.v3.oas.models.parameters.Parameter;
 import io.swagger.v3.oas.models.parameters.PathParameter;
-import me.xdrop.fuzzywuzzy.FuzzySearch;
-import me.xdrop.fuzzywuzzy.model.ExtractedResult;
 import std.ConstantKeys;
 import std.Util;
 
@@ -47,14 +45,17 @@ public abstract class UIBuilder implements ConstantKeys {
   protected String restOperation;
   protected List<PropertyDescriptor<?>> pathVarsUI = new ArrayList<>();
   protected OpenAPI openAPI = null;
+  protected JsonNode openAPI2;
 
   protected Paths paths;
+  protected JsonNode paths2;
 /*  protected List<String> choicesForSearch = new ArrayList<>();
   protected List<Choice> defaultChoices = new ArrayList<>();*/
   protected SimpleIntegrationTemplate simpleIntegrationTemplate;
   protected SimpleConfiguration integrationConfiguration;
   protected SimpleConfiguration connectedSystemConfiguration;
   protected PropertyPath propertyPath;
+  protected ObjectMapper objectMapper = new ObjectMapper();
 
   public UIBuilder(GuidewireIntegrationTemplate simpleIntegrationTemplate,
       SimpleConfiguration integrationConfiguration,
@@ -93,9 +94,57 @@ public abstract class UIBuilder implements ConstantKeys {
     this.openAPI = openAPI;
     this.paths = openAPI.getPaths();
   }
+  public void setOpenAPI2(String swaggerStr) throws JsonProcessingException {
+    try {
+      this.openAPI2 = objectMapper.readValue(swaggerStr, JsonNode.class);
+      this.paths2 = Optional.ofNullable(openAPI2)
+          .map(openapi -> openapi.get("paths"))
+          .orElse(null);
+
+      if (paths2 == null) {
+        integrationConfiguration.setErrors(Arrays.asList("Unable to fetch API information. Check that connected system " +
+            "credentials are properly formatted"));
+      }
+    } catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public List<JsonNode> getRefs(JsonNode arrOfRefStrs) {
+    if (arrOfRefStrs == null || arrOfRefStrs.size() == 0) return null;
+
+    List<JsonNode> refNodeArr = new ArrayList<>();
+    arrOfRefStrs.forEach(refNode -> {
+      Optional.ofNullable(refNode.get("$ref"))
+          .ifPresent(refStr -> {
+            String refLocation = refStr.asText().replace("#/", "/");
+            refNodeArr.add(openAPI2.at(refLocation));
+          });
+    });
+    return refNodeArr;
+  }
+
+  public JsonNode parse(JsonNode root, List<String> path) {
+    JsonNode currNode = root;
+
+    for (int i = 0; i < path.size(); i++) {
+      String loc = path.get(i);
+      currNode = currNode.get(loc);
+      if (currNode == null) return null;
+
+      if (currNode.has(REF)) {
+        String newLoc = currNode.get(REF).asText().replace("#/", "/");
+        currNode = openAPI2.at(newLoc);
+        if (currNode == null || currNode.isMissingNode()) return null;
+      }
+    }
+    return currNode;
+  }
+
+
 
   // Find all occurrences of variables inside path (ex. {claimId})
-  protected void setPathVarsUI() {
+/*  protected void setPathVarsUI() {
 
     List<Parameter> pathParams = Util.getOperation(paths.get(pathName), restOperation).getParameters();
     if (pathParams == null)  return;
@@ -106,7 +155,7 @@ public abstract class UIBuilder implements ConstantKeys {
             .instructionText("")
             .isRequired(true)
             .isExpressionable(true)
-/*            .refresh(RefreshPolicy.ALWAYS)*/
+*//*            .refresh(RefreshPolicy.ALWAYS)*//*
             .placeholder("1")
             .label(Util.camelCaseToTitleCase(param.getName()))
             .instructionText(param.getDescription() != null ? param.getDescription() : "")
@@ -115,11 +164,34 @@ public abstract class UIBuilder implements ConstantKeys {
       }
     });
 
-  }
+  }*/
 
   public List<PropertyDescriptor<?>> getPathVarsUI() {
     return pathVarsUI;
   }
+  protected void setPathVarsUI() {
+
+    Optional.ofNullable(parse(paths2, Arrays.asList(pathName, PARAMETERS)))
+        .map(this::getRefs)
+        .ifPresent(refs -> refs.forEach(ref -> {
+          String paramName = ref.get(NAME).asText();
+          String paramDescription = ref.get(DESCRIPTION).asText();
+          TextPropertyDescriptor ui = simpleIntegrationTemplate.textProperty(paramName)
+              .instructionText("")
+              .isRequired(true)
+              .isExpressionable(true)
+              .placeholder("1")
+              .label(Util.camelCaseToTitleCase(paramName))
+              .instructionText(paramDescription != null ? paramDescription : "")
+              .build();
+          pathVarsUI.add(ui);
+        }));
+  }
+
+
+
+
+
 
   public void ReqBodyUIBuilder(List<PropertyDescriptor<?>> result,
       Map<?,?> properties,
