@@ -7,7 +7,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -25,12 +24,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import io.swagger.v3.oas.models.Operation;
-import io.swagger.v3.oas.models.PathItem;
-import io.swagger.v3.oas.models.media.MediaType;
-import io.swagger.v3.oas.models.media.ObjectSchema;
-import io.swagger.v3.oas.models.media.Schema;
-import io.swagger.v3.oas.models.parameters.RequestBody;
-import io.swagger.v3.oas.models.responses.ApiResponse;
 import me.xdrop.fuzzywuzzy.FuzzySearch;
 import me.xdrop.fuzzywuzzy.model.ExtractedResult;
 import std.ConstantKeys;
@@ -53,7 +46,7 @@ public class GuidewireUIBuilder extends UIBuilder {
 
   public SimpleConfiguration setPropertiesAndValues(List<PropertyDescriptor<?>> properties, Map<String, String> values) {
     integrationConfiguration.setProperties(properties.toArray(new PropertyDescriptor<?>[0]));
-    if (values.size() > 0) {
+    if (values != null && values.size() > 0) {
       values.forEach((key, val) -> {
         integrationConfiguration.setValue(key, val);
       });
@@ -319,6 +312,24 @@ public class GuidewireUIBuilder extends UIBuilder {
 
     JsonNode get = parse(paths2, Arrays.asList(pathName, GET));
 
+    // If Document content is sent back, UI to save that document in Knowledge Base
+    JsonNode documentInResponse = parse(get, Arrays.asList(RESPONSES, "200", CONTENT, APPLICATION_JSON, SCHEMA, PROPERTIES, DATA,
+        PROPERTIES, ATTRIBUTES, PROPERTIES, CONTENTS, FORMAT));
+    if (documentInResponse != null && documentInResponse.asText().equals("byte")) {
+      properties.add(simpleIntegrationTemplate.folderProperty(FOLDER)
+          .isExpressionable(true)
+          .isRequired(true)
+          .label("Response File Save Location")
+          .instructionText("Choose the folder you would like to save the response file to.")
+          .build());
+      properties.add(simpleIntegrationTemplate.textProperty(SAVED_FILENAME)
+          .isExpressionable(true)
+          .isRequired(true)
+          .label("Response File Name")
+          .instructionText("Choose the name of the file received in the response. Do not include the file extension.")
+          .build());
+    }
+
     // Pagination
     properties.add(simpleIntegrationTemplate.textProperty(PAGESIZE)
         .label("Pagination")
@@ -424,173 +435,8 @@ public class GuidewireUIBuilder extends UIBuilder {
         .build());
 
 
-    JsonNode documentInResponse = parse(get, Arrays.asList(RESPONSES, "200", CONTENT, APPLICATION_JSON, SCHEMA, PROPERTIES, DATA,
-        PROPERTIES, ATTRIBUTES, PROPERTIES, CONTENTS, FORMAT));
-    if (documentInResponse != null && documentInResponse.asText().equals("byte")) {
-      properties.add(simpleIntegrationTemplate.folderProperty(FOLDER)
-          .isExpressionable(true)
-          .isRequired(true)
-          .label("Response File Save Location")
-          .instructionText("Choose the folder you would like to save the response file to.")
-          .build());
-      properties.add(simpleIntegrationTemplate.textProperty(SAVED_FILENAME)
-          .isExpressionable(true)
-          .isRequired(true)
-          .label("Response File Name")
-          .instructionText("Choose the name of the file received in the response. Do not include the file extension.")
-          .build());
-    }
-
-/*
-
-    Optional<Object> documentInResponse = Optional.ofNullable(get.getResponses())
-        .map(responses -> responses.get("200"))
-        .map(ApiResponse::getContent)
-        .map(content -> content.get("application/json"))
-        .map(MediaType::getSchema)
-        .map(Schema::getProperties)
-        .map(properties -> properties.get("data"))
-        .flatMap(data -> data instanceof ObjectSchema ?
-            Optional.of(((ObjectSchema)data).getProperties()) :
-            Optional.empty())
-        .map(properties -> properties.get("attributes"))
-        .map(Schema::getProperties)
-        .map(properties -> properties.get("contents"));
-
-    if (documentInResponse.isPresent() && documentInResponse.get() instanceof ByteArraySchema) {
-      result.add(simpleIntegrationTemplate.folderProperty(FOLDER)
-          .isExpressionable(true)
-          .isRequired(true)
-          .label("Response File Save Location")
-          .instructionText("Choose the folder you would like to save the response file to.")
-          .build());
-      result.add(simpleIntegrationTemplate.textProperty(SAVED_FILENAME)
-          .isExpressionable(true)
-          .isRequired(true)
-          .label("Response File Name")
-          .instructionText("Choose the name of the file received in the response. Do not include the file extension.")
-          .build());
-
-
-    ////////////////////////OLD BELOW
-
-    Operation get = paths.get(pathName).getGet();
-
-    // Pagination
-    result.add(simpleIntegrationTemplate.textProperty(PAGESIZE)
-        .label("Pagination")
-        .instructionText("Return 'n' number of items in the response or pass in a link to the 'next' or 'prev' set of items as " +
-            "shown here: https://docs.guidewire.com/cloud/cc/202302/cloudapibf/cloudAPI/topics/101-Fund/03-query-parameters" +
-            "/c_the-pagination-query-parameters.html.")
-        .description("Every resource type has a default pageSize. This value is used when the query does not specify a pageSize. " +
-                "To paginate through results, pass the href within the 'next' parameter of 'links', found in the result of the " +
-                "initial call to the resource.")
-        .isExpressionable(true)
-        .placeholder("25 or /common/v1/activities?pageSize=25")
-        .build());
-
-    // Filtering and Sorting
-    Optional<Map<String,Object>> extensions = Optional.ofNullable(get.getResponses())
-        .map(responses -> responses.get("200"))
-        .map(ApiResponse::getContent)
-        .map(content -> content.get("application/json"))
-        .map(MediaType::getSchema)
-        .map(Schema::getProperties)
-        .map(map -> map.get("data"))
-        .map(schema -> ((Schema)schema).getItems())
-        .map(Schema::getProperties)
-        .map(properties -> (Schema<?>)properties.get("attributes"))
-        .map(Schema::getExtensions);
-
-    // Parsing to find filtering and sorting options available on the call
-    if (extensions.isPresent() && extensions.get().size() > 0) {
-
-      // Building up sorting and filtering options
-      TextPropertyDescriptor.TextPropertyDescriptorBuilder sortedChoices = simpleIntegrationTemplate.textProperty(SORT)
-          .label("Sort Response")
-          .instructionText("Sort response by selecting a field in the dropdown. If the dropdown is empty," +
-              " there are no sortable fields available")
-          .isExpressionable(true)
-          .refresh(RefreshPolicy.ALWAYS);
-      TextPropertyDescriptor.TextPropertyDescriptorBuilder filteredChoices = simpleIntegrationTemplate.textProperty(FILTER_FIELD)
-          .label("Filter Response")
-          .instructionText("Filter response by selecting a field in the dropdown. If the dropdown is " +
-              "empty, there are no filterable fields available")
-          .isExpressionable(true)
-          .refresh(RefreshPolicy.ALWAYS);
-
-        // If there are filtering options, add filtering UI
-        List<String> filterProperties = (List)extensions.get().get("x-gw-filterable");
-        if (filterProperties != null && filterProperties.size() > 0) {
-          filterProperties.forEach(property -> {
-            filteredChoices.choice(Choice.builder().name(Util.camelCaseToTitleCase(property)).value(property).build());
-          });
-          TextPropertyDescriptor.TextPropertyDescriptorBuilder filteringOperatorsBuilder = simpleIntegrationTemplate
-              .textProperty(FILTER_OPERATOR)
-              .instructionText("Select an operator to filter the results")
-              .refresh(RefreshPolicy.ALWAYS)
-              .isExpressionable(true);
-          FILTERING_OPTIONS.entrySet().forEach(option -> {
-            filteringOperatorsBuilder.choice(Choice.builder().name(option.getKey()).value(option.getValue()).build());
-          });
-
-          // If any of the options are selected, the set will have more items than just null and the rest of the fields become
-          // required
-          Set<String> requiredSet = new HashSet<>(
-              Arrays.asList(integrationConfiguration.getValue(FILTER_FIELD), integrationConfiguration.getValue(FILTER_OPERATOR),
-                  integrationConfiguration.getValue(FILTER_VALUE)));
-          boolean isRequired = requiredSet.size() > 1;
-
-          // Add sorting fields to the UI
-          result.add(filteredChoices.isRequired(isRequired).build());
-          result.add(filteringOperatorsBuilder.isRequired(isRequired).build());
-          result.add(simpleIntegrationTemplate.textProperty(FILTER_VALUE)
-              .instructionText("Insert the query to filter the chosen field")
-              .isRequired(isRequired)
-              .refresh(RefreshPolicy.ALWAYS)
-              .isExpressionable(true)
-              .refresh(RefreshPolicy.ALWAYS)
-              .placeholder("22")
-              .build());
-        }
-
-        // If there are sorting options, add sorting UI
-        List<String> sortProperties = (List)extensions.get().get("x-gw-sortable");
-        if (sortProperties != null && sortProperties.size() > 0) {
-          sortProperties.forEach(property -> {
-            sortedChoices.choice(Choice.builder().name(Util.camelCaseToTitleCase(property)).value(property).build());
-          });
-          result.add(sortedChoices.isRequired(integrationConfiguration.getValue(SORT_ORDER) != null).build());
-          Choice[] sortOrder = {Choice.builder().name("Ascending").value("+").build(),
-              Choice.builder().name("Descending").value("-").build()};
-          result.add(simpleIntegrationTemplate.textProperty(SORT_ORDER)
-              .label("Sort Order of Response")
-              .choices(sortOrder)
-              .isExpressionable(true)
-              .isRequired(integrationConfiguration.getValue(SORT) != null)
-              .displayHint(DisplayHint.NORMAL)
-              .instructionText("Select the sort order. Default sort order is ascending")
-              .refresh(RefreshPolicy.ALWAYS)
-              .build());
-        }
-    }
-
-    // Include Total UI
-    result.add(simpleIntegrationTemplate.booleanProperty(INCLUDE_TOTAL)
-        .label("Include Total")
-        .isExpressionable(true)
-        .displayMode(BooleanDisplayMode.RADIO_BUTTON)
-        .instructionText("Used to request that results should include a count of the total number of results available, " +
-            "which may be more than the total number of results currently being returned.")
-        .description("This value can only be set when there is more than one element returned. If not specified, the default is" +
-            " considered to be `false.` If the number of resources to total is sufficiently large, using the includeTotal " +
-            "parameter can affect performance. Guidewire recommends you use this parameter only when there is a need for it, and " +
-            "only when the number of resources to total is unlikely to affect performance.")
-        .build());
-
     // Included resources TODO: currently not working because guidewire docs are wrong
-*//*
-    Optional<Object> hasIncludedResources = Optional.ofNullable(get.getResponses())
+/*    Optional<Object> hasIncludedResources = Optional.ofNullable(get.getResponses())
         .map(schema -> schema.get("200"))
         .map(ApiResponse::getContent)
         .map(contentMap -> contentMap.get("application/json"))
@@ -623,60 +469,69 @@ public class GuidewireUIBuilder extends UIBuilder {
               "Select the related resources below that you would like to be attached to the call. If " +
               "they exist, they will be returned alongside the root resource.")
           .build());
-    }*//*
-
-    Optional<Object> documentInResponse = Optional.ofNullable(get.getResponses())
-        .map(responses -> responses.get("200"))
-        .map(ApiResponse::getContent)
-        .map(content -> content.get("application/json"))
-        .map(MediaType::getSchema)
-        .map(Schema::getProperties)
-        .map(properties -> properties.get("data"))
-        .flatMap(data -> data instanceof ObjectSchema ?
-            Optional.of(((ObjectSchema)data).getProperties()) :
-            Optional.empty())
-        .map(properties -> properties.get("attributes"))
-        .map(Schema::getProperties)
-        .map(properties -> properties.get("contents"));
-
-    if (documentInResponse.isPresent() && documentInResponse.get() instanceof ByteArraySchema) {
-      result.add(simpleIntegrationTemplate.folderProperty(FOLDER)
-          .isExpressionable(true)
-          .isRequired(true)
-          .label("Response File Save Location")
-          .instructionText("Choose the folder you would like to save the response file to.")
-          .build());
-      result.add(simpleIntegrationTemplate.textProperty(SAVED_FILENAME)
-          .isExpressionable(true)
-          .isRequired(true)
-          .label("Response File Name")
-          .instructionText("Choose the name of the file received in the response. Do not include the file extension.")
-          .build());
     }*/
 
   }
 
-  public void buildPost(List<PropertyDescriptor<?>> result) {
+  public void buildPost(List<PropertyDescriptor<?>> properties)  {
+
+
+    JsonNode post = parse(paths2, Arrays.asList(pathName, POST));
+
+
+    JsonNode reqBody = parse(post, Arrays.asList(REQUEST_BODY));
+    if(reqBody == null) {
+      properties.add(ConstantKeys.getChecksumUI(CHECKSUM_IN_HEADER));
+      properties.add(NO_REQ_BODY_UI);
+      return;
+    }
+
+    JsonNode documentType = parse(reqBody, Arrays.asList(CONTENT,MULTIPART_FORM_DATA));
+    if (documentType != null) {
+      properties.add(simpleIntegrationTemplate.documentProperty(DOCUMENT)
+          .label("Document")
+          .isRequired(true)
+          .isExpressionable(true)
+          .refresh(RefreshPolicy.ALWAYS)
+          .instructionText("Insert a document to upload")
+          .build());
+    }
+
+    properties.add(ConstantKeys.getChecksumUI(CHECKSUM_IN_REQ_BODY));
+
+    JsonNode schema = (documentType == null) ?
+        parse(reqBody, Arrays.asList(CONTENT, APPLICATION_JSON, SCHEMA, PROPERTIES, DATA, PROPERTIES, ATTRIBUTES)) :
+        parse(post, Arrays.asList(RESPONSES, "201", CONTENT, APPLICATION_JSON, SCHEMA, PROPERTIES, DATA, PROPERTIES, ATTRIBUTES));
+
+
+    if (schema == null) {
+      properties.add(NO_REQ_BODY_UI);
+      return;
+    }
+
+    JsonNode requiredNode = parse(schema, Arrays.asList(REQUIRED));
+
+/*    schema.get(PROPERTIES).fields().forEachRemaining(entry -> {
+      System.out.println(entry.getKey() + ": " + entry.getValue() );
+    });*/
+
+
+    ReqBodyUIBuilder2(properties, schema.get(PROPERTIES), requiredNode, POST);
+
+
+
+
+
+
+
+
+    /*
 
     if (paths.get(pathName).getPost().getRequestBody() == null) {
       result.add(ConstantKeys.getChecksumUI(CHECKSUM_IN_HEADER));
       result.add(NO_REQ_BODY_UI);
       return;
     }
-
-    // Composite Request -
-/*    if (pathName.equals("/composite")) {
-      Optional<Schema> schema = Optional.ofNullable(paths.get(pathName))
-          .map(PathItem::getPost)
-          .map(Operation::getRequestBody)
-          .map(RequestBody::getContent)
-          .map(content -> content.get("application/json"))
-          .map(MediaType::getSchema);
-
-      Set<String> required = schema.get().getRequired() != null ? new HashSet<>(schema.get().getRequired()) : null;
-      ReqBodyUIBuilder(result, schema.get().getProperties(), required, new HashMap<>(), POST);
-      return;
-    }*/
 
     MediaType documentType = openAPI.getPaths().get(pathName).getPost().getRequestBody().getContent().get("multipart/form-data");
     if (documentType != null) {
@@ -720,11 +575,11 @@ public class GuidewireUIBuilder extends UIBuilder {
     }
 
     Set<String> required = schema.get().getRequired() != null ? new HashSet<>(schema.get().getRequired()) : null;
-    ReqBodyUIBuilder(result, schema.get().getProperties(), required, new HashMap<>(), POST);
+    ReqBodyUIBuilder(result, schema.get().getProperties(), required, new HashMap<>(), POST);*/
   }
 
   public void buildPatch(List<PropertyDescriptor<?>> result) {
-
+/*
     if (paths.get(pathName).getPatch().getRequestBody() == null) {
       result.add(NO_REQ_BODY_UI);
       return;
@@ -772,7 +627,7 @@ public class GuidewireUIBuilder extends UIBuilder {
     }
 
     Set<String> required = schema.get().getRequired() != null ? new HashSet<>(schema.get().getRequired()) : null;
-    ReqBodyUIBuilder(result, schema.get().getProperties(), required, new HashMap<>(), PATCH);
+    ReqBodyUIBuilder(result, schema.get().getProperties(), required, new HashMap<>(), PATCH);*/
   }
 
   public void buildDelete(List<PropertyDescriptor<?>> result) {

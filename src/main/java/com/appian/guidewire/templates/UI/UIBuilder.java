@@ -1,10 +1,10 @@
 package com.appian.guidewire.templates.UI;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -18,8 +18,8 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.Paragraph
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptorBuilder;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
+import com.appian.connectedsystems.templateframework.sdk.configuration.RefreshPolicy;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
-import com.appian.connectedsystems.templateframework.sdk.configuration.TypeReference;
 import com.appian.guidewire.templates.apis.GuidewireIntegrationTemplate;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -27,13 +27,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Paths;
-import io.swagger.v3.oas.models.media.ArraySchema;
-import io.swagger.v3.oas.models.media.BooleanSchema;
-import io.swagger.v3.oas.models.media.IntegerSchema;
-import io.swagger.v3.oas.models.media.Schema;
-import io.swagger.v3.oas.models.media.StringSchema;
-import io.swagger.v3.oas.models.parameters.Parameter;
-import io.swagger.v3.oas.models.parameters.PathParameter;
 import std.ConstantKeys;
 import std.Util;
 
@@ -72,7 +65,7 @@ public abstract class UIBuilder implements ConstantKeys {
 
   public abstract void buildGet(List<PropertyDescriptor<?>> result);
 
-  public abstract void buildPost(List<PropertyDescriptor<?>> result);
+  public abstract void buildPost(List<PropertyDescriptor<?>> result) throws IOException;
 
   public abstract void buildPatch(List<PropertyDescriptor<?>> result);
 
@@ -124,20 +117,30 @@ public abstract class UIBuilder implements ConstantKeys {
     return refNodeArr;
   }
 
-  public JsonNode parse(JsonNode root, List<String> path) {
-    JsonNode currNode = root;
+  public JsonNode getRefIfPresent(JsonNode currNode) {
+    // If no ref or null, just return currNode
+    if (currNode == null || !currNode.has(REF)) return currNode;
 
+    // Get Ref if it exists
+    String newLoc = currNode.get(REF).asText().replace("#/", "/");
+    JsonNode newNode = openAPI2.at(newLoc);
+    if (newNode == null || newNode.isMissingNode()) return null;
+    else return newNode;
+  }
+
+  // Parse through the OpenAPI spec starting at root node and traversing down path
+  public JsonNode parse(JsonNode root, List<String> path) {
+    if (root == null || path.size() <= 0) return null;
+
+    JsonNode currNode = root;
     for (int i = 0; i < path.size(); i++) {
       String loc = path.get(i);
       currNode = currNode.get(loc);
+      currNode = getRefIfPresent(currNode);
       if (currNode == null) return null;
-
-      if (currNode.has(REF)) {
-        String newLoc = currNode.get(REF).asText().replace("#/", "/");
-        currNode = openAPI2.at(newLoc);
-        if (currNode == null || currNode.isMissingNode()) return null;
-      }
     }
+
+    currNode = getRefIfPresent(currNode);
     return currNode;
   }
 
@@ -192,7 +195,215 @@ public abstract class UIBuilder implements ConstantKeys {
 
 
 
+  public void ReqBodyUIBuilder2(List<PropertyDescriptor<?>> result,
+      JsonNode reqBodyPropertiesNode,
+      JsonNode required,
+      String restOperation) {
 
+    LocalTypeDescriptor.Builder builder = simpleIntegrationTemplate.localType(REQ_BODY_PROPERTIES);
+    reqBodyPropertiesNode.fields().forEachRemaining(entry -> {
+      if (entry.getValue() == null) return;
+
+      JsonNode itemSchema = entry.getValue();
+      String keyStr = entry.getKey();
+
+      // If that property has required fields create a new hashset of those required fields
+      // TODO: check all required logic
+      Set<String> requiredProperties = new HashSet<>();
+      if (required == null && itemSchema.get(REQUIRED) != null) {
+        itemSchema.get(REQUIRED).forEach(req -> requiredProperties.add(req.asText()));
+      }
+
+      // If the property is a document. This creates the property outside of the request body to use the native Appian
+      // document/file picker
+      if (itemSchema.get(FORMAT) != null && itemSchema.get(FORMAT).equals("binary")) {
+        DocumentPropertyDescriptor document = simpleIntegrationTemplate.documentProperty(keyStr)
+            .label("Document " + Character.toUpperCase(keyStr.charAt(0)) + keyStr.substring(1))
+            .isRequired(requiredProperties == null ? false : requiredProperties.contains(keyStr))
+            .isExpressionable(true)
+/*            .refresh(RefreshPolicy.ALWAYS)*/
+            .instructionText(itemSchema.get(DESCRIPTION).asText())
+            .build();
+        result.add(document);
+      } else {
+        LocalTypeDescriptor property = parseRequestBody(keyStr, itemSchema, requiredProperties, restOperation);
+        if (property != null) {
+          builder.properties(property.getProperties());
+        }
+      }
+    });
+
+    result.add(
+        simpleIntegrationTemplate.localTypeProperty(builder.build())
+            .key(Util.removeSpecialCharactersFromPathName(pathName))
+            .displayHint(DisplayHint.NORMAL)
+            .isExpressionable(true)
+
+            .label("Request Body")
+            .description("Enter values to the properties below to send new or updated data to Guidewire. Not all properties are " +
+                "required. Make sure to remove any unnecessary autogenerated properties. By default, null values will not be added " +
+                "to the request. Use a space between apostrophes for sending empty text.")
+            .instructionText(AUTOGENERATED_ERROR_DETAIL)
+/*            .refresh(RefreshPolicy.ALWAYS)*/
+
+            .build()
+    );
+  }
+
+
+  public LocalTypeDescriptor parseRequestBody(String key,
+      JsonNode item,
+      Set<String> requiredProperties,
+      String restOperation) {
+
+    // Skip if the field is a read-only value
+    if (item.get("readOnly") != null && item.get("readOnly").asBoolean()) return null;
+
+    item = getRefIfPresent(item);
+
+    // For POSTs, gw sets required properties required to create a post in their extensions instead of in the required section
+    JsonNode requiredForCreate = item.get("x-gw-requiredForCreate");
+    if (restOperation.equals(POST) && requiredForCreate != null ) {
+      for (JsonNode req : requiredForCreate) {
+        requiredProperties.add(req.asText());
+      }
+    }
+
+    // Fields that are marked as createOnly are allowed in POSTs but not in PATCHes
+    JsonNode createOnly = item.get("x-gw-createOnly");
+    if (restOperation.equals(PATCH) && createOnly != null && createOnly.asBoolean()) {
+      return null;
+    }
+
+    LocalTypeDescriptor.Builder builder = simpleIntegrationTemplate.localType(key);
+    String type = item.get("type").asText();
+    if (type.equals("object")) {
+
+      if (item.get(PROPERTIES) == null)
+        return null;
+
+      item.get(PROPERTIES).fields().forEachRemaining(entry -> {
+        String innerKey = entry.getKey();
+        JsonNode innerItem = entry.getValue();
+
+        // TODO: fix required
+/*        requiredProperties = innerItem.get(REQUIRED) != null ? new HashSet<>(innerItem.get(REQUIRED)) : requiredProperties;*/
+
+        LocalTypeDescriptor nested = parseRequestBody(innerKey, innerItem, requiredProperties, restOperation);
+        if (nested != null) {
+          builder.properties(nested.getProperties());
+        }
+      });
+
+      String description = item.get(DESCRIPTION) != null ?
+          item.get(DESCRIPTION).asText().replaceAll("\n", "") :
+          "";
+      return simpleIntegrationTemplate.localType(key + "Builder")
+          .properties(simpleIntegrationTemplate.localTypeProperty(builder.build())
+              .label(key)
+              .description(description)
+              .refresh(RefreshPolicy.ALWAYS)
+              .isRequired(requiredProperties != null && requiredProperties.contains(key))
+              .build())
+          .build();
+
+    }
+
+  /*  else if (type.equals("array")) {
+
+      if (item.get(ITEMS) == null || item.get(ITEMS).get(REF) == null)
+        return null;
+
+      item = parse(item, Arrays.asList(REF));
+
+      item.get(PROPERTIES).fields().forEachRemaining(entry -> {
+        String innerKey = entry.getKey();
+        JsonNode innerItem = entry.getValue();
+
+        Set<String> innerRequiredProperties = new HashSet<>();
+        if (innerItem.getRequired() != null) innerRequiredProperties.addAll(innerItem.getRequired());
+        else if (item.getItems().getRequired() != null) innerRequiredProperties.addAll(item.getItems().getRequired());
+
+        LocalTypeDescriptor nested = parseRequestBody(innerKey, innerItem, innerRequiredProperties,
+            removeFieldsFromReqBody, restOperation);
+        if (nested != null) {
+          builder.properties(nested.getProperties());
+        }
+      });
+
+
+      String description = item.getDescription() != null ?
+          item.getDescription().replaceAll("\n", "") :
+          "";
+
+      // The listProperty needs a typeReference to a localProperty set by localTypeProperty, but not actually displayed
+      LocalTypeDescriptor built = builder.build();
+      simpleIntegrationTemplate.localTypeProperty(built, key + "hidden");
+      return simpleIntegrationTemplate.localType(key + "Builder").properties(
+          simpleIntegrationTemplate.listTypeProperty(key)
+              .label(key)
+              .isHidden(false)
+              .refresh(RefreshPolicy.ALWAYS)
+
+              .description(description)
+              .displayHint(DisplayHint.NORMAL)
+              .isExpressionable(true)
+              .isRequired(requiredProperties != null && requiredProperties.contains(key))
+              .itemType(TypeReference.from(built))
+              .build()
+      ).build();
+
+    }*/
+    else {
+      String isRequired = requiredProperties != null && requiredProperties.contains(key) ? "(Required) ": "";
+      String description = item.get(DESCRIPTION) != null ?
+          isRequired + item.get(DESCRIPTION).asText().replaceAll("\n", "") :
+          "";
+
+      // Base case: Create new property field depending on the type
+      PropertyDescriptorBuilder<?> newProperty;
+      switch (type) {
+        case ("boolean"):
+/*          newProperty = simpleIntegrationTemplate.booleanProperty(key).displayMode(BooleanDisplayMode.CHECKBOX);*/
+
+          // Boolean properties are automatically marked as false, need to know when a user actually selects false. Using
+          // dropdown instead
+          newProperty = simpleIntegrationTemplate.textProperty(key).choices(
+              Choice.builder().name("True").value("true").build(),
+              Choice.builder().name("False").value("false").build()
+          );
+          break;
+        case ("integer"):
+          newProperty = simpleIntegrationTemplate.integerProperty(key);
+          break;
+        case ("number"):
+          newProperty = simpleIntegrationTemplate.doubleProperty(key);
+          break;
+        default:
+          newProperty = simpleIntegrationTemplate
+              .paragraphProperty(key)
+              .height(description.length() >= 125 ? ParagraphHeight.TALL : ParagraphHeight.MEDIUM);
+          break;
+      }
+
+      return simpleIntegrationTemplate.localType(key + "Container")
+          .property(newProperty
+              .label(key)
+              .isRequired(requiredProperties != null && requiredProperties.contains(key))
+              .isExpressionable(true)
+              .refresh(RefreshPolicy.ALWAYS)
+
+              .placeholder(description)
+              .instructionText(description)
+
+              .description(description)
+
+              .build())
+          .build();
+    }
+  }
+
+/*
   public void ReqBodyUIBuilder(List<PropertyDescriptor<?>> result,
       Map<?,?> properties,
       Set<String> required,
@@ -215,7 +426,7 @@ public abstract class UIBuilder implements ConstantKeys {
             .label("Document " + Character.toUpperCase(keyStr.charAt(0)) + keyStr.substring(1))
             .isRequired(requiredProperties == null ? false : requiredProperties.contains(keyStr))
             .isExpressionable(true)
-/*            .refresh(RefreshPolicy.ALWAYS)*/
+*//*            .refresh(RefreshPolicy.ALWAYS)*//*
             .instructionText(itemSchema.getDescription())
             .build();
         result.add(document);
@@ -231,13 +442,13 @@ public abstract class UIBuilder implements ConstantKeys {
         simpleIntegrationTemplate.localTypeProperty(builder.build())
         .key(Util.removeSpecialCharactersFromPathName(pathName))
         .displayHint(DisplayHint.NORMAL)
-/*        .isExpressionable(true)*/
+*//*        .isExpressionable(true)*//*
         .label("Request Body")
         .description("Enter values to the properties below to send new or updated data to Guidewire. Not all properties are " +
             "required. Make sure to remove any unnecessary autogenerated properties. By default, null values will not be added " +
             "to the request. Use a space between apostrophes for sending empty text.")
         .instructionText(AUTOGENERATED_ERROR_DETAIL)
-/*        .refresh(RefreshPolicy.ALWAYS)*/
+*//*        .refresh(RefreshPolicy.ALWAYS)*//*
         .build()
     );
   }
@@ -311,7 +522,7 @@ public abstract class UIBuilder implements ConstantKeys {
       return builder.property(simpleIntegrationTemplate.textProperty(key)
           .placeholder(oneOfStrBuilder.toString())
           .isExpressionable(true)
-/*          .refresh(RefreshPolicy.ALWAYS)*/
+*//*          .refresh(RefreshPolicy.ALWAYS)*//*
           .build()).build();
     } else if (item.getType().equals("object")) {
 
@@ -335,7 +546,7 @@ public abstract class UIBuilder implements ConstantKeys {
           .properties(simpleIntegrationTemplate.localTypeProperty(builder.build())
               .label(key)
               .description(description)
-/*              .refresh(RefreshPolicy.ALWAYS)*/
+*//*              .refresh(RefreshPolicy.ALWAYS)*//*
               .isRequired(requiredProperties != null && requiredProperties.contains(key))
               .build())
           .build();
@@ -371,7 +582,7 @@ public abstract class UIBuilder implements ConstantKeys {
           simpleIntegrationTemplate.listTypeProperty(key)
               .label(key)
               .isHidden(false)
-/*              .refresh(RefreshPolicy.ALWAYS)*/
+*//*              .refresh(RefreshPolicy.ALWAYS)*//*
               .description(description)
               .displayHint(DisplayHint.NORMAL)
               .isExpressionable(true)
@@ -390,7 +601,7 @@ public abstract class UIBuilder implements ConstantKeys {
       PropertyDescriptorBuilder<?> newProperty;
       switch (item.getType()) {
         case ("boolean"):
-/*          newProperty = simpleIntegrationTemplate.booleanProperty(key).displayMode(BooleanDisplayMode.CHECKBOX);*/
+*//*          newProperty = simpleIntegrationTemplate.booleanProperty(key).displayMode(BooleanDisplayMode.CHECKBOX);*//*
           // Boolean properties are automatically marked as false, need to know when a user actually selects false. Using
           // dropdown instead
           newProperty = simpleIntegrationTemplate.textProperty(key).choices(
@@ -416,102 +627,13 @@ public abstract class UIBuilder implements ConstantKeys {
               .label(key)
               .isRequired(requiredProperties != null && requiredProperties.contains(key))
               .isExpressionable(true)
-/*              .refresh(RefreshPolicy.ALWAYS)*/
+*//*              .refresh(RefreshPolicy.ALWAYS)*//*
               .placeholder(description)
-/*              .instructionText(description)*/
-  /*            .description(description)*/
+*//*              .instructionText(description)*//*
+  *//*            .description(description)*//*
               .build())
           .build();
     }
-  }
-
-  // Runs on initialization to set the default paths for the dropdown as well as a list of strings of choices used for
-  // sorting when a query is entered
-  /*public void setDefaultEndpoints(List<CustomEndpoint> customEndpoints) {
-    // Build search choices when no search query has been entered
-    // Check if rest call exists on path and add each rest call of path to list of choices
-    Map<String,Operation> operations = new HashMap<>();
-
-    paths.forEach((pathName, path) -> {
-      if (PATHS_TO_REMOVE.contains(pathName))
-        return;
-
-      operations.put(GET, path.getGet());
-      operations.put(POST, path.getPost());
-      operations.put(PATCH, path.getPatch());
-      operations.put(DELETE, path.getDelete());
-
-      operations.forEach((restOperation, openAPIOperation) -> {
-        if (openAPIOperation != null) {
-          // filter out deprecated endpoints
-          if (openAPIOperation.getDeprecated() != null && openAPIOperation.getDeprecated()) return;
-
-          String name = restOperation + " - " + openAPIOperation.getSummary();
-          String value = api + ":" + restOperation + ":" + pathName + ":" + subApi ;
-
-          // Builds up choices for search on initial run with all paths
-          choicesForSearch.add(value);
-
-          // Choice UI built
-          defaultChoices.add(Choice.builder().name(name).value(value).build());
-        }
-      });
-    });
-
-    // if there are custom endpoints that aren't from the openAPI spec, add them to the choices here
-    if (customEndpoints != null && customEndpoints.size() > 0) {
-      customEndpoints.forEach(endpoint -> {
-        String name = endpoint.getRestOperation() + " - " + endpoint.getSummary();
-
-        // TODO. Save choicesForSearch in value of a hidden property, only run this if that doesn't exist (first run), use that
-        //  val in endpointChoiceBuilder
-
-        // Builds up choices for search on initial run with all paths
-        choicesForSearch.add(endpoint.getCustomEndpoint());
-
-        // Choice UI built
-        defaultChoices.add(Choice.builder().name(name).value(endpoint.getCustomEndpoint()).build());
-      });
-    }
-  }
-
-  // Sets the choices for endpoints with either default choices or sorted choices based off of the search query
-  public TextPropertyDescriptor endpointChoiceBuilder() {
-
-    // If there is a search query, sort the dropdown with the query
-    String searchQuery = integrationConfiguration.getValue(SEARCH);
-    ArrayList<Choice> choices = new ArrayList<>();
-    if (searchQuery != null && !searchQuery.equals("") && !choicesForSearch.isEmpty()) {
-      List<ExtractedResult> extractedResults = FuzzySearch.extractSorted(searchQuery, choicesForSearch);
-      for (ExtractedResult choice : extractedResults) {
-        String[] pathInfo = choice.getString().split(":");
-        String restOperation = pathInfo[1];
-        PathItem chosenPath = paths.get(pathInfo[2]);
-
-        String summary = Util.getPathProperties(chosenPath, restOperation, "summary");
-        choices.add(Choice.builder().name(restOperation + " - " + summary).value(choice.getString()).build());
-      }
-    }
-
-    // If an endpoint is selected, the instructionText will update to the REST call and path name
-    String chosenEndpoint = integrationConfiguration.getValue(CHOSEN_ENDPOINT);
-
-    // Add description to the instruction text if it is different from the summary
-    String instructionText = "";
-    if (chosenEndpoint != null) {
-      String restOperation = chosenEndpoint.split(":")[1];
-      String chosenPath = chosenEndpoint.split(":")[2];
-      String description = Util.getPathProperties(paths.get(chosenPath), restOperation, "description");
-      instructionText = restOperation + " " + chosenPath + " " + description;
-    }
-
-    return simpleIntegrationTemplate.textProperty(CHOSEN_ENDPOINT)
-        .isRequired(true)
-        .refresh(RefreshPolicy.ALWAYS)
-        .label("Select Operation")
-*//*        .transientChoices(true)*//*
-        .instructionText(instructionText)
-        .choices(choices.size() > 0 ? choices.toArray(new Choice[0]) : defaultChoices.toArray(new Choice[0]))
-        .build();
   }*/
+
 }
