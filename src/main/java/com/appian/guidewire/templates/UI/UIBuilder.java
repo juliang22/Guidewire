@@ -20,6 +20,7 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyD
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
 import com.appian.connectedsystems.templateframework.sdk.configuration.RefreshPolicy;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
+import com.appian.connectedsystems.templateframework.sdk.configuration.TypeReference;
 import com.appian.guidewire.templates.apis.GuidewireIntegrationTemplate;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -275,8 +276,17 @@ public abstract class UIBuilder implements ConstantKeys {
       return null;
     }
 
+    // TODO: fix oneOf
+    if (item.has("oneOf")) return null;
+
     LocalTypeDescriptor.Builder builder = simpleIntegrationTemplate.localType(key);
     String type = item.get("type").asText();
+    String description = item.get(DESCRIPTION) != null ?
+        item.get(DESCRIPTION).asText().replaceAll("\n", "") :
+        "";
+
+
+
     if (type.equals("object")) {
 
       if (item.get(PROPERTIES) == null)
@@ -289,15 +299,14 @@ public abstract class UIBuilder implements ConstantKeys {
         // TODO: fix required
 /*        requiredProperties = innerItem.get(REQUIRED) != null ? new HashSet<>(innerItem.get(REQUIRED)) : requiredProperties;*/
 
-        LocalTypeDescriptor nested = parseRequestBody(innerKey, innerItem, requiredProperties, restOperation);
-        if (nested != null) {
-          builder.properties(nested.getProperties());
+        if (!innerKey.equals("mailingAddress")) {
+          LocalTypeDescriptor nested = parseRequestBody(innerKey, innerItem, requiredProperties, restOperation);
+          if (nested != null) {
+            builder.properties(nested.getProperties());
+          }
         }
       });
 
-      String description = item.get(DESCRIPTION) != null ?
-          item.get(DESCRIPTION).asText().replaceAll("\n", "") :
-          "";
       return simpleIntegrationTemplate.localType(key + "Builder")
           .properties(simpleIntegrationTemplate.localTypeProperty(builder.build())
               .label(key)
@@ -309,32 +318,28 @@ public abstract class UIBuilder implements ConstantKeys {
 
     }
 
-  /*  else if (type.equals("array")) {
+    else if (type.equals("array")) {
 
       if (item.get(ITEMS) == null || item.get(ITEMS).get(REF) == null)
         return null;
 
-      item = parse(item, Arrays.asList(REF));
+      item = getRefIfPresent(item.get(ITEMS));
 
       item.get(PROPERTIES).fields().forEachRemaining(entry -> {
         String innerKey = entry.getKey();
         JsonNode innerItem = entry.getValue();
 
         Set<String> innerRequiredProperties = new HashSet<>();
-        if (innerItem.getRequired() != null) innerRequiredProperties.addAll(innerItem.getRequired());
-        else if (item.getItems().getRequired() != null) innerRequiredProperties.addAll(item.getItems().getRequired());
+        // TODO: fix required
+/*        if (innerItem.get(REQ_BODY) != null) innerRequiredProperties.addAll(innerItem.get(REQUIRED).);
+        else if (item.getItems().getRequired() != null) innerRequiredProperties.addAll(item.getItems().getRequired());*/
 
-        LocalTypeDescriptor nested = parseRequestBody(innerKey, innerItem, innerRequiredProperties,
-            removeFieldsFromReqBody, restOperation);
+        LocalTypeDescriptor nested = parseRequestBody(innerKey, innerItem, innerRequiredProperties, restOperation);
         if (nested != null) {
           builder.properties(nested.getProperties());
         }
       });
 
-
-      String description = item.getDescription() != null ?
-          item.getDescription().replaceAll("\n", "") :
-          "";
 
       // The listProperty needs a typeReference to a localProperty set by localTypeProperty, but not actually displayed
       LocalTypeDescriptor built = builder.build();
@@ -353,10 +358,11 @@ public abstract class UIBuilder implements ConstantKeys {
               .build()
       ).build();
 
-    }*/
+    }
     else {
       String isRequired = requiredProperties != null && requiredProperties.contains(key) ? "(Required) ": "";
-      String description = item.get(DESCRIPTION) != null ?
+      // TODO: fix
+      description = item.get(DESCRIPTION) != null ?
           isRequired + item.get(DESCRIPTION).asText().replaceAll("\n", "") :
           "";
 
