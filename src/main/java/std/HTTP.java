@@ -152,8 +152,7 @@ public class HTTP implements ConstantKeys {
         executionService.setError("Error Code: " + code, message, bodyStr);
       }
 
-      // If OpenAI returns a document back, capture the document
-
+      // If there is a document capture the document
      Optional<Object> isDocument = Optional.ofNullable(responseEntity.get("data"))
          .flatMap(data -> data instanceof LinkedHashMap ?
              Optional.ofNullable(((LinkedHashMap)data).get("attributes")) :

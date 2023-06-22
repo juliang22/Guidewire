@@ -1,22 +1,29 @@
 package com.appian.guidewire.templates.Execution;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.commons.io.IOUtils;
+
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationError;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
+import com.appian.connectedsystems.templateframework.sdk.configuration.Document;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyState;
 import com.appian.guidewire.templates.apis.GuidewireIntegrationTemplate;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import okhttp3.MediaType;
+import okhttp3.MultipartBody;
 import okhttp3.RequestBody;
 import std.Util;
 
@@ -149,25 +156,52 @@ public class GuidewireExecute extends Execute {
       return RequestBody.create(new byte[0]);
     }
 
-    HashMap<String, PropertyState> reqBodyProperties = integrationConfiguration.getValue(reqBodyKey);
-    buildRequestBodyJSON(reqBodyProperties);
+    // PropertyState to JSON map of request body
+    buildRequestBodyJSON(integrationConfiguration.getValue(reqBodyKey));
+
     Map<String, Object> attributesWrapper = new HashMap<>();
     attributesWrapper.put("attributes", builtRequestBody);
 
-    //add checksum to request body if it exists
-    if (integrationConfiguration.getProperty(CHECKSUM_IN_REQ_BODY) != null && integrationConfiguration.getValue(CHECKSUM_IN_REQ_BODY) != null) {
+    // Add checksum to request body if it exists
+    if (integrationConfiguration.getValue(CHECKSUM_IN_REQ_BODY) != null) {
       attributesWrapper.put(CHECKSUM_IN_REQ_BODY, integrationConfiguration.getValue(CHECKSUM_IN_REQ_BODY).toString());
     }
-
     Map<String, Object> dataWrapper = Collections.singletonMap("data", attributesWrapper);
+
+    Document doc = integrationConfiguration.getValue(DOCUMENT);
+    if (doc != null) {
+
+      // Create a temporary file and copy the InputStream into it
+      String fileName = doc.getFileName();
+      String fileNameWithoutExtension = fileName.substring(0, doc.getFileName().lastIndexOf("."));
+      File tempFile = File.createTempFile(fileNameWithoutExtension, "." + doc.getExtension());
+      tempFile.deleteOnExit();
+      FileOutputStream out = new FileOutputStream(tempFile);
+      IOUtils.copy(doc.getInputStream(), out);
+
+      // Create MultipartBody
+      String jsonString = new ObjectMapper().writeValueAsString(dataWrapper);
+      // Determine media type based on file extension
+      String contentType = Files.probeContentType(tempFile.toPath());
+      if (contentType == null) {
+        contentType = "application/octet-stream";  // Default to octet stream if type is unknown
+      }
+      RequestBody fileBody = RequestBody.create(tempFile, MediaType.parse(contentType));
+      return new MultipartBody.Builder()
+          .setType(MultipartBody.FORM)
+          .addFormDataPart("content", fileName, fileBody)
+          .addFormDataPart("metadata", null, RequestBody.create(jsonString, MediaType.parse("application/json")))
+          .build();
+    }
+
     String jsonString = new ObjectMapper().writeValueAsString(dataWrapper);
-    System.out.println(jsonString);
+/*    System.out.println(jsonString);*/
     return RequestBody.create(jsonString, MediaType.get("application/json; charset=utf-8"));
   }
 
   @Override
   public void executePost() throws IOException {
-    setHTTPResponse(httpService.post(pathNameModified, getCompletedRequestBody()));
+      setHTTPResponse(httpService.post(pathNameModified, getCompletedRequestBody()));
   }
 
   @Override
