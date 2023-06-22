@@ -23,7 +23,6 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyD
 import com.appian.guidewire.templates.Execution.Execute;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
@@ -34,7 +33,7 @@ import okhttp3.Response;
 import okhttp3.ResponseBody;
 
 public class HTTP implements ConstantKeys {
-protected Execute executionService;
+  protected Execute executionService;
 
   public HTTP(Execute executionService) {
     this.executionService = executionService;
@@ -104,7 +103,6 @@ protected Execute executionService;
       int code = response.code();
       String message = response.message();
       String bodyStr = body.string();
-      ObjectMapper mapper = new ObjectMapper();
 
       // Set error if error is returned in response
       if (code > 400 || !response.isSuccessful()) {
@@ -142,12 +140,11 @@ protected Execute executionService;
       int code = response.code();
       String message = response.message();
       String bodyStr = body.string();
-      ObjectMapper mapper = new ObjectMapper();
       HashMap<String,Object> responseEntity = new HashMap<>();
 
       // Normal json response sent back
       if (bodyStr.length() > 0) {
-        responseEntity.putAll(mapper.readValue(bodyStr, new TypeReference<HashMap<String,Object>>() {}));
+        responseEntity.putAll(executionService.getObjectMapper().readValue(bodyStr, new TypeReference<HashMap<String,Object>>() {}));
       }
 
       // Set error if error is returned in response
@@ -241,7 +238,7 @@ protected Execute executionService;
       } else {
         String jsonString;
         try {
-          jsonString = new ObjectMapper().writeValueAsString(val);
+          jsonString = executionService.getObjectMapper().writeValueAsString(val);
         } catch (JsonProcessingException e) {
           throw new RuntimeException(e);
         }

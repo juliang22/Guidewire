@@ -478,7 +478,6 @@ public class GuidewireUIBuilder extends UIBuilder {
 
     JsonNode post = parse(paths2, Arrays.asList(pathName, POST));
 
-
     JsonNode reqBody = parse(post, Arrays.asList(REQUEST_BODY));
     if(reqBody == null) {
       properties.add(ConstantKeys.getChecksumUI(CHECKSUM_IN_HEADER));
@@ -490,9 +489,8 @@ public class GuidewireUIBuilder extends UIBuilder {
     if (documentType != null) {
       properties.add(simpleIntegrationTemplate.documentProperty(DOCUMENT)
           .label("Document")
-          .isRequired(true)
+/*          .isRequired(true)*/ // TODO: test sending vs not sending document
           .isExpressionable(true)
-          .refresh(RefreshPolicy.ALWAYS)
           .instructionText("Insert a document to upload")
           .build());
     }
@@ -501,7 +499,7 @@ public class GuidewireUIBuilder extends UIBuilder {
 
     JsonNode schema = (documentType == null) ?
         parse(reqBody, Arrays.asList(CONTENT, APPLICATION_JSON, SCHEMA, PROPERTIES, DATA, PROPERTIES, ATTRIBUTES)) :
-        parse(post, Arrays.asList(RESPONSES, "201", CONTENT, APPLICATION_JSON, SCHEMA, PROPERTIES, DATA, PROPERTIES, ATTRIBUTES));
+        parse(documentType, Arrays.asList(SCHEMA, PROPERTIES, METADATA, PROPERTIES, DATA, PROPERTIES, ATTRIBUTES));
 
 
     if (schema == null) {
@@ -510,72 +508,7 @@ public class GuidewireUIBuilder extends UIBuilder {
     }
 
     JsonNode requiredNode = parse(schema, Arrays.asList(REQUIRED));
-
-/*    schema.get(PROPERTIES).fields().forEachRemaining(entry -> {
-      System.out.println(entry.getKey() + ": " + entry.getValue() );
-    });*/
-
-
     ReqBodyUIBuilder2(properties, schema.get(PROPERTIES), requiredNode, POST);
-
-
-
-
-
-
-
-
-    /*
-
-    if (paths.get(pathName).getPost().getRequestBody() == null) {
-      result.add(ConstantKeys.getChecksumUI(CHECKSUM_IN_HEADER));
-      result.add(NO_REQ_BODY_UI);
-      return;
-    }
-
-    MediaType documentType = openAPI.getPaths().get(pathName).getPost().getRequestBody().getContent().get("multipart/form-data");
-    if (documentType != null) {
-      result.add(simpleIntegrationTemplate.documentProperty(DOCUMENT)
-          .label("Document")
-          .isRequired(true)
-          .isExpressionable(true)
-          .refresh(RefreshPolicy.ALWAYS)
-          .instructionText("Insert a document to upload")
-          .build());
-    }
-
-    result.add(ConstantKeys.getChecksumUI(CHECKSUM_IN_REQ_BODY));
-
-    Optional<Schema> schema = (documentType == null) ?
-        Optional.ofNullable(paths.get(pathName))
-            .map(PathItem::getPost)
-            .map(Operation::getRequestBody)
-            .map(RequestBody::getContent)
-            .map(content -> content.get("application/json"))
-            .map(MediaType::getSchema)
-            .map(Schema::getProperties)
-            .map(properties -> properties.get("data"))
-            .map(data -> ((ObjectSchema)data).getProperties())
-            .map(dataMap -> dataMap.get("attributes")) :
-        Optional.ofNullable(paths.get(pathName))
-            .map(PathItem::getPost)
-            .map(Operation::getResponses)
-            .map(apiResponses -> apiResponses.get("201"))
-            .map(ApiResponse::getContent)
-            .map(content -> content.get("application/json"))
-            .map(MediaType::getSchema)
-            .map(Schema::getProperties)
-            .map(properties -> properties.get("data"))
-            .map(data -> ((ObjectSchema)data).getProperties())
-            .map(properties -> properties.get("attributes"));
-
-    if (!schema.isPresent()) {
-      result.add(NO_REQ_BODY_UI);
-      return;
-    }
-
-    Set<String> required = schema.get().getRequired() != null ? new HashSet<>(schema.get().getRequired()) : null;
-    ReqBodyUIBuilder(result, schema.get().getProperties(), required, new HashMap<>(), POST);*/
   }
 
   public void buildPatch(List<PropertyDescriptor<?>> result) {

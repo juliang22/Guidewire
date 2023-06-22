@@ -41,9 +41,9 @@ public abstract class Execute implements ConstantKeys {
   protected Long start;
   protected Map<String, Object> builtRequestBody = new HashMap<>();
   protected HttpResponse HTTPResponse;
-  protected Map<String,Object> requestDiagnostic;
   protected HTTP httpService;
   protected Map<String,String> apiInfoMap;
+  protected ObjectMapper objectMapper = new ObjectMapper();
 
   public abstract IntegrationResponse buildExecution() throws IOException;
   public abstract void executeGet() throws IOException ;
@@ -67,7 +67,7 @@ public abstract class Execute implements ConstantKeys {
     this.pathNameUnmodified = pathData[2];
     this.subApi = pathData[3];
     String subApiInfoStr = integrationConfiguration.getValue(SUB_API_TYPE);
-    this.apiInfoMap = new ObjectMapper().readValue(subApiInfoStr, Map.class);
+    this.apiInfoMap = objectMapper.readValue(subApiInfoStr, Map.class);
     this.pathNameModified =
         connectedSystemConfiguration.getValue(ROOT_URL) + "/rest" + apiInfoMap.get("basePath") + pathNameUnmodified;
     this.gson = new Gson();
@@ -92,7 +92,7 @@ public abstract class Execute implements ConstantKeys {
     error = new IntegrationErrorBuilder().title(title).message(message).detail(detail);
   }
 
-  public String getPathNameUnmodified() {return pathNameUnmodified;}
+  public ObjectMapper getObjectMapper() {return objectMapper;}
 
   // Getting pathName with user inputted path parameters
   public void buildPathNameWithPathVars() {
@@ -105,24 +105,23 @@ public abstract class Execute implements ConstantKeys {
     });
   }
 
-  // getting/setting diagnostics
-  public Map<String,Object> getDiagnostics() {return this.requestDiagnostic;}
-
-  public void setRequestDiagnostics() {
+  // Getting request diagnostics
+  public Map<String,Object> getRequestDiagnostics() throws JsonProcessingException {
     Map<String,Object> requestDiagnostic = new HashMap<>();
     requestDiagnostic.put("Operation: ", pathNameUnmodified);
     requestDiagnostic.put("Operation with Path Params: ", pathNameModified);
     if (integrationConfiguration.getProperty(reqBodyKey) != null) {
-      requestDiagnostic.put("Request Body", this.builtRequestBody);
+      requestDiagnostic.put("Request Body", builtRequestBody);
+      requestDiagnostic.put("Raw Request Body", builtRequestBody.toString());
     }
-    this.requestDiagnostic = requestDiagnostic;
+    return requestDiagnostic;
   }
 
-  public IntegrationDesignerDiagnostic getDiagnosticsUI() {
-    setRequestDiagnostics();
+  public IntegrationDesignerDiagnostic getDiagnosticsUI() throws JsonProcessingException {
+
     return IntegrationDesignerDiagnostic.builder()
         .addExecutionTimeDiagnostic(System.currentTimeMillis() - start)
-        .addRequestDiagnostic(getDiagnostics())
+        .addRequestDiagnostic(getRequestDiagnostics())
         .addResponseDiagnostic(getHTTPResponse().getCombinedResponse())
         .build();
   }
@@ -150,10 +149,10 @@ public abstract class Execute implements ConstantKeys {
     } else { // The value does have nested values
       // If the nested value is an array, recursively add to that array and put array in the map
       if (val.getValue() instanceof ArrayList) {
-        List<Map<String, Object>> propertyArr = new ArrayList<>();
+        List<Object> propertyArr = new ArrayList<>();
         ((ArrayList<?>)val.getValue()).forEach(property -> {
           Map<String,Object> nestedVal = parseReqBodyJSON(property.toString(), ((PropertyState)property));
-          propertyArr.add((Map<String,Object>)nestedVal.get(property.toString()));
+          propertyArr.add(nestedVal.get(property.toString()));
         });
         propertyMap.put(key, propertyArr);
       } else {

@@ -133,6 +133,8 @@ public interface ConstantKeys {
   String DESCRIPTION = "description";
   String REF = "$ref";
   String RESPONSES = "responses";
+  String TYPE = "type";
+  String METADATA = "metadata";
 
 
 

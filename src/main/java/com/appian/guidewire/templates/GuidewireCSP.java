@@ -25,12 +25,6 @@ import std.HTTP;
 @TemplateId(name="GuidewireCSP")
 public class GuidewireCSP extends SimpleTestableConnectedSystemTemplate implements ConstantKeys {
 
-  GuidewireCSP() {
-    ServiceContext sc = ServiceLocator.getAdministratorServiceContext();
-    ContentService cs = ServiceLocator.getContentService(sc);
-    
-    System.out.println(cs.getAdministratorGroup());
-  }
 
   @Override
   protected SimpleConfiguration getConfiguration(
