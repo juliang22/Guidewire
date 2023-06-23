@@ -25,11 +25,20 @@ import std.HTTP;
 @TemplateId(name="GuidewireCSP")
 public class GuidewireCSP extends SimpleTestableConnectedSystemTemplate implements ConstantKeys {
 
+  public boolean test() {
+    return true;
+  }
+
+  GuidewireCSP() {
+/*    ServiceContext sc = ServiceLocator.getAdministratorServiceContext();
+    ContentService cs = ServiceLocator.getContentService(sc);
+    cs.getDocumentInputStream(2)*/
+  }
+
 
   @Override
   protected SimpleConfiguration getConfiguration(
       SimpleConfiguration connectedSystemConfiguration, ExecutionContext executionContext) {
-
 
 
     List<TextPropertyDescriptor> defaultProperties = Arrays.asList(

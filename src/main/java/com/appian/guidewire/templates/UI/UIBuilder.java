@@ -151,12 +151,13 @@ public abstract class UIBuilder implements ConstantKeys {
         .map(this::getRefs)
         .ifPresent(refs -> refs.forEach(ref -> {
           String paramName = ref.get(NAME).asText();
+          String paramNameTitleCase = Util.camelCaseToTitleCase(paramName);
           String paramDescription = ref.get(DESCRIPTION).asText();
           TextPropertyDescriptor ui = simpleIntegrationTemplate.textProperty(paramName)
               .isRequired(true)
               .isExpressionable(true)
-              .placeholder("Insert a value")
-              .label(Util.camelCaseToTitleCase(paramName))
+              .placeholder("Insert " + paramNameTitleCase)
+              .label(paramNameTitleCase)
               .instructionText(paramDescription != null ? paramDescription : "")
               .build();
           pathVarsUI.add(ui);

@@ -4,10 +4,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -15,6 +13,7 @@ import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfigurat
 import com.appian.connectedsystems.templateframework.sdk.configuration.BooleanDisplayMode;
 import com.appian.connectedsystems.templateframework.sdk.configuration.Choice;
 import com.appian.connectedsystems.templateframework.sdk.configuration.DisplayHint;
+import com.appian.connectedsystems.templateframework.sdk.configuration.Expression;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
 import com.appian.connectedsystems.templateframework.sdk.configuration.RefreshPolicy;
@@ -314,21 +313,27 @@ public class GuidewireUIBuilder extends UIBuilder {
 
     if (extensions != null && (extensions.has("x-gw-filterable") || extensions.has("x-gw-sortable"))) {
       // Building up sorting and filtering options
+      JsonNode filterProperties = extensions.get("x-gw-filterable");
+      JsonNode sortProperties = extensions.get("x-gw-sortable");
       TextPropertyDescriptor.TextPropertyDescriptorBuilder sortedChoices = simpleIntegrationTemplate.textProperty(SORT)
           .label("Sort Response")
           .instructionText("Sort response by selecting a field in the dropdown. If the dropdown is empty," +
               " there are no sortable fields available")
           .isExpressionable(true)
+          .description("If setting this value as a rule input, use the string version of the value as described in the " +
+              "following list: " + sortProperties.toString())
           .refresh(RefreshPolicy.ALWAYS);
       TextPropertyDescriptor.TextPropertyDescriptorBuilder filteredChoices = simpleIntegrationTemplate.textProperty(FILTER_FIELD)
           .label("Filter Response")
-          .instructionText("Filter response by selecting a field in the dropdown. If the dropdown is " +
-              "empty, there are no filterable fields available")
+          .instructionText("Filter response by selecting a field in the dropdown.")
           .isExpressionable(true)
+          .description("If setting this value as a rule input, use the string version of the value as described in the " +
+              "following list: " + filterProperties.toString() + ". If rule inputs are set for filter properties, the values " +
+              "are required and cannot be null.")
           .refresh(RefreshPolicy.ALWAYS);
 
       // If there are filtering options, add filtering UI
-      JsonNode filterProperties = extensions.get("x-gw-filterable");
+
       if (filterProperties != null && filterProperties.size() > 0) {
         filterProperties.forEach(property -> {
           filteredChoices.choice(
@@ -339,16 +344,18 @@ public class GuidewireUIBuilder extends UIBuilder {
             .textProperty(FILTER_OPERATOR)
             .instructionText("Select an operator to filter the results")
             .refresh(RefreshPolicy.ALWAYS)
+            .description("If setting this value as a rule input, use the string version of the value as described in the " +
+                "following list: " + FILTERING_OPTIONS)
             .isExpressionable(true);
         FILTERING_OPTIONS.entrySet().forEach(option -> {
           filteringOperatorsBuilder.choice(Choice.builder().name(option.getKey()).value(option.getValue()).build());
         });
         // If any of the options are selected, the set will have more items than just null and the rest of the fields become
         // required
-        Set<String> requiredSet = new HashSet<>(
-            Arrays.asList(integrationConfiguration.getValue(FILTER_FIELD), integrationConfiguration.getValue(FILTER_OPERATOR),
-                integrationConfiguration.getValue(FILTER_VALUE)));
-        boolean isRequired = requiredSet.size() > 1;
+        boolean isRequired =
+            integrationConfiguration.getValue(FILTER_FIELD) != null || integrationConfiguration.getValue(FILTER_FIELD) instanceof Expression ||
+                integrationConfiguration.getValue(FILTER_OPERATOR) != null || integrationConfiguration.getValue(FILTER_OPERATOR) instanceof Expression ||
+                integrationConfiguration.getValue(FILTER_VALUE) != null || integrationConfiguration.getValue(FILTER_VALUE) instanceof Expression;
 
         // Add filtering fields to the UI
         properties.add(filteredChoices.isRequired(isRequired).build());
@@ -364,7 +371,6 @@ public class GuidewireUIBuilder extends UIBuilder {
       }
 
       // If there are sorting options, add sorting UI
-      JsonNode sortProperties = extensions.get("x-gw-sortable");
       if (sortProperties != null && sortProperties.size() > 0) {
         sortProperties.forEach(property -> {
           sortedChoices.choice(
@@ -380,7 +386,10 @@ public class GuidewireUIBuilder extends UIBuilder {
             .isExpressionable(true)
             .isRequired(integrationConfiguration.getValue(SORT) != null)
             .displayHint(DisplayHint.NORMAL)
-            .instructionText("Select the sort order. Default sort order is ascending")
+            .instructionText("Select the sort order. Default sort order is ascending.")
+            .description("If setting this value as a rule input, use the string version of the value as described in the " +
+                "following list: {Ascending: '+' Descending: '-'}. " + ". If rule inputs are set for sorting properties, the " +
+                "values are required and cannot be null.")
             .refresh(RefreshPolicy.ALWAYS)
             .build());
       }
@@ -391,9 +400,9 @@ public class GuidewireUIBuilder extends UIBuilder {
         .label("Include Total")
         .isExpressionable(true)
         .displayMode(BooleanDisplayMode.RADIO_BUTTON)
-        .instructionText("Used to request that results should include a count of the total number of results available, " +
-            "which may be more than the total number of results currently being returned.")
-        .description("This value can only be set when there is more than one element returned. If not specified, the default is" +
+        .instructionText("Includes a count of the total number of results available, which may be more than the total number of" +
+            " results currently being returned. This value can only be set when there is more than one element returned.")
+        .description("If not specified, the default is" +
             " considered to be `false.` If the number of resources to total is sufficiently large, using the includeTotal " +
             "parameter can affect performance. Guidewire recommends you use this parameter only when there is a need for it, and " +
             "only when the number of resources to total is unlikely to affect performance.")

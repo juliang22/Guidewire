@@ -21,9 +21,6 @@ import std.ConstantKeys;
 @IntegrationTemplateType(IntegrationTemplateRequestPolicy.READ_AND_WRITE)
 public class GuidewireIntegrationTemplate extends SimpleIntegrationTemplate implements ConstantKeys {
 
-
-
-
   @Override
   protected SimpleConfiguration getConfiguration(
       SimpleConfiguration integrationConfiguration,
@@ -31,6 +28,8 @@ public class GuidewireIntegrationTemplate extends SimpleIntegrationTemplate impl
       PropertyPath propertyPath,
       ExecutionContext executionContext) {
 
+
+    integrationConfiguration.setErrors(Arrays.asList("")); // resetting errors if they exist
     try {
       return new GuidewireUIBuilder(this, integrationConfiguration, connectedSystemConfiguration, propertyPath).build();
     } catch (IOException e) {

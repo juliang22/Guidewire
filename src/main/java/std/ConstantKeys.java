@@ -205,14 +205,14 @@ public interface ConstantKeys {
         .key(checksumInReqBodyOrHeader)
         .label("Checksum")
         .placeholder("7a0d9677f11e246bbe3c124889219c50")
-        .instructionText("Use checksum to verify that a resource has not been changed since you last interacted with it. When " +
-            "you submit a request with a checksum, ClaimCenter calculates the checksum and compares that value " +
-            "to the submitted checksum value. Use a GET call for the resource being modified to get the checksum value. Refer to " +
-            "the documentation for more information: https://docs.guidewire" +
-            ".com/cloud/cc/202302/cloudapibf/cloudAPI/topics/102-Optim/05-checksums/c_checksums.html")
+        .instructionText("Use checksum property to verify that a resource has not been changed since you last interacted with " +
+            "it. Use a GET call for the resource being modified to get the checksum value.")
         .description(
-            "If the values match, ClaimCenter determines the resource has not been changed since the caller application last acquired the data. The request is executed.\n" +
-                "If the values do not match, ClaimCenter determines the resource has been changed since the caller application last acquired the data. The request is not executed, and ClaimCenter returns an error")
+            "If the values match, Guidewire determines the resource has not been changed since the caller application last " +
+                "acquired the data and the request is executed. If the values do not match, Guidewire determines the resource" +
+                " has changed since the caller application last acquired the data and the request is not executed, returning " +
+                "an error. Refer to the documentation for more information: " +
+                "https://docs.guidewire.com/cloud/cc/202302/cloudapibf/cloudAPI/topics/102-Optim/05-checksums/c_checksums.html")
         .isExpressionable(true)
         .build();
   }
