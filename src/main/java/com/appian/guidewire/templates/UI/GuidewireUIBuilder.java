@@ -61,7 +61,7 @@ public class GuidewireUIBuilder extends UIBuilder {
 
     TextPropertyDescriptor.TextPropertyDescriptorBuilder subApiChoicesUI = simpleIntegrationTemplate.textProperty(SUB_API_TYPE)
         .label("Guidewire Module")
-        .description("Select the GuideWire API to access. Create a separate connected system for each additional API.")
+        .instructionText("Select the Guidewire module to access within " + Util.camelCaseToTitleCase(connectedSystemConfiguration.getValue(API_TYPE)))
         .isRequired(true)
         .refresh(RefreshPolicy.ALWAYS);
 
@@ -305,6 +305,7 @@ public class GuidewireUIBuilder extends UIBuilder {
         break;
       case (DELETE):
         buildDelete(properties);
+        break;
     }
   }
 
@@ -473,12 +474,9 @@ public class GuidewireUIBuilder extends UIBuilder {
 
   }
 
-  public void buildPost(List<PropertyDescriptor<?>> properties)  {
+  public void buildPostOrPatch(List<PropertyDescriptor<?>> properties, String restOperation) {
 
-
-    JsonNode post = parse(paths2, Arrays.asList(pathName, POST));
-
-    JsonNode reqBody = parse(post, Arrays.asList(REQUEST_BODY));
+    JsonNode reqBody = parse(paths2, Arrays.asList(pathName, restOperation, REQUEST_BODY));
     if(reqBody == null) {
       properties.add(ConstantKeys.getChecksumUI(CHECKSUM_IN_HEADER));
       properties.add(NO_REQ_BODY_UI);
@@ -489,7 +487,6 @@ public class GuidewireUIBuilder extends UIBuilder {
     if (documentType != null) {
       properties.add(simpleIntegrationTemplate.documentProperty(DOCUMENT)
           .label("Document")
-/*          .isRequired(true)*/ // TODO: test sending vs not sending document
           .isExpressionable(true)
           .instructionText("Insert a document to upload")
           .build());
@@ -508,59 +505,15 @@ public class GuidewireUIBuilder extends UIBuilder {
     }
 
     JsonNode requiredNode = parse(schema, Arrays.asList(REQUIRED));
-    ReqBodyUIBuilder2(properties, schema.get(PROPERTIES), requiredNode, POST);
+    ReqBodyUIBuilder2(properties, schema.get(PROPERTIES), requiredNode, restOperation);
   }
 
-  public void buildPatch(List<PropertyDescriptor<?>> result) {
-/*
-    if (paths.get(pathName).getPatch().getRequestBody() == null) {
-      result.add(NO_REQ_BODY_UI);
-      return;
-    }
+  public void buildPost(List<PropertyDescriptor<?>> properties) {
+    buildPostOrPatch(properties, POST);
+  }
 
-    MediaType documentType = openAPI.getPaths().get(pathName).getPatch().getRequestBody().getContent().get("multipart/form-data");
-    if (documentType != null) {
-      result.add(simpleIntegrationTemplate.documentProperty(DOCUMENT)
-          .isRequired(true)
-          .isExpressionable(true)
-          .label("Document")
-          .refresh(RefreshPolicy.ALWAYS)
-          .instructionText("Insert a document to upload")
-          .build());
-    }
-
-    result.add(ConstantKeys.getChecksumUI(CHECKSUM_IN_REQ_BODY));
-
-    Optional<Schema> schema = (documentType == null) ?
-        Optional.ofNullable(paths.get(pathName))
-            .map(PathItem::getPatch)
-            .map(Operation::getRequestBody)
-            .map(RequestBody::getContent)
-            .map(content -> content.get("application/json"))
-            .map(MediaType::getSchema)
-            .map(Schema::getProperties)
-            .map(properties -> properties.get("data"))
-            .map(data -> ((ObjectSchema)data).getProperties())
-            .map(dataMap -> dataMap.get("attributes")) :
-        Optional.ofNullable(paths.get(pathName))
-            .map(PathItem::getPatch)
-            .map(Operation::getResponses)
-            .map(apiResponses -> apiResponses.get("200"))
-            .map(ApiResponse::getContent)
-            .map(content -> content.get("application/json"))
-            .map(MediaType::getSchema)
-            .map(Schema::getProperties)
-            .map(properties -> properties.get("data"))
-            .map(data -> ((ObjectSchema)data).getProperties())
-            .map(properties -> properties.get("attributes"));
-
-    if (!schema.isPresent()) {
-      result.add(NO_REQ_BODY_UI);
-      return;
-    }
-
-    Set<String> required = schema.get().getRequired() != null ? new HashSet<>(schema.get().getRequired()) : null;
-    ReqBodyUIBuilder(result, schema.get().getProperties(), required, new HashMap<>(), PATCH);*/
+  public void buildPatch(List<PropertyDescriptor<?>> properties) {
+    buildPostOrPatch(properties, PATCH);
   }
 
   public void buildDelete(List<PropertyDescriptor<?>> result) {

@@ -27,9 +27,9 @@ public interface ConstantKeys {
   // API Types
   String API_TYPE = "apiType";
   String SUB_API_TYPE = "subApiType";
-  String CLAIMS = "claims";
-  String POLICIES = "policies";
-  String BILLING = "billing";
+  String CLAIMS = "claimCenter";
+  String POLICIES = "policyCenter";
+  String BILLING = "billingCenter";
   String API_VERSION = "v1";
 
   // Sub API Types

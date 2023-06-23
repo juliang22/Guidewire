@@ -146,8 +146,6 @@ public class GuidewireExecute extends Execute {
     }
 
     setHTTPResponse(httpService.get(pathNameModified));
-
-    System.out.println(pathNameModified);
   }
 
   public RequestBody getCompletedRequestBody() throws IOException {

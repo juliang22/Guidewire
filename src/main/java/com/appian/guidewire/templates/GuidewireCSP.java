@@ -47,7 +47,8 @@ public class GuidewireCSP extends SimpleTestableConnectedSystemTemplate implemen
             .build(),
         textProperty(ROOT_URL)
             .label("Base Url")
-            .instructionText("Enter the base url of your Guidewire instance. For example, https://cc-gwcpdev.saappian.zeta1-andromeda.guidewire.net")
+            .instructionText("Enter the base url of your Guidewire instance. For example, https://cc-dev-gwcpdev.<Tenant>" +
+                ".zeta1-andromeda.guidewire.net")
             .isRequired(true)
             .isReadOnly(connectedSystemConfiguration.toConfiguration().getTypes().size() == 0 ? false : true)
             .build(),
