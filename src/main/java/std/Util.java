@@ -3,95 +3,32 @@ package std;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
-import javax.swing.text.html.Option;
-
-import org.apache.commons.io.IOUtils;
-
-import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationError;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-
-import io.swagger.v3.oas.models.OpenAPI;
-import io.swagger.v3.oas.models.Operation;
-import io.swagger.v3.oas.models.PathItem;
-import io.swagger.v3.parser.OpenAPIV3Parser;
-import io.swagger.v3.parser.core.models.AuthorizationValue;
-import io.swagger.v3.parser.core.models.ParseOptions;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
 
 public class Util implements ConstantKeys{
 
     private static List<Integer> responseCode = Arrays.asList(200, 201, 202, 207, 204);
 
-    public static Boolean isSuccess(HttpResponse response) {
-        return (Boolean) (response.getStatusCode() == 200 && response.getResponse().get("access_token") != null);
-    }
-
-    public static String getToken(SimpleConfiguration simpleConfiguration) {
-/*        HttpResponse response = Http.authPost(simpleConfiguration);
-        if (response.getStatusCode() == 200 && response.getResponse().get("access_token") != null) {
-            return response.getResponse().get("access_token").toString();
-        } else return null;*/
-        return "";
-    }
-
-    public static String fieldsQueryBuilder(ArrayList<String> fieldList){
-
-        ArrayList<String> elements= new ArrayList<>();
-        fieldList.forEach((entity)->
-                elements.add("element="+entity.toString()));
-        return String.join("^OR",(String[])elements.toArray(new String[0]));
-    }
-
-    public static IntegrationResponse buildResult(Diagnostics diagnostics, HttpResponse result) {
-        final IntegrationDesignerDiagnostic diagnostic = IntegrationDesignerDiagnostic.builder()
-                .addExecutionTimeDiagnostic(diagnostics.getTiming())
-                .addRequestDiagnostic(diagnostics.getDiagnostics())
-                .addResponseDiagnostic(result.getResponse())
-                .build();
-        if (responseCode.contains(result.getStatusCode())) {
-            return IntegrationResponse
-                    .forSuccess(result.getResponse())
-                    .withDiagnostic(diagnostic)
-                    .build();
-        } else {
-            return IntegrationResponse.forError(
-                            new IntegrationError.IntegrationErrorBuilder()
-                                    .title("Error Code " + result.getStatusCode())
-                                    .message(result.getStatusLine())
-                                    .detail(result.getResponse().toString())
-                                    .build())
-                    .withDiagnostic(diagnostic).build();
-        }
-    }
-
-    public static IntegrationResponse buildError(String title, String errorMessage) {
+    public static IntegrationResponse buildError(String title, String errorMessage, String errorDetail) {
         return IntegrationResponse.forError(
-                        new IntegrationError.IntegrationErrorBuilder()
-                                .title(title)
-                                .message(errorMessage)
-                                .build())
-                .build();
+            new IntegrationError.IntegrationErrorBuilder()
+                .title(title)
+                .message(errorMessage == null ? "" : errorMessage)
+                .detail(errorDetail == null ? "" : errorDetail)
+                .build())
+            .build();
     }
 
     public static boolean isInteger(String str) {
@@ -103,38 +40,6 @@ public class Util implements ConstantKeys{
         }
     }
 
-    public static String getExtensionFromContentType(String contentType) {
-        switch (contentType) {
-            case "image/jpeg":
-                return ".jpg";
-            case "image/png":
-                return ".png";
-            case "image/gif":
-                return ".gif";
-            case "text/html":
-                return ".html";
-            case "application/json":
-                return ".json";
-            case "application/xml":
-                return ".xml";
-            case "text/css":
-                return ".css";
-            case "text/plain":
-                return ".txt";
-            default:
-                return ""; // return default extension or null or throw exception
-        }
-    }
-
-
-
-    public static OpenAPI getOpenAPI(String openAPIStr) {
-        ParseOptions parseOptions = new ParseOptions();
-        parseOptions.setResolve(true); // implicit
-        parseOptions.setResolveFully(true);
-        parseOptions.setResolveCombinators(false);
-        return new OpenAPIV3Parser().readContents(openAPIStr, null, parseOptions).getOpenAPI();
-    }
 
     // finds the longest common substring at the end of the first string and the beginning of the second string by starting at
     // the end of the first string and the start of the second string and moving towards the start of the first string and the
@@ -179,7 +84,6 @@ public class Util implements ConstantKeys{
         return pathName.replace("/", "").replace("{", "").replace("}", "");
     }
 
-
     public static String filterRules(String str) {
         return str == null ?
             null :
@@ -188,44 +92,6 @@ public class Util implements ConstantKeys{
 
     public static String removeLastChar(String str) {
         return str.substring(0, str.length() - 1);
-    }
-
-    public static Operation getOperation(PathItem path, String restOperation) {
-        Operation chosenOpenApiPath = null;
-        switch(restOperation) {
-            case GET:
-                chosenOpenApiPath = path.getGet();
-                break;
-            case POST:
-                chosenOpenApiPath = path.getPost();
-                break;
-            case PATCH:
-                chosenOpenApiPath = path.getPatch();
-                break;
-            case DELETE:
-                chosenOpenApiPath = path.getDelete();
-                break;
-        }
-        return chosenOpenApiPath;
-    }
-
-    public static JsonNode getOperation2(JsonNode path, String restOperation) {
-        JsonNode chosenOpenApiPath = null;
-        switch(restOperation) {
-            case GET:
-                chosenOpenApiPath = path.get(GET);
-                break;
-            case POST:
-                chosenOpenApiPath = path.get(POST);
-                break;
-            case PATCH:
-                chosenOpenApiPath = path.get(PATCH);
-                break;
-            case DELETE:
-                chosenOpenApiPath = path.get(DELETE);
-                break;
-        }
-        return chosenOpenApiPath;
     }
 
     public static String compress(String str) throws IOException {
@@ -256,21 +122,4 @@ public class Util implements ConstantKeys{
         }
         return outStr;
     }
-
-    public static String getPathProperties(PathItem path, String restOperation, String property) {
-
-
-        Operation chosenOpenApiPath = getOperation(path, restOperation);
-        String result = "";
-        switch (property) {
-            case "description":
-                result = chosenOpenApiPath.getDescription();
-                break;
-            case "summary":
-                result = chosenOpenApiPath.getSummary();
-                break;
-        }
-        return result;
-    }
-
 }

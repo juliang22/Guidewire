@@ -23,7 +23,6 @@ import com.appian.guidewire.templates.apis.GuidewireIntegrationTemplate;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 
-import io.swagger.v3.oas.models.Operation;
 import me.xdrop.fuzzywuzzy.FuzzySearch;
 import me.xdrop.fuzzywuzzy.model.ExtractedResult;
 import std.ConstantKeys;
@@ -44,15 +43,6 @@ public class GuidewireUIBuilder extends UIBuilder {
     setApi(connectedSystemConfiguration.getValue(API_TYPE));
   }
 
-  public SimpleConfiguration setPropertiesAndValues(List<PropertyDescriptor<?>> properties, Map<String, String> values) {
-    integrationConfiguration.setProperties(properties.toArray(new PropertyDescriptor<?>[0]));
-    if (values != null && values.size() > 0) {
-      values.forEach((key, val) -> {
-        integrationConfiguration.setValue(key, val);
-      });
-    }
-    return integrationConfiguration;
-  }
 
   public SimpleConfiguration build() throws IOException {
     List<PropertyDescriptor<?>> properties = new ArrayList<>(); // build properties to pass into .setProperties()
@@ -124,7 +114,7 @@ public class GuidewireUIBuilder extends UIBuilder {
     properties.add(simpleIntegrationTemplate.textProperty(SEARCH)
         .label("Sort Endpoints")
         .refresh(RefreshPolicy.ALWAYS)
-        .instructionText("Sort the endpoints dropdown below with a relevant search query.")
+        .instructionText("Sort the endpoints dropdown below with a relevant search query")
         .placeholder("Sort Query")
         .build());
     properties.add(simpleIntegrationTemplate.textProperty(ENDPOINTS_FOR_SEARCH).isHidden(true).build());
@@ -150,58 +140,44 @@ public class GuidewireUIBuilder extends UIBuilder {
 
       // Create map of subApi module name to map of subApi module info and save as hidden property
       String swaggerStr = apiSwaggerResponse.get("result").toString();
-
-      try {
-        setOpenAPI2(swaggerStr);
-        if (openAPI2 == null || paths2 == null) {
-          return setPropertiesAndValues(properties, values);
-        }
-      } catch (JsonProcessingException e) {
-        integrationConfiguration.setErrors(Arrays.asList("Unable to fetch API information. Check that connected system " +
-            "credentials are properly formatted", e.getMessage()));
+      setOpenAPI(swaggerStr);
+      if (openAPI == null || paths == null) {
         return setPropertiesAndValues(properties, values);
       }
-
       String compressedSwaggerStr = Util.compress(swaggerStr);
       swaggerInfoMap.put(subApi, compressedSwaggerStr);
       swaggerInfoMapAsStr = objectMapper.writeValueAsString(swaggerInfoMap);
       values.put(OPENAPI_INFO, swaggerInfoMapAsStr);
       values.put(SEARCH, "");
-/*      values.put(ENDPOINTS_FOR_SEARCH, null);*/
-
 
 
       // If subApi module selected on initial run, refresh, or new subApi module selected, get list of endpoints
-      long startTime = System.nanoTime();
-      setOpenAPI(Util.getOpenAPI(swaggerStr));
-      System.out.println("Getting openAPI: " + (System.nanoTime() - startTime)/1000000 + " milliseconds");
-
       List<String> listOfChoicesForSearch = new ArrayList<>();
-      paths.forEach((pathName, path) -> {
-        if (PATHS_TO_REMOVE.contains(pathName))
-          return;
 
-        Map<String,Operation> operations = new HashMap<>();
-        operations.put(GET, path.getGet());
-        operations.put(POST, path.getPost());
-        operations.put(PATCH, path.getPatch());
-        operations.put(DELETE, path.getDelete());
+      paths.fields().forEachRemaining(pathNode -> {
+        String pathName = pathNode.getKey();
+        JsonNode path = pathNode.getValue();
+        if (PATHS_TO_REMOVE.contains(pathName)) return;
 
-        operations.forEach((restOperation, openAPIOperation) -> {
-          if (openAPIOperation != null) {
-            // filter out deprecated endpoints
-            if (openAPIOperation.getDeprecated() != null && openAPIOperation.getDeprecated()) return;
+        Map<String, JsonNode> operations = new HashMap<>();
+        operations.put(GET, path.get(GET));
+        operations.put(POST, path.get(POST));
+        operations.put(PATCH, path.get(PATCH));
+        operations.put(DELETE, path.get(DELETE));
+        operations.forEach((restOperation, operation) -> {
+          if (operation == null || operation.size() == 0) return;
+          if (operation.get(DEPRECATED) != null && operation.get(DEPRECATED).asBoolean()) return;
 
-            String name = restOperation.toUpperCase() + " - " + openAPIOperation.getSummary();
-            String value = api + ":" + restOperation + ":" + pathName + ":" + subApi + ":" + openAPIOperation.getSummary() +
-                ":" + openAPIOperation.getDescription();
-
-            // Builds up endpoint choices and choices list for search on initial run with all paths
-            listOfEndpointsUI.choice(Choice.builder().name(name).value(value).build());
-            listOfChoicesForSearch.add(value);
-          }
+          // Builds up endpoint choices and choices list for search on initial run with all paths
+          String summary = operation.get(SUMMARY).asText();
+          String description = operation.get(DESCRIPTION).asText();
+          String name = restOperation.toUpperCase() + " - " + summary;
+          String value = String.join(":", api, restOperation, pathName, subApi, summary, description);
+          listOfEndpointsUI.choice(Choice.builder().name(name).value(value).build());
+          listOfChoicesForSearch.add(value);
         });
       });
+
 
       properties.add(listOfEndpointsUI.build());
       values.put(ENDPOINTS_FOR_SEARCH, objectMapper.writeValueAsString(listOfChoicesForSearch));
@@ -247,7 +223,6 @@ public class GuidewireUIBuilder extends UIBuilder {
     // If the endpoints list has already been generated but no endpoint is selected, just build the endpoints dropdown
     String selectedEndpoint = integrationConfiguration.getValue(CHOSEN_ENDPOINT);
     if (selectedEndpoint == null) {
-
       properties.add(listOfEndpointsUI.build());
       return setPropertiesAndValues(properties, values);
     }
@@ -265,21 +240,10 @@ public class GuidewireUIBuilder extends UIBuilder {
     String compressedSwaggerStr = swaggerMap.get(subApi);
     String swaggerStr = Util.decompress(compressedSwaggerStr);
     if (openAPI == null) {
-      setOpenAPI(Util.getOpenAPI(swaggerStr));
-
-
-      try {
-        setOpenAPI2(swaggerStr);
-        if (openAPI2 == null || paths2 == null) {
-          return setPropertiesAndValues(properties, values);
-        }
-      } catch (JsonProcessingException e) {
-        integrationConfiguration.setErrors(Arrays.asList("Unable to fetch API information. Check that connected system " +
-            "credentials are properly formatted", e.getMessage()));
+      setOpenAPI(swaggerStr);
+      if (openAPI == null || paths == null) {
         return setPropertiesAndValues(properties, values);
       }
-
-
     }
     buildRestCall(restOperation, properties, chosenPath);
     return setPropertiesAndValues(properties, values);
@@ -311,7 +275,7 @@ public class GuidewireUIBuilder extends UIBuilder {
 
   public void buildGet(List<PropertyDescriptor<?>> properties) {
 
-    JsonNode get = parse(paths2, Arrays.asList(pathName, GET));
+    JsonNode get = parse(paths, Arrays.asList(pathName, GET));
 
     // If Document content is sent back, UI to save that document in Knowledge Base
     JsonNode documentInResponse = parse(get, Arrays.asList(RESPONSES, "200", CONTENT, APPLICATION_JSON, SCHEMA, PROPERTIES, DATA,
@@ -476,7 +440,7 @@ public class GuidewireUIBuilder extends UIBuilder {
 
   public void buildPostOrPatch(List<PropertyDescriptor<?>> properties, String restOperation) {
 
-    JsonNode reqBody = parse(paths2, Arrays.asList(pathName, restOperation, REQUEST_BODY));
+    JsonNode reqBody = parse(paths, Arrays.asList(pathName, restOperation, REQUEST_BODY));
     if(reqBody == null) {
       properties.add(ConstantKeys.getChecksumUI(CHECKSUM_IN_HEADER));
       properties.add(NO_REQ_BODY_UI);
@@ -505,7 +469,7 @@ public class GuidewireUIBuilder extends UIBuilder {
     }
 
     JsonNode requiredNode = parse(schema, Arrays.asList(REQUIRED));
-    ReqBodyUIBuilder2(properties, schema.get(PROPERTIES), requiredNode, restOperation);
+    ReqBodyUIBuilder(properties, schema.get(PROPERTIES), requiredNode, restOperation);
   }
 
   public void buildPost(List<PropertyDescriptor<?>> properties) {

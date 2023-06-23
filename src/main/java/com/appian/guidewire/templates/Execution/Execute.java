@@ -106,7 +106,7 @@ public abstract class Execute implements ConstantKeys {
   }
 
   // Getting request diagnostics
-  public Map<String,Object> getRequestDiagnostics() throws JsonProcessingException {
+  public Map<String,Object> getRequestDiagnostics() {
     Map<String,Object> requestDiagnostic = new HashMap<>();
     requestDiagnostic.put("Operation: ", pathNameUnmodified);
     requestDiagnostic.put("Operation with Path Params: ", pathNameModified);
@@ -117,7 +117,7 @@ public abstract class Execute implements ConstantKeys {
     return requestDiagnostic;
   }
 
-  public IntegrationDesignerDiagnostic getDiagnosticsUI() throws JsonProcessingException {
+  public IntegrationDesignerDiagnostic getDiagnosticsUI() {
 
     return IntegrationDesignerDiagnostic.builder()
         .addExecutionTimeDiagnostic(System.currentTimeMillis() - start)

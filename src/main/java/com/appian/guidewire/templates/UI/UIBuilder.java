@@ -30,8 +30,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import io.swagger.v3.oas.models.OpenAPI;
-import io.swagger.v3.oas.models.Paths;
 import std.ConstantKeys;
 import std.Util;
 
@@ -42,13 +40,8 @@ public abstract class UIBuilder implements ConstantKeys {
   protected String pathName;
   protected String restOperation;
   protected List<PropertyDescriptor<?>> pathVarsUI = new ArrayList<>();
-  protected OpenAPI openAPI = null;
-  protected JsonNode openAPI2;
-
-  protected Paths paths;
-  protected JsonNode paths2;
-/*  protected List<String> choicesForSearch = new ArrayList<>();
-  protected List<Choice> defaultChoices = new ArrayList<>();*/
+  protected JsonNode openAPI;
+  protected JsonNode paths;
   protected SimpleIntegrationTemplate simpleIntegrationTemplate;
   protected SimpleConfiguration integrationConfiguration;
   protected SimpleConfiguration connectedSystemConfiguration;
@@ -88,24 +81,25 @@ public abstract class UIBuilder implements ConstantKeys {
 
   public void setSubApi(String subApi) {this.subApi = subApi;}
 
-  public void setOpenAPI(OpenAPI openAPI) {
-    this.openAPI = openAPI;
-    this.paths = openAPI.getPaths();
-  }
-  public void setOpenAPI2(String swaggerStr) throws JsonProcessingException {
-    try {
-      this.openAPI2 = objectMapper.readValue(swaggerStr, JsonNode.class);
-      this.paths2 = Optional.ofNullable(openAPI2)
-          .map(openapi -> openapi.get("paths"))
-          .orElse(null);
+  public void setOpenAPI(String swaggerStr) throws JsonProcessingException {
+      this.openAPI = objectMapper.readValue(swaggerStr, JsonNode.class);
+      this.paths = parse(openAPI, Arrays.asList(PATHS));
 
-      if (paths2 == null) {
-        integrationConfiguration.setErrors(Arrays.asList("Unable to fetch API information. Check that connected system " +
-            "credentials are properly formatted"));
+      if (openAPI == null || paths == null) {
+        integrationConfiguration.setErrors(
+            Arrays.asList("Unable to fetch API information. Check that connected system credentials are properly formatted")
+        );
       }
-    } catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
+  }
+
+  public SimpleConfiguration setPropertiesAndValues(List<PropertyDescriptor<?>> properties, Map<String, String> values) {
+    integrationConfiguration.setProperties(properties.toArray(new PropertyDescriptor<?>[0]));
+    if (values != null && values.size() > 0) {
+      values.forEach((key, val) -> {
+        integrationConfiguration.setValue(key, val);
+      });
     }
+    return integrationConfiguration;
   }
 
   public List<JsonNode> getRefs(JsonNode arrOfRefStrs) {
@@ -116,7 +110,7 @@ public abstract class UIBuilder implements ConstantKeys {
       Optional.ofNullable(refNode.get("$ref"))
           .ifPresent(refStr -> {
             String refLocation = refStr.asText().replace("#/", "/");
-            refNodeArr.add(openAPI2.at(refLocation));
+            refNodeArr.add(openAPI.at(refLocation));
           });
     });
     return refNodeArr;
@@ -128,7 +122,7 @@ public abstract class UIBuilder implements ConstantKeys {
 
     // Get Ref if it exists
     String newLoc = currNode.get(REF).asText().replace("#/", "/");
-    JsonNode newNode = openAPI2.at(newLoc);
+    JsonNode newNode = openAPI.at(newLoc);
     if (newNode == null || newNode.isMissingNode()) return null;
     else return newNode;
   }
@@ -153,7 +147,7 @@ public abstract class UIBuilder implements ConstantKeys {
   }
   protected void setPathVarsUI() {
 
-    Optional.ofNullable(parse(paths2, Arrays.asList(pathName, PARAMETERS)))
+    Optional.ofNullable(parse(paths, Arrays.asList(pathName, PARAMETERS)))
         .map(this::getRefs)
         .ifPresent(refs -> refs.forEach(ref -> {
           String paramName = ref.get(NAME).asText();
@@ -169,7 +163,7 @@ public abstract class UIBuilder implements ConstantKeys {
         }));
   }
 
-  public void ReqBodyUIBuilder2(List<PropertyDescriptor<?>> properties,
+  public void ReqBodyUIBuilder(List<PropertyDescriptor<?>> properties,
       JsonNode reqBodyPropertiesNode,
       JsonNode requiredNode,
       String restOperation) {
@@ -296,8 +290,7 @@ public abstract class UIBuilder implements ConstantKeys {
 
     else if (type.equals("array")) {
 
-      if (item.get(ITEMS) == null)
-        return null;
+      if (item.get(ITEMS) == null) return null;
 
       item = item.get(ITEMS);
       ListTypePropertyDescriptor.Builder listProperty = simpleIntegrationTemplate.listTypeProperty(key)

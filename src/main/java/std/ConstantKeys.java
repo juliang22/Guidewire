@@ -135,6 +135,8 @@ public interface ConstantKeys {
   String RESPONSES = "responses";
   String TYPE = "type";
   String METADATA = "metadata";
+  String DEPRECATED = "deprecated";
+  String SUMMARY = "summary";
 
 
 
