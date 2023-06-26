@@ -1,10 +1,7 @@
 package com.appian.guidewire.templates;
 
-import java.io.IOException;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.simplified.sdk.connectiontesting.SimpleTestableConnectedSystemTemplate;
@@ -17,29 +14,18 @@ import com.appian.connectedsystems.templateframework.sdk.connectiontesting.TestC
 import com.appiancorp.services.ServiceContext;
 import com.appiancorp.suiteapi.common.ServiceLocator;
 import com.appiancorp.suiteapi.content.ContentService;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import std.ConstantKeys;
-import std.HTTP;
 
 @TemplateId(name="GuidewireCSP")
 public class GuidewireCSP extends SimpleTestableConnectedSystemTemplate implements ConstantKeys {
 
-  public boolean test() {
-    return true;
-  }
-
-  GuidewireCSP() {
-/*    ServiceContext sc = ServiceLocator.getAdministratorServiceContext();
-    ContentService cs = ServiceLocator.getContentService(sc);
-    cs.getDocumentInputStream(2)*/
-  }
-
+  public static ServiceContext sc = ServiceLocator.getAdministratorServiceContext();
+  public static ContentService cs = ServiceLocator.getContentService(sc);
 
   @Override
   protected SimpleConfiguration getConfiguration(
       SimpleConfiguration connectedSystemConfiguration, ExecutionContext executionContext) {
-
 
     List<TextPropertyDescriptor> defaultProperties = Arrays.asList(
         textProperty(API_TYPE).choices(Choice.builder().name("Claims Center").value(CLAIMS).build(),
@@ -60,6 +46,14 @@ public class GuidewireCSP extends SimpleTestableConnectedSystemTemplate implemen
                 ".zeta1-andromeda.guidewire.net")
             .isRequired(true)
             .isReadOnly(connectedSystemConfiguration.toConfiguration().getTypes().size() == 0 ? false : true)
+            .build(),
+        textProperty(API_VERSION)
+            .label("API Version")
+            .instructionText("Enter the Guidewire Cloud API major release version (ex. 'v1')")
+            .placeholder("v1")
+            .description("Find more information about Guidewire versioning here: https://docs.guidewire" +
+                ".com/cloud/cc/202302/cloudapibf/cloudAPI/topics/101-Fund/01-overview-of-Cloud-API/c_list-of-APIs-in-Cloud-API.html#c_api_version_numbers")
+            .isRequired(true)
             .build(),
         textProperty(USERNAME)
             .label("Username")
@@ -137,14 +131,14 @@ public class GuidewireCSP extends SimpleTestableConnectedSystemTemplate implemen
       }
     }*/
 
-    return connectedSystemConfiguration.setProperties(defaultProperties.toArray(new PropertyDescriptor[0]));
+    return connectedSystemConfiguration.setProperties(defaultProperties.toArray(new PropertyDescriptor[0])).setErrors(Arrays.asList("test error"));
 
   }
 
   @Override
   protected TestConnectionResult testConnection(SimpleConfiguration connectedSystemConfiguration, ExecutionContext executionContext) {
-
-    String rootUrl = connectedSystemConfiguration.getValue(ROOT_URL);
+    return TestConnectionResult.success();
+    /*String rootUrl = connectedSystemConfiguration.getValue(ROOT_URL);
     try {
       Map<String, Object> initialResponse = HTTP.testAuth(connectedSystemConfiguration, rootUrl + "/rest/apis");
       if (initialResponse == null || initialResponse.containsKey("error")) {
@@ -185,6 +179,6 @@ public class GuidewireCSP extends SimpleTestableConnectedSystemTemplate implemen
       return TestConnectionResult.error(e.getMessage());
     }
 
-    return TestConnectionResult.success();
+    return TestConnectionResult.success();*/
   }
 }

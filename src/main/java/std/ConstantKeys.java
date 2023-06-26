@@ -30,88 +30,10 @@ public interface ConstantKeys {
   String CLAIMS = "claimCenter";
   String POLICIES = "policyCenter";
   String BILLING = "billingCenter";
-  String API_VERSION = "v1";
+  String API_VERSION = "apiVersion";
 
   // Sub API Types
   String SUB_API_KEY = "subApiKey";
-  // ClaimCenter
-  String CLAIMS_ADMIN = "claimsAdmin";
-  String CLAIMS_ASYNC = "claimsAsync";
-  String CLAIMS_CLAIM = "claimsClaim";
-  String CLAIMS_COMMON = "claimsCommon";
-  String CLAIMS_COMPOSITE = "claimsComposite";
-  String CLAIMS_SYSTEM_TOOLS = "claimsSystemTools";
-
-  // PolicyCenter
-  String POLICY_ACCOUNT = "policyAccount";
-  String POLICY_ADMIN = "policyAdmin";
-  String POLICY_ASYNC = "policyAsync";
-  String POLICY_COMMON = "policyCommon";
-  String POLICY_COMPOSITE = "policyComposite";
-  String POLICY_JOB = "policyJob";
-  String POLICY_POLICIES = "policyPolicies";
-  String POLICY_PRODUCT_DEFINITION = "policyProductDefinition";
-  String POLICY_SYSTEM_TOOLS = "policySystemTools";
-
-  // BillingCenter
-  String BILLING_ADMIN = "billingAdmin";
-  String BILLING_ASYNC = "billingAsync";
-  String BILLING_BILLING = "billingBilling";
-  String BILLING_COMMON = "billingCommon";
-  String BILLING_COMPOSITE = "billingComposite";
-  String BILLING_SYSTEM_TOOLS = "billingSystemTools";
-
-
-
-  Map<String, List<String>> SUB_API_MAP = new HashMap<String, List<String>>() {{
-    put(CLAIMS, new ArrayList<>(Arrays.asList(CLAIMS_ADMIN, CLAIMS_ASYNC, CLAIMS_CLAIM, CLAIMS_COMMON,
-/*        CLAIMS_COMPOSITE, */
-        CLAIMS_SYSTEM_TOOLS)));
-    put(POLICIES, new ArrayList<>(Arrays.asList(POLICY_ACCOUNT, POLICY_ADMIN, POLICY_ASYNC, POLICY_COMMON,
-/*        POLICY_COMPOSITE,*/
-        POLICY_JOB, POLICY_POLICIES, POLICY_PRODUCT_DEFINITION, POLICY_SYSTEM_TOOLS)));
-    put(BILLING, new ArrayList<>(Arrays.asList(BILLING_ADMIN, BILLING_ASYNC, BILLING_BILLING, BILLING_COMMON,
-/*        BILLING_COMPOSITE, */
-        BILLING_SYSTEM_TOOLS )));
-  }};
-
-  // API URLS
-  Map<String, String> URL_MAP = new HashMap<String, String>() {{
-    put(CLAIMS, "/cc/rest/");
-    put(POLICIES, "/pc/rest/");
-    put(BILLING, "/bc/rest/");
-  }};
-
-  Map<String, String> CLAIMS_URL_MAP = new HashMap<String, String>() {{
-    put(CLAIMS_ADMIN, "admin/" + API_VERSION);
-    put(CLAIMS_ASYNC, "async/" + API_VERSION);
-    put(CLAIMS_CLAIM, "claim/" + API_VERSION);
-    put(CLAIMS_COMMON, "activities/" + API_VERSION);
-/*    put(CLAIMS_COMPOSITE, "composite/" + API_VERSION);*/
-    put(CLAIMS_SYSTEM_TOOLS, "systemtools/" + API_VERSION);
-  }};
-
-  Map<String, String> POLICY_URL_MAP = new HashMap<String, String>() {{
-    put(POLICY_ACCOUNT, "account/" + API_VERSION);
-    put(POLICY_ADMIN, "admin/" + API_VERSION);
-    put(POLICY_ASYNC, "async/" + API_VERSION);
-    put(POLICY_COMMON, "common/" + API_VERSION);
-/*    put(POLICY_COMPOSITE, "composite/" + API_VERSION);*/
-    put(POLICY_JOB, "job/" + API_VERSION);
-    put(POLICY_POLICIES, "policy/" + API_VERSION);
-    put(POLICY_PRODUCT_DEFINITION, "productdefinition/" + API_VERSION);
-    put(POLICY_SYSTEM_TOOLS, "systemtools" + API_VERSION);
-  }};
-
-  Map<String, String> BILLING_URL_MAP = new HashMap<String, String>() {{
-    put(BILLING_ADMIN, "admin/" + API_VERSION);
-    put(BILLING_ASYNC, "async/" + API_VERSION);
-    put(BILLING_BILLING, "billing/" + API_VERSION);
-    put(BILLING_COMMON, "common/" + API_VERSION);
-/*    put(BILLING_COMPOSITE, "composite/" + API_VERSION);*/
-    put(BILLING_SYSTEM_TOOLS, "systemtools/" + API_VERSION);
-  }};
-
   // OpenAPI Parsing Constants
   String PARAMETERS = "parameters";
   String PATHS = "paths";
@@ -174,7 +96,7 @@ public interface ConstantKeys {
       .build();
   String INCLUDED_RESOURCES = "includedResources";
   String INCLUDE_TOTAL = "includeTotal";
-  String REQ_BODY = "reqBody";
+  Set<String> NOT_NESTED_SET = new HashSet<>(Arrays.asList("STRING", "INTEGER", "BOOLEAN", "DOUBLE", "PARAGRAPH"));
   String REQ_BODY_PROPERTIES = "reqBodyProperties";
   String DOCUMENT = "document";
   String PAGESIZE = "pagesize";

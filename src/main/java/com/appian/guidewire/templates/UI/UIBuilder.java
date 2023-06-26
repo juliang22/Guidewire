@@ -170,7 +170,7 @@ public abstract class UIBuilder implements ConstantKeys {
       String restOperation) {
 
     LocalTypeDescriptor.Builder builder = simpleIntegrationTemplate.localType(REQ_BODY_PROPERTIES);
-    StringBuilder rootInstructionText = new StringBuilder("Properties: \n");
+    StringBuilder rootInstructionText = new StringBuilder("Nested Property Descriptions: \n");
     reqBodyPropertiesNode.fields().forEachRemaining(entry -> {
       if (entry.getValue() == null) return;
 
@@ -254,7 +254,9 @@ public abstract class UIBuilder implements ConstantKeys {
     String description = item.get(DESCRIPTION) != null ?
         isRequired + item.get(DESCRIPTION).asText().replaceAll("\n", "") :
         "";
-    if (nestingLevel == 0) rootInstructionText.append(key + ": " + description + ". ");
+    if (nestingLevel == 0 && !NOT_NESTED_SET.contains(type)) { // If top-level property that's an object or array, add description
+      rootInstructionText.append(key + ": " + description + ". ");
+    }
 
     if (type.equals("object")) {
 
@@ -283,7 +285,6 @@ public abstract class UIBuilder implements ConstantKeys {
           .properties(simpleIntegrationTemplate.localTypeProperty(builder.build())
               .label(key)
               .displayHint(DisplayHint.NORMAL)
-/*              .refresh(RefreshPolicy.ALWAYS)*/
               .isRequired(requiredProperties != null && requiredProperties.contains(key))
               .build())
           .build();
@@ -372,7 +373,6 @@ public abstract class UIBuilder implements ConstantKeys {
               .label(key)
               .isRequired(requiredProperties != null && requiredProperties.contains(key))
               .isExpressionable(true)
-/*              .refresh(RefreshPolicy.ALWAYS)*/
               .placeholder(description)
               .build())
           .build();

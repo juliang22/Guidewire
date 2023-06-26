@@ -15,7 +15,6 @@ import java.util.zip.GZIPOutputStream;
 
 import com.appian.connectedsystems.templateframework.sdk.IntegrationError;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
-import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
 
 public class Util implements ConstantKeys{
 

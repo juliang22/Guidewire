@@ -50,7 +50,8 @@ public class GuidewireUIBuilder extends UIBuilder {
 
     TextPropertyDescriptor.TextPropertyDescriptorBuilder subApiChoicesUI = simpleIntegrationTemplate.textProperty(SUB_API_TYPE)
         .label("Guidewire Module")
-        .instructionText("Select the Guidewire module to access within " + Util.camelCaseToTitleCase(connectedSystemConfiguration.getValue(API_TYPE)))
+        .instructionText("Select the Guidewire module to access within " +
+            Util.camelCaseToTitleCase(connectedSystemConfiguration.getValue(API_TYPE)) + " "  + connectedSystemConfiguration.getValue(API_VERSION))
         .isRequired(true)
         .refresh(RefreshPolicy.ALWAYS);
 
@@ -60,7 +61,8 @@ public class GuidewireUIBuilder extends UIBuilder {
       String rootUrl = connectedSystemConfiguration.getValue(ROOT_URL);
       Map<String, Object> initialResponse = HTTP.testAuth(connectedSystemConfiguration, rootUrl + "/rest/apis");
       if (initialResponse == null || initialResponse.containsKey("error")) {
-        integrationConfiguration.setErrors(Arrays.asList("Error in connected system. Please verify that your authentication credentials are correct"));
+        integrationConfiguration.setErrors(Arrays.asList("Error in connected system. Please verify that your authentication " +
+            "credentials are correct."));
       }
 
       Map<String,Map<String,String>> subApiList = objectMapper.readValue(initialResponse.get("result").toString(), Map.class);
