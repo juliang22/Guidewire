@@ -93,6 +93,32 @@ public class Util implements ConstantKeys{
         return str.substring(0, str.length() - 1);
     }
 
+    public static String pascalCaseToTileCase(String path) {
+        // Extract substring after last "/"
+        String lastPart = path.substring(path.lastIndexOf("/") + 1);
+
+        // Replace "_" with " " and add a space between two capital letters
+        String withSpaces = lastPart.replaceAll("_", " ")
+            .replaceAll("(?<=[a-z])(?=[A-Z])", " ");
+
+        // Convert to title case
+        StringBuilder titleCase = new StringBuilder();
+        boolean nextTitleCase = true;
+
+        for (char c : withSpaces.toCharArray()) {
+            if (Character.isSpaceChar(c)) {
+                nextTitleCase = true;
+            } else if (nextTitleCase) {
+                c = Character.toTitleCase(c);
+                nextTitleCase = false;
+            }
+
+            titleCase.append(c);
+        }
+
+        return titleCase.toString();
+    }
+
     public static String compress(String str) throws IOException {
         if ((str == null) || (str.length() == 0)) {
             return str;

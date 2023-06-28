@@ -49,7 +49,7 @@ public interface ConstantKeys {
   String DATA = "data";
   String ITEMS = "items";
   String ATTRIBUTES = "attributes";
-  String COMPONENTS = "components";
+  String ONE_OF = "oneOf";
   String REQUIRED = "required";
   String NAME = "name";
   String DESCRIPTION = "description";

@@ -3,6 +3,7 @@ package com.appian.guidewire.templates.UI;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -47,6 +48,8 @@ public abstract class UIBuilder implements ConstantKeys {
   protected SimpleConfiguration connectedSystemConfiguration;
   protected PropertyPath propertyPath;
   protected ObjectMapper objectMapper = new ObjectMapper();
+  List<PropertyDescriptor<?>> properties = new ArrayList<>(); // build properties to pass into .setProperties()
+  Map<String, String> values = new HashMap<>(); // build values to pass into .setValues()
 
   public UIBuilder(GuidewireIntegrationTemplate simpleIntegrationTemplate,
       SimpleConfiguration integrationConfiguration,
@@ -59,15 +62,15 @@ public abstract class UIBuilder implements ConstantKeys {
   }
 
   // Methods to implement when building out the API specific details of each request
-  public abstract void buildRestCall(String restOperation, List<PropertyDescriptor<?>> result, String pathName);
+  public abstract void buildRestCall(String restOperation, String pathName) throws JsonProcessingException;
 
-  public abstract void buildGet(List<PropertyDescriptor<?>> result);
+  public abstract void buildGet();
 
-  public abstract void buildPost(List<PropertyDescriptor<?>> result) throws IOException;
+  public abstract void buildPost() throws IOException;
 
-  public abstract void buildPatch(List<PropertyDescriptor<?>> result);
+  public abstract void buildPatch() throws JsonProcessingException;
 
-  public abstract void buildDelete(List<PropertyDescriptor<?>> result);
+  public abstract void buildDelete();
 
   public void setPathName(String pathName) {
     this.pathName = pathName;
@@ -82,17 +85,21 @@ public abstract class UIBuilder implements ConstantKeys {
   public void setSubApi(String subApi) {this.subApi = subApi;}
 
   public void setOpenAPI(String swaggerStr) throws JsonProcessingException {
-      this.openAPI = objectMapper.readValue(swaggerStr, JsonNode.class);
-      this.paths = parse(openAPI, Arrays.asList(PATHS));
+    long startTime = System.nanoTime();
 
-      if (openAPI == null || paths == null) {
-        integrationConfiguration.setErrors(
-            Arrays.asList("Unable to fetch API information. Check that connected system credentials are properly formatted")
-        );
-      }
+    this.openAPI = objectMapper.readValue(swaggerStr, JsonNode.class);
+    this.paths = parse(openAPI, Arrays.asList(PATHS));
+
+    if (openAPI == null || paths == null) {
+      integrationConfiguration.setErrors(
+          Arrays.asList("Unable to fetch API information. Check that connected system credentials are properly formatted")
+      );
+    }
+
+    System.out.println("Getting OpenAPI obj: " + (System.nanoTime() - startTime)/1000000 + " milliseconds. ");
   }
 
-  public SimpleConfiguration setPropertiesAndValues(List<PropertyDescriptor<?>> properties, Map<String, String> values) {
+  public SimpleConfiguration setPropertiesAndValues() {
     integrationConfiguration.setProperties(properties.toArray(new PropertyDescriptor<?>[0]));
     if (values != null && values.size() > 0) {
       values.forEach((key, val) -> {
@@ -128,6 +135,10 @@ public abstract class UIBuilder implements ConstantKeys {
   }
 
   // Parse through the OpenAPI spec starting at root node and traversing down path
+  public JsonNode parse(JsonNode root, String path) {
+    return parse(root, Arrays.asList(path));
+  }
+
   public JsonNode parse(JsonNode root, List<String> path) {
     if (root == null || path.size() <= 0) return null;
 
@@ -164,8 +175,7 @@ public abstract class UIBuilder implements ConstantKeys {
         }));
   }
 
-  public void ReqBodyUIBuilder(List<PropertyDescriptor<?>> properties,
-      JsonNode reqBodyPropertiesNode,
+  public void ReqBodyUIBuilder(JsonNode reqBodyPropertiesNode,
       JsonNode requiredNode,
       String restOperation) {
 
