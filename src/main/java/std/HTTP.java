@@ -1,7 +1,6 @@
 package std;
 
 import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -21,11 +20,8 @@ import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfigurat
 import com.appian.connectedsystems.templateframework.sdk.configuration.Document;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
 import com.appian.guidewire.templates.Execution.Execute;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 
-import okhttp3.MediaType;
-import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
@@ -46,11 +42,11 @@ public class HTTP implements ConstantKeys {
     String usernamePassword = username + ":" + password;
     String encodedCredentials = Base64.getEncoder().encodeToString(usernamePassword.getBytes());
 
-    return new OkHttpClient.Builder().connectTimeout(2, TimeUnit.MINUTES)
-        .connectTimeout(2, TimeUnit.MINUTES)
-        .readTimeout(2, TimeUnit.MINUTES)
-        .callTimeout(2, TimeUnit.MINUTES)
-        .writeTimeout(2, TimeUnit.MINUTES)
+    return new OkHttpClient.Builder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .callTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
         .addInterceptor(chain -> {
           Request.Builder newRequest = chain.request()
               .newBuilder()
@@ -65,7 +61,7 @@ public class HTTP implements ConstantKeys {
         .build();
   }
 
-  public static Map<String, Object> testAuth(SimpleConfiguration connectedSystemConfiguration, String url) throws IOException {
+  public static Map<String, Object> testAuth(SimpleConfiguration connectedSystemConfiguration, String url) {
 
     String username = connectedSystemConfiguration.getValue(USERNAME).toString().trim();
     String password = connectedSystemConfiguration.getValue(PASSWORD).toString().trim();
@@ -75,10 +71,10 @@ public class HTTP implements ConstantKeys {
 
     Request request = new Request.Builder().url(url).build();
     OkHttpClient client = new OkHttpClient.Builder().connectTimeout(20, TimeUnit.SECONDS)
-        .connectTimeout(20, TimeUnit.SECONDS)
-        .readTimeout(20, TimeUnit.SECONDS)
-        .callTimeout(20, TimeUnit.SECONDS)
-        .writeTimeout(20, TimeUnit.SECONDS)
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .callTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
         .addInterceptor(chain -> {
           Request.Builder newRequest = chain.request()
               .newBuilder()
@@ -222,39 +218,6 @@ public class HTTP implements ConstantKeys {
       throws IOException {
     Request request = new Request.Builder().url(url).patch(body).build();
     OkHttpClient client = getHTTPClient(executionService, "application/json");
-    return executeRequest(client, request);
-  }
-
-  public HttpResponse multipartPost(String url, Map<String,Object> requestBody, Map<String,File> files)
-      throws IOException {
-
-    MultipartBody.Builder multipartBuilder = new MultipartBody.Builder().setType(MultipartBody.FORM);
-
-    // Adding text request body json to the multipart builder
-    requestBody.forEach((key, val) -> {
-      if (val instanceof String) {
-        multipartBuilder.addFormDataPart(key, ((String)val));
-      } else {
-        String jsonString;
-        try {
-          jsonString = executionService.getObjectMapper().writeValueAsString(val);
-        } catch (JsonProcessingException e) {
-          throw new RuntimeException(e);
-        }
-        multipartBuilder.addFormDataPart(key, jsonString);
-      }
-    });
-
-    // Adding files to the multipart builder
-    files.forEach((fileName, file) -> {
-      RequestBody requestFile = RequestBody.create(file, MediaType.parse("multipart/form-data"));
-      MultipartBody.Part filePart = MultipartBody.Part.createFormData(fileName, file.getName(), requestFile);
-      multipartBuilder.addPart(filePart);
-    });
-
-    // Getting the client/request and executing the request
-    OkHttpClient client = getHTTPClient(executionService, "multipart/form-data");
-    Request request = new Request.Builder().url(url).post(multipartBuilder.build()).build();
     return executeRequest(client, request);
   }
 

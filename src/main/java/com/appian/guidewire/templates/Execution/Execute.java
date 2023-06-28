@@ -15,7 +15,7 @@ import com.appian.connectedsystems.templateframework.sdk.IntegrationError.Integr
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyState;
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
-import com.appian.guidewire.templates.apis.GuidewireIntegrationTemplate;
+import com.appian.guidewire.templates.integrationTemplates.GuidewireIntegrationTemplate;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;

@@ -7,12 +7,15 @@
   </plugin-info>
   <connected-system key="Guidewire">
     <version major-version="1">
-      <connected-system-template key="GuidewireCSP"
+      <connected-system-template key="BasicAuth"
                                  name="Guidewire"
-                                 class="com.appian.guidewire.templates.GuidewireCSP"/>
+                                 class="com.appian.guidewire.templates.connectedSystemTemplates.BasicAuth"/>
+      <connected-system-template key="StandaloneService"
+                                 name="Guidewire"
+                                 class="com.appian.guidewire.templates.connectedSystemTemplates.StandaloneService"/>
       <integration-template key="GuidewireIntegrationTemplate"
                             name="Guidewire"
-                            class="com.appian.guidewire.templates.apis.GuidewireIntegrationTemplate"
+                            class="com.appian.guidewire.templates.integrationTemplates.GuidewireIntegrationTemplate"
                             request-policy="read_and_write" />
     </version>
   </connected-system>

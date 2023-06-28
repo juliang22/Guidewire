@@ -1,4 +1,4 @@
-package com.appian.guidewire.templates.apis;
+package com.appian.guidewire.templates.integrationTemplates;
 
 import java.io.IOException;
 import java.util.Arrays;

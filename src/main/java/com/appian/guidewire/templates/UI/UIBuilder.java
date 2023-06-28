@@ -26,7 +26,7 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyP
 import com.appian.connectedsystems.templateframework.sdk.configuration.SystemType;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TypeReference;
-import com.appian.guidewire.templates.apis.GuidewireIntegrationTemplate;
+import com.appian.guidewire.templates.integrationTemplates.GuidewireIntegrationTemplate;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -85,18 +85,15 @@ public abstract class UIBuilder implements ConstantKeys {
   public void setSubApi(String subApi) {this.subApi = subApi;}
 
   public void setOpenAPI(String swaggerStr) throws JsonProcessingException {
-    long startTime = System.nanoTime();
-
-    this.openAPI = objectMapper.readValue(swaggerStr, JsonNode.class);
-    this.paths = parse(openAPI, Arrays.asList(PATHS));
+    this.openAPI = swaggerStr == null ? null : objectMapper.readValue(swaggerStr, JsonNode.class);
+    this.paths = swaggerStr == null ? null : parse(openAPI, Arrays.asList(PATHS));
 
     if (openAPI == null || paths == null) {
       integrationConfiguration.setErrors(
-          Arrays.asList("Unable to fetch API information. Check that connected system credentials are properly formatted")
+          Arrays.asList("Unable to fetch API information. Either the connected system's authentication credentials were not " +
+              "inputted properly or this user does not have access to this api.")
       );
     }
-
-    System.out.println("Getting OpenAPI obj: " + (System.nanoTime() - startTime)/1000000 + " milliseconds. ");
   }
 
   public SimpleConfiguration setPropertiesAndValues() {

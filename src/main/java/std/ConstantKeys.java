@@ -14,12 +14,17 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.TextPrope
 
 public interface ConstantKeys {
 
-  // CSP Auth
+  // Basic Auth
   String USERNAME = "username";
   String PASSWORD = "password";
   String ROOT_URL = "rootUrl";
-  String OPENAPI_INFO = "openAPIInfo";
-  String OPENAPISTR = "openAPIStr";
+
+  // Service Auth
+  String CLIENT_ID = "clientId";
+  String CLIENT_SECRET = "clientSecret";
+  String SCOPES = "scopes";
+
+
   String ENDPOINTS_FOR_SEARCH = "endpointsForSearch";
 
   String CHOSEN_ENDPOINT = "chosenEndpoint";

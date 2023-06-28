@@ -17,7 +17,7 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.Expressio
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
 import com.appian.connectedsystems.templateframework.sdk.configuration.RefreshPolicy;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
-import com.appian.guidewire.templates.apis.GuidewireIntegrationTemplate;
+import com.appian.guidewire.templates.integrationTemplates.GuidewireIntegrationTemplate;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -29,8 +29,6 @@ import std.Util;
 
 public class GuidewireUIBuilder extends UIBuilder {
 
-
-
   public GuidewireUIBuilder(
       GuidewireIntegrationTemplate simpleIntegrationTemplate,
       SimpleConfiguration integrationConfiguration,
@@ -41,7 +39,7 @@ public class GuidewireUIBuilder extends UIBuilder {
     setApi(connectedSystemConfiguration.getValue(API_TYPE));
   }
 
-  public Map<String,Map<String,String>> getSubApiList() throws IOException{
+  public Map<String,Map<String,String>> getSubApiList() throws IOException {
     // Get list of available subApis and their information map
     String rootUrl = connectedSystemConfiguration.getValue(ROOT_URL);
     Map<String, Object> initialResponse = HTTP.testAuth(connectedSystemConfiguration, rootUrl + "/rest/apis");
@@ -53,8 +51,20 @@ public class GuidewireUIBuilder extends UIBuilder {
     return objectMapper.readValue(initialResponse.get("result").toString(), Map.class);
   }
 
-  public void buildSubApiModuleUI() throws IOException
-       {
+  public String getSwaggerFile() throws IOException {
+    String selectedSubApiModule = integrationConfiguration.getValue(SUB_API_TYPE);
+    Map<String,String> subApiInfoMap = objectMapper.readValue(selectedSubApiModule, Map.class);
+
+    String swaggerUrl = subApiInfoMap.get("docs");
+    Map<String, Object> apiSwaggerResponse = HTTP.testAuth(connectedSystemConfiguration, swaggerUrl);
+    if (apiSwaggerResponse == null || apiSwaggerResponse.containsKey("error")) {
+      integrationConfiguration.setErrors((List)apiSwaggerResponse.get("error"));
+      return null;
+    }
+    return apiSwaggerResponse.get("result").toString();
+  }
+
+  public void buildSubApiModuleUI() throws IOException {
     TextPropertyDescriptor.TextPropertyDescriptorBuilder subApiChoicesUI = simpleIntegrationTemplate.textProperty(SUB_API_TYPE)
         .label("Guidewire Module")
         .instructionText("Select the Guidewire module to access within " +
@@ -81,21 +91,6 @@ public class GuidewireUIBuilder extends UIBuilder {
       subApiChoicesUI.choice(Choice.builder().name(subAPIInfoMap.get("title")).value(subAPIInfoMapStr).build());
     }
     properties.add(subApiChoicesUI.build());
-    return;
-  }
-
-  public String getSwaggerFile() throws IOException {
-    String selectedSubApiModule = integrationConfiguration.getValue(SUB_API_TYPE);
-    Map<String,String> subApiInfoMap = objectMapper.readValue(selectedSubApiModule, Map.class);
-
-    String swaggerUrl = subApiInfoMap.get("docs");
-    Map<String, Object> apiSwaggerResponse = HTTP.testAuth(connectedSystemConfiguration, swaggerUrl);
-    if (apiSwaggerResponse == null || apiSwaggerResponse.containsKey("error")) {
-      integrationConfiguration.setErrors((List)apiSwaggerResponse.get("error"));
-      return null;
-    }
-    String swaggerStr = apiSwaggerResponse.get("result").toString();
-    return swaggerStr;
   }
 
   public void buildEndpointsUI() throws IOException {
@@ -144,7 +139,6 @@ public class GuidewireUIBuilder extends UIBuilder {
     values.put(SEARCH, "");
     values.put(CHOSEN_ENDPOINT, null);
     properties.add(listOfEndpointsUI.build());
-    return;
   }
 
   public TextPropertyDescriptor.TextPropertyDescriptorBuilder buildSearchEndpointsUI() throws IOException {
@@ -211,38 +205,28 @@ public class GuidewireUIBuilder extends UIBuilder {
 
   public SimpleConfiguration build() throws IOException {
 
-    // On save retain all properties and values
-/*    if (propertyPath == null && integrationConfiguration.getProperties().size() > 0) {
-      integrationConfiguration.getProperties().forEach(properties::add);
-      return setPropertiesAndValues(properties, values);
-    }*/
 
     buildSubApiModuleUI(); // Build choice of subApi modules
 
+    // Property path could be null initial load, after save, refresh after at least one save has occurred, or when switching
+    // from "reads" to "modifies" data
     if (propertyPath == null) {
-      // When switching from "reads" to "modifies" template type
-      if (integrationConfiguration.getProperties().size() <= 1) {
+      if (integrationConfiguration.getProperties().size() <= 1) { // When switching from "reads" to "modifies" template type
         values.put(SUB_API_TYPE, null);
         return setPropertiesAndValues();
       }
-      // On initial load, save, or refresh after save, return just the integration configuration
-      return integrationConfiguration;
+      return integrationConfiguration; // On initial load, save, or refresh after save, return just the integration configuration
     }
 
-
-
-
     // If subApi module is set for the first time or switched to new subApi module, or if integration is being switched from
-    // reads to modifies and propertyPath is null
-    if (propertyPath == null || propertyPath.toString().equals(SUB_API_TYPE)) {
+    // reads to modifies data and propertyPath is null
+    if (propertyPath.toString().equals(SUB_API_TYPE)) {
       setOpenAPI(getSwaggerFile());
       if (openAPI == null || paths == null) return setPropertiesAndValues();
 
       buildEndpointsUI();
       return setPropertiesAndValues();
     }
-
-
 
     // Build endpoints list either from endpointsForSearch from buildEndpointsUI(); either default order or search order
     TextPropertyDescriptor.TextPropertyDescriptorBuilder listOfEndpointsUI = buildSearchEndpointsUI();
@@ -259,182 +243,6 @@ public class GuidewireUIBuilder extends UIBuilder {
     }
 
     return setPropertiesAndValues();
-
-
-
-
-
-
-
-
-
-
-/*
-    // If the subAPI module has not been selected, retrieve list of subApis and only render the subAPI dropdown
-    properties.add(integrationConfiguration.getProperty(SUB_API_TYPE));
-    String subAPIInfoMapStr = integrationConfiguration.getValue(SUB_API_TYPE);
-    if (subAPIInfoMapStr == null)  {
-      return setPropertiesAndValues(properties, values);
-    }
-
-
-    // User has selected subAPI module. Set subApi and get OpenAPI spec/info either from memory or from endpoint.
-    // Load swagger from memory (user searching or selecting another subapi module) or get swagger file of the subApi from
-    // guidewire and save it in a hidden property. Property is transient and will not save permanently after saving the
-    // integration object to conserve memory. Reopening integration will trigger another api call to get the spec.
-
-    // User selected subApi module on first run, refresh, or user selected another subapi module
-    TextPropertyDescriptor openAPIInfo = simpleIntegrationTemplate.textProperty(OPENAPI_INFO)
-        .transientChoices(true)
-        .isHidden(true)
-        .build();
-    properties.add(openAPIInfo);
-
-    Map<String,String> subAPIInfoMap =  objectMapper.readValue(subAPIInfoMapStr, Map.class);
-    setSubApi(subAPIInfoMap.get(SUB_API_KEY));
-    String swaggerInfoMapAsStr = integrationConfiguration.getValue(OPENAPI_INFO);
-    Map<String, String> swaggerInfoMap = swaggerInfoMapAsStr != null  ?
-        objectMapper.readValue(swaggerInfoMapAsStr, Map.class) :
-        new HashMap<>();
-    boolean userSelectedAnotherSubapiModule = swaggerInfoMap.size() > 0 && !swaggerInfoMap.containsKey(subApi);
-
-    // Search bar UI and hidden property used for searching added to property list
-    properties.add(simpleIntegrationTemplate.textProperty(SEARCH)
-        .label("Sort Endpoints")
-        .refresh(RefreshPolicy.ALWAYS)
-        .instructionText("Sort the endpoints dropdown below with a relevant search query")
-        .placeholder("Sort Query")
-        .build());
-    properties.add(simpleIntegrationTemplate.textProperty(ENDPOINTS_FOR_SEARCH).isHidden(true).build());
-
-    TextPropertyDescriptor.TextPropertyDescriptorBuilder listOfEndpointsUI = simpleIntegrationTemplate
-        .textProperty(CHOSEN_ENDPOINT)
-        .isRequired(true)
-        .refresh(RefreshPolicy.ALWAYS)
-        .label("Select Operation");
-
-    if (swaggerInfoMapAsStr == null || userSelectedAnotherSubapiModule) {
-      if (userSelectedAnotherSubapiModule) {
-        integrationConfiguration.setValue(CHOSEN_ENDPOINT, null);
-        swaggerInfoMap.clear();
-      }
-
-      String swaggerUrl = subAPIInfoMap.get("docs");
-      Map<String, Object> apiSwaggerResponse = HTTP.testAuth(connectedSystemConfiguration, swaggerUrl);
-      if (apiSwaggerResponse == null || apiSwaggerResponse.containsKey("error")) {
-        integrationConfiguration.setErrors((List)apiSwaggerResponse.get("error"));
-        return setPropertiesAndValues(properties, values);
-      }
-
-      // Create map of subApi module name to map of subApi module info and save as hidden property
-      String swaggerStr = apiSwaggerResponse.get("result").toString();
-      setOpenAPI(swaggerStr);
-      if (openAPI == null || paths == null) {
-        return setPropertiesAndValues(properties, values);
-      }
-      String compressedSwaggerStr = Util.compress(swaggerStr);
-      swaggerInfoMap.put(subApi, compressedSwaggerStr);
-      swaggerInfoMapAsStr = objectMapper.writeValueAsString(swaggerInfoMap);
-      values.put(OPENAPI_INFO, swaggerInfoMapAsStr);
-      values.put(SEARCH, "");
-
-
-      // If subApi module selected on initial run, refresh, or new subApi module selected, get list of endpoints
-      List<String> listOfChoicesForSearch = new ArrayList<>();
-
-      paths.fields().forEachRemaining(pathNode -> {
-        String pathName = pathNode.getKey();
-        JsonNode path = pathNode.getValue();
-        if (PATHS_TO_REMOVE.contains(pathName)) return;
-
-        Map<String, JsonNode> operations = new HashMap<>();
-        operations.put(GET, path.get(GET));
-        operations.put(POST, path.get(POST));
-        operations.put(PATCH, path.get(PATCH));
-        operations.put(DELETE, path.get(DELETE));
-        operations.forEach((restOperation, operation) -> {
-          if (operation == null || operation.size() == 0) return;
-          if (operation.get(DEPRECATED) != null && operation.get(DEPRECATED).asBoolean()) return;
-
-          // Builds up endpoint choices and choices list for search on initial run with all paths
-          String summary = operation.get(SUMMARY).asText();
-          String description = operation.get(DESCRIPTION).asText();
-          String name = restOperation.toUpperCase() + " - " + summary;
-          String value = String.join(":", api, restOperation, pathName, subApi, summary, description);
-          listOfEndpointsUI.choice(Choice.builder().name(name).value(value).build());
-          listOfChoicesForSearch.add(value);
-        });
-      });
-
-
-      properties.add(listOfEndpointsUI.build());
-      values.put(ENDPOINTS_FOR_SEARCH, objectMapper.writeValueAsString(listOfChoicesForSearch));
-      return setPropertiesAndValues(properties, values);
-    }
-
-    if (propertyPath != null) {
-      swaggerInfoMapAsStr = objectMapper.writeValueAsString(swaggerInfoMap);
-      values.put(OPENAPI_INFO, swaggerInfoMapAsStr);
-    }
-
-
-    String searchQuery = integrationConfiguration.getValue(SEARCH);
-    String listOfChoicesForSearchStr = integrationConfiguration.getValue(ENDPOINTS_FOR_SEARCH);
-    values.put(ENDPOINTS_FOR_SEARCH, listOfChoicesForSearchStr);
-    List<String> listOfChoicesForSearch = objectMapper.readValue(listOfChoicesForSearchStr, List.class);
-
-    // If there isn't a search query, render default endpoints list
-    if (searchQuery == null || searchQuery.equals("")) {
-      // rebuild default choices from listOfChoicesForSearch (as the choices themselves change order and listOfChoicesForSearch
-      // is stable)
-      listOfChoicesForSearch.forEach(choice -> {
-        String[] pathInfo = choice.split(":");
-        String restOperation = pathInfo[1];
-        String summary = pathInfo[4];
-        listOfEndpointsUI.choice(
-            new Choice.ChoiceBuilder().name(restOperation.toUpperCase() + " - " + summary).value(choice).build()
-        );
-      });
-    } else {
-      // If there is a search query, sort the dropdown with the query
-      List<ExtractedResult> extractedResults = FuzzySearch.extractSorted(searchQuery, listOfChoicesForSearch);
-      for (ExtractedResult choice : extractedResults) {
-        String[] pathInfo = choice.getString().split(":");
-        String restOperation = pathInfo[1];
-        String summary = pathInfo[4];
-        listOfEndpointsUI.choice(
-            new Choice.ChoiceBuilder().name(restOperation.toUpperCase() + " - " + summary).value(choice.getString()).build()
-        );
-      }
-    }
-
-    // If the endpoints list has already been generated but no endpoint is selected, just build the endpoints dropdown
-    String selectedEndpoint = integrationConfiguration.getValue(CHOSEN_ENDPOINT);
-    if (selectedEndpoint == null) {
-      properties.add(listOfEndpointsUI.build());
-      return setPropertiesAndValues(properties, values);
-    }
-
-    // If an endpoint is selected, the instructionText will update to the REST call and path name
-    String[] pathInfo = selectedEndpoint.split(":");
-    String restOperation = pathInfo[1];
-    String chosenPath = pathInfo[2];
-    String description = pathInfo[5];
-    String instructionText = restOperation.toUpperCase() + " " + chosenPath + " " + description;
-    listOfEndpointsUI.instructionText(instructionText);
-    properties.add(listOfEndpointsUI.build());
-    Map<String, String> swaggerMap = objectMapper.readValue(swaggerInfoMapAsStr, Map.class);
-
-    String compressedSwaggerStr = swaggerMap.get(subApi);
-    String swaggerStr = Util.decompress(compressedSwaggerStr);
-    if (openAPI == null) {
-      setOpenAPI(swaggerStr);
-      if (openAPI == null || paths == null) {
-        return setPropertiesAndValues(properties, values);
-      }
-    }
-    buildRestCall(restOperation, properties, chosenPath);
-    return setPropertiesAndValues(properties, values);*/
   }
 
   public void buildRestCall(String restOperation, String pathName) throws JsonProcessingException {
@@ -523,12 +331,11 @@ public class GuidewireUIBuilder extends UIBuilder {
 
       // If there are filtering options, add filtering UI
 
-      if (filterProperties != null && filterProperties.size() > 0) {
-        filterProperties.forEach(property -> {
-          filteredChoices.choice(
+      if (filterProperties.size() > 0) {
+        filterProperties.forEach(property -> filteredChoices.choice(
               Choice.builder().name(Util.camelCaseToTitleCase(property.asText())).value(property.asText()).build()
-          );
-        });
+          )
+        );
         TextPropertyDescriptor.TextPropertyDescriptorBuilder filteringOperatorsBuilder = simpleIntegrationTemplate
             .textProperty(FILTER_OPERATOR)
             .instructionText("Select an operator to filter the results")
@@ -536,9 +343,7 @@ public class GuidewireUIBuilder extends UIBuilder {
             .description("If setting this value as a rule input, use the string version of the value as described in the " +
                 "following list: " + FILTERING_OPTIONS)
             .isExpressionable(true);
-        FILTERING_OPTIONS.entrySet().forEach(option -> {
-          filteringOperatorsBuilder.choice(Choice.builder().name(option.getKey()).value(option.getValue()).build());
-        });
+        FILTERING_OPTIONS.forEach((key, value) -> filteringOperatorsBuilder.choice(Choice.builder().name(key).value(value).build()));
         // If any of the options are selected, the set will have more items than just null and the rest of the fields become
         // required
         boolean isRequired =
@@ -560,12 +365,11 @@ public class GuidewireUIBuilder extends UIBuilder {
       }
 
       // If there are sorting options, add sorting UI
-      if (sortProperties != null && sortProperties.size() > 0) {
-        sortProperties.forEach(property -> {
-          sortedChoices.choice(
+      if (sortProperties.size() > 0) {
+        sortProperties.forEach(property -> sortedChoices.choice(
               Choice.builder().name(Util.camelCaseToTitleCase(property.asText())).value(property.asText()).build()
-          );
-        });
+          )
+        );
         properties.add(sortedChoices.isRequired(integrationConfiguration.getValue(SORT_ORDER) != null).build());
         Choice[] sortOrder = {Choice.builder().name("Ascending").value("+").build(),
             Choice.builder().name("Descending").value("-").build()};
@@ -633,7 +437,6 @@ public class GuidewireUIBuilder extends UIBuilder {
               "they exist, they will be returned alongside the root resource.")
           .build());
     }*/
-
   }
 
   public void buildPostOrPatch(String restOperation) throws JsonProcessingException {
@@ -666,29 +469,28 @@ public class GuidewireUIBuilder extends UIBuilder {
       return;
     }
 
+    // If the schema could be one of many types
     if (parse(schema, ONE_OF) != null) {
       TextPropertyDescriptor.TextPropertyDescriptorBuilder oneOfUI = simpleIntegrationTemplate
           .textProperty(ONE_OF)
           .isRequired(true)
-          .refresh(RefreshPolicy.ALWAYS)
-          .label("Select Schema");
-      if (integrationConfiguration.getProperty(ONE_OF) == null) {
+          .refresh(RefreshPolicy.ALWAYS);
+      if (integrationConfiguration.getProperty(ONE_OF) == null || integrationConfiguration.getValue(ONE_OF) == null) {
+        // If the oneOf property hasn't been set yet, or has been deselected
         JsonNode listOfRefs = parse(schema, ONE_OF);
+        String label = getRefIfPresent(listOfRefs.get(0)) != null && getRefIfPresent(listOfRefs.get(0)).get("title") != null ?
+            getRefIfPresent(listOfRefs.get(0)).get("title").asText() :
+            "";
+        oneOfUI.label("Select " + Util.camelCaseToTitleCase(label) + " Schema");
         for (JsonNode refNodeStr : listOfRefs) {
           String refName = Util.pascalCaseToTileCase(refNodeStr.get(REF).asText());
           JsonNode ref = getRefIfPresent(refNodeStr);
           oneOfUI.choice(Choice.builder().name(refName).value(ref.toString()).build());
         }
 
-/*        List<JsonNode> oneOfRefs = getRefs(parse(schema, ONE_OF));
-        oneOfRefs.forEach((key, ref) -> {
-          oneOfUI.choice(
-              Choice.builder().name(ref.get("title").asText()).value(ref.toString()).build()
-          );
-        });*/
         properties.add(oneOfUI.build());
         return;
-      } else {
+      } else { // Render the correct oneOf choice
         properties.add(integrationConfiguration.getProperty(ONE_OF));
         schema = objectMapper.readValue(integrationConfiguration.getValue(ONE_OF).toString(), JsonNode.class);
       }
