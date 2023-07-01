@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
+import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationError;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 
@@ -20,14 +21,68 @@ public class Util implements ConstantKeys{
 
     private static List<Integer> responseCode = Arrays.asList(200, 201, 202, 207, 204);
 
-    public static IntegrationResponse buildError(String title, String errorMessage, String errorDetail) {
-        return IntegrationResponse.forError(
-            new IntegrationError.IntegrationErrorBuilder()
+    public static String getStandaloneServiceScopes(SimpleConfiguration connectedSystemConfiguration) {
+        String tenant = connectedSystemConfiguration.getValue(TENANT);
+        String planetClass = connectedSystemConfiguration.getValue(PLANET_CLASS);
+        if (tenant == null || planetClass == null) return null;
+        tenant = tenant.trim();
+        return String.join(", ",
+            "tenant." + tenant,
+            "project.gwcp",
+            "planet_class." + planetClass,
+            "scp.pc." + tenant + "_standaloneservice",
+            "pc.service",
+            "scp.bc." + tenant + "_standaloneservice",
+            "bc.service",
+            "scp.cc." + tenant + "_standaloneservice",
+            "cc.service",
+            "scp.ab." + tenant + "_standaloneservice",
+            "ab.service"
+            );
+    }
+
+    public static String getServiceAccountMappingScopes(SimpleConfiguration connectedSystemConfiguration) {
+        String tenant = connectedSystemConfiguration.getValue(TENANT);
+        String planetClass = connectedSystemConfiguration.getValue(PLANET_CLASS);
+        if (tenant == null || planetClass == null) return null;
+        tenant = tenant.trim();
+        return String.join(", ",
+            "tenant." + tenant,
+            "project.gwcp",
+            "planet_class." + planetClass
+        );
+    }
+
+    public static String getServiceUserContext(SimpleConfiguration connectedSystemConfiguration) {
+        String tenant = connectedSystemConfiguration.getValue(TENANT);
+        String planetClass = connectedSystemConfiguration.getValue(PLANET_CLASS);
+        if (tenant == null || planetClass == null) return null;
+        tenant = tenant.trim();
+        return String.join(", ",
+            "tenant." + tenant,
+            "project.gwcp",
+            "planet_class." + planetClass,
+            "scp.pc." + tenant + "_serviceusercontext",
+            "pc.service",
+            "pc.allowusercontext",
+            "scp.cc." + tenant + "_serviceusercontext",
+            "cc.service",
+            "cc.allowusercontext",
+            "scp.bc." + tenant + "_serviceusercontext",
+            "bc.service",
+            "bc.allowusercontext",
+            "scp.ab." + tenant + "_serviceusercontext",
+            "ab.service",
+            "ab.allowusercontext"
+        );
+    }
+
+    public static IntegrationError buildError(String title, String errorMessage, String errorDetail) {
+        return new IntegrationError.IntegrationErrorBuilder()
                 .title(title)
                 .message(errorMessage == null ? "" : errorMessage)
                 .detail(errorDetail == null ? "" : errorDetail)
-                .build())
-            .build();
+                .build();
     }
 
     public static boolean isInteger(String str) {

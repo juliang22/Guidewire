@@ -32,6 +32,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import std.ConstantKeys;
+import com.appian.guidewire.templates.HTTP.HTTP;
+
 import std.Util;
 
 public abstract class UIBuilder implements ConstantKeys {
@@ -47,9 +49,10 @@ public abstract class UIBuilder implements ConstantKeys {
   protected SimpleConfiguration integrationConfiguration;
   protected SimpleConfiguration connectedSystemConfiguration;
   protected PropertyPath propertyPath;
-  protected ObjectMapper objectMapper = new ObjectMapper();
   List<PropertyDescriptor<?>> properties = new ArrayList<>(); // build properties to pass into .setProperties()
   Map<String, String> values = new HashMap<>(); // build values to pass into .setValues()
+  ObjectMapper objectMapper = GuidewireIntegrationTemplate.objectMapper;
+  protected HTTP httpService;
 
   public UIBuilder(GuidewireIntegrationTemplate simpleIntegrationTemplate,
       SimpleConfiguration integrationConfiguration,
@@ -59,6 +62,7 @@ public abstract class UIBuilder implements ConstantKeys {
     this.integrationConfiguration = integrationConfiguration;
     this.connectedSystemConfiguration = connectedSystemConfiguration;
     this.propertyPath = propertyPath;
+    this.httpService = new HTTP(connectedSystemConfiguration);
   }
 
   // Methods to implement when building out the API specific details of each request

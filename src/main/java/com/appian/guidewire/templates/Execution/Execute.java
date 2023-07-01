@@ -9,20 +9,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.tika.mime.MimeTypeException;
+
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationError.IntegrationErrorBuilder;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyState;
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
+import com.appian.guidewire.templates.HTTP.HTTP;
+import com.appian.guidewire.templates.HTTP.HttpResponse;
 import com.appian.guidewire.templates.integrationTemplates.GuidewireIntegrationTemplate;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.gson.Gson;
 
 import std.ConstantKeys;
-import std.HTTP;
-import std.HttpResponse;
 import std.Util;
 
 public abstract class Execute implements ConstantKeys {
@@ -36,43 +36,26 @@ public abstract class Execute implements ConstantKeys {
   protected SimpleConfiguration connectedSystemConfiguration;
   protected ExecutionContext executionContext;
   protected IntegrationErrorBuilder error = null;
-  protected Gson gson;
   protected String reqBodyKey;
   protected Long start;
   protected Map<String, Object> builtRequestBody = new HashMap<>();
-  protected HttpResponse HTTPResponse;
   protected HTTP httpService;
   protected Map<String,String> apiInfoMap;
-  protected ObjectMapper objectMapper = new ObjectMapper();
+  ObjectMapper objectMapper = GuidewireIntegrationTemplate.objectMapper;
 
   public abstract IntegrationResponse buildExecution() throws IOException;
-  public abstract void executeGet() throws IOException ;
-  public abstract void executePost() throws IOException ;
-  public abstract void executePatch() throws IOException ;
-  public abstract void executeDelete() throws IOException ;
+  public abstract void executeGet() throws IOException, MimeTypeException;
+  public abstract void executePost() throws IOException, MimeTypeException;
+  public abstract void executePatch() throws IOException, MimeTypeException;
+  public abstract void executeDelete() throws IOException, MimeTypeException;
 
-  public Execute(
-      GuidewireIntegrationTemplate simpleIntegrationTemplate,
-      SimpleConfiguration integrationConfiguration,
-      SimpleConfiguration connectedSystemConfiguration,
-      ExecutionContext executionContext) throws JsonProcessingException {
+  public Execute(SimpleConfiguration integrationConfiguration, SimpleConfiguration connectedSystemConfiguration,
+      ExecutionContext executionContext) {
     this.start = System.currentTimeMillis();
     this.connectedSystemConfiguration = connectedSystemConfiguration;
     this.integrationConfiguration = integrationConfiguration;
     this.executionContext = executionContext;
     this.httpService = new HTTP(this);
-    String[] pathData = integrationConfiguration.getValue(CHOSEN_ENDPOINT).toString().split(":");
-    this.api = pathData[0];
-    this.restOperation = pathData[1];
-    this.pathNameUnmodified = pathData[2];
-    this.subApi = pathData[3];
-    String subApiInfoStr = integrationConfiguration.getValue(SUB_API_TYPE);
-    this.apiInfoMap = objectMapper.readValue(subApiInfoStr, Map.class);
-    this.pathNameModified =
-        connectedSystemConfiguration.getValue(ROOT_URL) + "/rest" + apiInfoMap.get("basePath") + pathNameUnmodified;
-    this.gson = new Gson();
-    this.reqBodyKey = Util.removeSpecialCharactersFromPathName(pathNameUnmodified);
-    buildPathNameWithPathVars();
   }
 
   // Getting Appian execution details
@@ -86,14 +69,6 @@ public abstract class Execute implements ConstantKeys {
     return executionContext;
   }
 
-  // Error setting/getting
-  public IntegrationErrorBuilder getError() { return this.error; }
-  public void setError(String title, String message, String detail) {
-    error = new IntegrationErrorBuilder().title(title).message(message).detail(detail);
-  }
-
-  public ObjectMapper getObjectMapper() {return objectMapper;}
-
   // Getting pathName with user inputted path parameters
   public void buildPathNameWithPathVars() {
     List<String> pathVars = Util.getPathVarsStr(pathNameModified);
@@ -103,6 +78,27 @@ public abstract class Execute implements ConstantKeys {
       String val = integrationConfiguration.getValue(key);
       pathNameModified = pathNameModified.replace("{"+key+"}", val);
     });
+  }
+
+  // Version might change on the base path, so this gets the most recent api version (ex. /claims/v1 changing to v2)
+  public String getBasePath(String rootUrl, String selectedBasePath) throws MimeTypeException, IOException {
+    httpService.get(rootUrl + "/rest/apis");
+    HttpResponse httpResponse = httpService.getHttpResponse();
+    Map<String, Object> responseMap = httpResponse.getResponse();
+
+    // If version is the same
+    if (responseMap.containsKey(selectedBasePath)) return selectedBasePath;
+
+    // If version has changed
+    String subApi = selectedBasePath.split("/")[1];
+    for (String basePath : responseMap.keySet()) {
+      String subApiToMatch = basePath.split("/")[1];
+      if (subApi.equals(subApiToMatch)) {
+        return basePath;
+      }
+    }
+
+    return selectedBasePath;
   }
 
   // Getting request diagnostics
@@ -122,12 +118,9 @@ public abstract class Execute implements ConstantKeys {
     return IntegrationDesignerDiagnostic.builder()
         .addExecutionTimeDiagnostic(System.currentTimeMillis() - start)
         .addRequestDiagnostic(getRequestDiagnostics())
-        .addResponseDiagnostic(getHTTPResponse().getCombinedResponse())
+        .addResponseDiagnostic(httpService.getHttpResponse().getCombinedResponse())
         .build();
   }
-
-  public void setHTTPResponse(HttpResponse HTTPResponse) { this.HTTPResponse = HTTPResponse; }
-  public HttpResponse getHTTPResponse() { return this.HTTPResponse; }
 
   // buildRequestBodyJSON() helper function to recursively extract user inputted values from Appian property descriptors
   public Map<String,Object> parseReqBodyJSON(String key, PropertyState val) {
@@ -141,8 +134,6 @@ public abstract class Execute implements ConstantKeys {
     if (NOT_NESTED_SET.contains(val.getType().getTypeDisplayName())) {
       if (val.getValue() == null) { // Use this line if you want to tell the user that they passed in a null value
         /*setError("No value set for: "+ key, "Set value for " + key + " or remove it from the request body.", "");*/
-      } else if (val.getValue().toString().equals("text")) { // Set error if autogenerated key is in Req Body
-        setError(AUTOGENERATED_ERROR_TITLE, AUTOGENERATED_ERROR_MESSAGE, AUTOGENERATED_ERROR_DETAIL);
       }
       // insert into request body map if there are no errors
       propertyMap.put(key, val.getValue());
@@ -184,8 +175,6 @@ public abstract class Execute implements ConstantKeys {
       if (val == null || val.getValue() == null || val.getValue().equals("")) {
         // Use this line if you would like to set an error when a user passes in a null value
         /*        setError("No value set for: "+ key, "Set value for " + key + " or remove it from the request body.", "");*/
-      } else if (val.getValue().toString().equals("text")) { // Set error if autogenerated key is in Req Body
-        setError(AUTOGENERATED_ERROR_TITLE, AUTOGENERATED_ERROR_MESSAGE, AUTOGENERATED_ERROR_DETAIL);
       } else {
         // flatValue could be a string or more nested Json of type Map<String, Object>
         Object flatValue = notNested.contains(val.getType().getTypeDisplayName()) ?

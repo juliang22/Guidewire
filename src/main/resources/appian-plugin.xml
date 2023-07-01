@@ -13,6 +13,12 @@
       <connected-system-template key="StandaloneService"
                                  name="Guidewire"
                                  class="com.appian.guidewire.templates.connectedSystemTemplates.StandaloneService"/>
+      <connected-system-template key="ServiceWithServiceAccountMapping"
+                                 name="Guidewire"
+                                 class="com.appian.guidewire.templates.connectedSystemTemplates.ServiceWithServiceAccountMapping"/>
+      <connected-system-template key="ServiceWithUserContext"
+                                 name="Guidewire"
+                                 class="com.appian.guidewire.templates.connectedSystemTemplates.ServiceWithUserContext"/>
       <integration-template key="GuidewireIntegrationTemplate"
                             name="Guidewire"
                             class="com.appian.guidewire.templates.integrationTemplates.GuidewireIntegrationTemplate"

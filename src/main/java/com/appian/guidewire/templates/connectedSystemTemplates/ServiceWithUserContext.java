@@ -17,8 +17,8 @@ import com.appian.guidewire.templates.HTTP.HttpResponse;
 
 import std.ConstantKeys;
 
-@TemplateId(name="StandaloneService")
-public class StandaloneService extends SimpleTestableConnectedSystemTemplate implements ConstantKeys {
+@TemplateId(name="ServiceWithUserContext")
+public class ServiceWithUserContext extends SimpleTestableConnectedSystemTemplate implements ConstantKeys {
 
   @Override
   protected SimpleConfiguration getConfiguration(SimpleConfiguration connectedSystemConfiguration, ExecutionContext executionContext) {
@@ -40,33 +40,23 @@ public class StandaloneService extends SimpleTestableConnectedSystemTemplate imp
             .build(),
         textProperty(AUTH_SERVER_URL)
             .label("Authentication Server Url")
-            .instructionText("Enter the Okta authentication url of your Guidewire instance to receive an authentication token.")
             .instructionText("Enter the Okta authentication url of your Guidewire instance to receive an authentication token " +
                 "(Make sure to append with /<VERSION>/token).")
+            .description("For example, https://guidewire-hub.okta.com/oauth2/<ID>/v1/token")
             .isRequired(true)
             .build(),
-/*        textProperty(TENANT)
-            .label("Tenant ID")
-            .instructionText("Enter the Tenant ID of your Guidewire instance.")
-            .description("See more information here: https://docs.guidewire.com/cloud/pc/202205/cloudapica/cloudAPI/topics/71_Authentication/07_services-standalone/c_example-flow-for-standalone-services-pc.html")
+        textProperty(USER_CONTEXT_USERNAME)
+            .label("User Context Username")
+            .instructionText("Enter the proxy user's username.")
+            .description("A proxy user is an internal user that is assigned to an external user or service when the API call is made." +
+                "Learn more here: https://docs.guidewire.com/cloud/pc/202302/restapiframework/rest-framework/topics/S02_Authentication/06_services-userContext/c_overview-of-authentication-for-services-with-user-context.html")
             .isRequired(true)
             .build(),
-        textProperty(PLANET_CLASS)
-            .label("Planet Class")
-            .choices(
-                Choice.builder().name("Production").value(PROD).build(),
-                Choice.builder().name("Pre-Production").value(PRE_PROD).build(),
-                Choice.builder().name("Lower").value(LOWER).build()
-            )
-            .instructionText("Enter the planet class of your Guidewire instance.")
-            .description("See more information here: https://docs.guidewire.com/cloud/pc/202205/cloudapica/cloudAPI/topics/71_Authentication/11_enablingBearerTokenAuth/c_specifying-deployment-information.html?hl=classes,planet,class")
-            .isRequired(true)
-            .build(),*/
         textProperty(SCOPES)
             .label("Scopes")
             .instructionText("Enter the scopes required to authenticate this service. All scopes must be space separated.")
-            .description("For example, Policy Center scopes may look like 'tenant.<TENANT_NAME> project.gwcp planet_class" +
-                ".<PLANET_CLASS> pc.service scp.pc.<TENANT_NAME>_standaloneservice'. Information about standalone service " +
+            .description("For example, Policy Center scopes may look like 'tenant.<TENANT> project.gwcp planet_class.<PLANET_CLASS> " +
+                "pc.service scp.pc.<TENANT>_serviceusercontext pc.allowusercontext'. Information about standalone service " +
                 "scopes can be found here: https://docs.guidewire.com/cloud/pc/202205/cloudapica/cloudAPI/topics/71_Authentication/07_services-standalone/c_example-flow-for-standalone-services-pc.html")
             .isRequired(true)
             .build(),
@@ -84,7 +74,7 @@ public class StandaloneService extends SimpleTestableConnectedSystemTemplate imp
         textProperty(AUTH_TYPE)
             .isHidden(true)
             .build()
-    ).setValue(AUTH_TYPE, STANDALONE_SERVICE);
+    ).setValue(AUTH_TYPE, SERVICE_USER_CONTEXT);
   }
 
   @Override
@@ -92,9 +82,8 @@ public class StandaloneService extends SimpleTestableConnectedSystemTemplate imp
     if (connectedSystemConfiguration.getValue(API_TYPE) == null ||
         connectedSystemConfiguration.getValue(ROOT_URL) == null ||
         connectedSystemConfiguration.getValue(AUTH_SERVER_URL) == null ||
-/*        connectedSystemConfiguration.getValue(TENANT) == null ||
-        connectedSystemConfiguration.getValue(PLANET_CLASS) == null ||*/
         connectedSystemConfiguration.getValue(CLIENT_ID) == null ||
+        connectedSystemConfiguration.getValue(USER_CONTEXT_USERNAME) == null ||
         connectedSystemConfiguration.getValue(CLIENT_SECRET) == null ||
         connectedSystemConfiguration.getValue(SCOPES) == null) {
       return TestConnectionResult.error(Collections.singletonList("Make sure to set all connected system values."));

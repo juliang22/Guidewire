@@ -9,6 +9,8 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.tika.mime.MimeTypeException;
+
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
 import com.appian.connectedsystems.templateframework.sdk.configuration.BooleanDisplayMode;
 import com.appian.connectedsystems.templateframework.sdk.configuration.Choice;
@@ -24,7 +26,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import me.xdrop.fuzzywuzzy.FuzzySearch;
 import me.xdrop.fuzzywuzzy.model.ExtractedResult;
 import std.ConstantKeys;
-import std.HTTP;
+import com.appian.guidewire.templates.HTTP.HttpResponse;
 import std.Util;
 
 public class GuidewireUIBuilder extends UIBuilder {
@@ -39,32 +41,38 @@ public class GuidewireUIBuilder extends UIBuilder {
     setApi(connectedSystemConfiguration.getValue(API_TYPE));
   }
 
-  public Map<String,Map<String,String>> getSubApiList() throws IOException {
+  public Map<String, Object> getSubApiList() throws IOException, MimeTypeException {
     // Get list of available subApis and their information map
-    String rootUrl = connectedSystemConfiguration.getValue(ROOT_URL);
-    Map<String, Object> initialResponse = HTTP.testAuth(connectedSystemConfiguration, rootUrl + "/rest/apis");
-    if (initialResponse == null || initialResponse.containsKey("error")) {
-      integrationConfiguration.setErrors(Arrays.asList("Error in connected system. Please verify that your authentication " +
-          "credentials are correct."));
+    httpService.get(connectedSystemConfiguration.getValue(ROOT_URL) + "/rest/apis");
+    if (httpService.getHttpError() != null) {
+      HttpResponse httpError = httpService.getHttpError();
+      integrationConfiguration.setErrors(
+          Arrays.asList("Error " + httpError.getStatusCode(), httpError.getResponse().toString(), httpError.getStatusLine())
+      );
+      setOpenAPI(null);
       return null;
     }
-    return objectMapper.readValue(initialResponse.get("result").toString(), Map.class);
+    return httpService.getHttpResponse().getResponse();
   }
 
-  public String getSwaggerFile() throws IOException {
+  public String getSwaggerFile() throws IOException, MimeTypeException {
     String selectedSubApiModule = integrationConfiguration.getValue(SUB_API_TYPE);
     Map<String,String> subApiInfoMap = objectMapper.readValue(selectedSubApiModule, Map.class);
+    setSubApi(subApiInfoMap.get(SUB_API_KEY));
 
     String swaggerUrl = subApiInfoMap.get("docs");
-    Map<String, Object> apiSwaggerResponse = HTTP.testAuth(connectedSystemConfiguration, swaggerUrl);
-    if (apiSwaggerResponse == null || apiSwaggerResponse.containsKey("error")) {
-      integrationConfiguration.setErrors((List)apiSwaggerResponse.get("error"));
+    httpService.get(swaggerUrl);
+    if (httpService.getHttpError() != null) {
+      HttpResponse httpError = httpService.getHttpError();
+      integrationConfiguration.setErrors(
+          Arrays.asList("Error " + httpError.getStatusCode(), httpError.getResponse().toString(), httpError.getStatusLine())
+      );
       return null;
     }
-    return apiSwaggerResponse.get("result").toString();
+    return objectMapper.writeValueAsString(httpService.getHttpResponse().getResponse());
   }
 
-  public void buildSubApiModuleUI() throws IOException {
+  public void buildSubApiModuleUI() throws IOException, MimeTypeException {
     TextPropertyDescriptor.TextPropertyDescriptorBuilder subApiChoicesUI = simpleIntegrationTemplate.textProperty(SUB_API_TYPE)
         .label("Guidewire Module")
         .instructionText("Select the Guidewire module to access within " +
@@ -73,11 +81,11 @@ public class GuidewireUIBuilder extends UIBuilder {
         .refresh(RefreshPolicy.ALWAYS);
 
 
-    Map<String,Map<String,String>> subApiList = getSubApiList();
+    Map<String, Object> subApiList = getSubApiList();
     if (subApiList == null) return;
 
-    for (Map.Entry<String,Map<String,String>> subApiProperties : subApiList.entrySet()) {
-      Map<String,String> subAPIInfoMap = subApiProperties.getValue();
+    for (Map.Entry<String, Object> subApiProperties : subApiList.entrySet()) {
+      Map<String,String> subAPIInfoMap = (Map<String,String>)subApiProperties.getValue();
 
       // Filter out all unusable swagger files
       Pattern pattern = Pattern.compile("/system/|/event/|/apis|/composite");
@@ -203,10 +211,10 @@ public class GuidewireUIBuilder extends UIBuilder {
   }
 
 
-  public SimpleConfiguration build() throws IOException {
-
+  public SimpleConfiguration build() throws IOException, MimeTypeException {
 
     buildSubApiModuleUI(); // Build choice of subApi modules
+/*    if (openAPI == null) return integrationConfiguration;*/
 
     // Property path could be null initial load, after save, refresh after at least one save has occurred, or when switching
     // from "reads" to "modifies" data
@@ -221,7 +229,14 @@ public class GuidewireUIBuilder extends UIBuilder {
     // If subApi module is set for the first time or switched to new subApi module, or if integration is being switched from
     // reads to modifies data and propertyPath is null
     if (propertyPath.toString().equals(SUB_API_TYPE)) {
-      setOpenAPI(getSwaggerFile());
+      if (integrationConfiguration.getValue(SUB_API_TYPE) == null) { // User deselected subApi module
+        return setPropertiesAndValues();
+      }
+
+      String swaggerStr = getSwaggerFile();
+      if (swaggerStr == null) return setPropertiesAndValues();
+
+      setOpenAPI(swaggerStr);
       if (openAPI == null || paths == null) return setPropertiesAndValues();
 
       buildEndpointsUI();
@@ -236,7 +251,9 @@ public class GuidewireUIBuilder extends UIBuilder {
     if (selectedEndpoint == null) {
       properties.add(listOfEndpointsUI.build());
     } else {
-      setOpenAPI(getSwaggerFile());
+      String swaggerStr = getSwaggerFile();
+      if (swaggerStr == null) return setPropertiesAndValues();
+      setOpenAPI(swaggerStr);
       if (openAPI == null || paths == null) return setPropertiesAndValues();
 
       buildSelectedEndpoint(listOfEndpointsUI);
@@ -308,33 +325,24 @@ public class GuidewireUIBuilder extends UIBuilder {
     JsonNode extensions = parse(get, Arrays.asList(RESPONSES, "200", CONTENT, APPLICATION_JSON, SCHEMA, PROPERTIES, DATA, ITEMS,
         PROPERTIES, ATTRIBUTES));
 
-    if (extensions != null && (extensions.has("x-gw-filterable") || extensions.has("x-gw-sortable"))) {
-      // Building up sorting and filtering options
-      JsonNode filterProperties = extensions.get("x-gw-filterable");
-      JsonNode sortProperties = extensions.get("x-gw-sortable");
-      TextPropertyDescriptor.TextPropertyDescriptorBuilder sortedChoices = simpleIntegrationTemplate.textProperty(SORT)
-          .label("Sort Response")
-          .instructionText("Sort response by selecting a field in the dropdown. If the dropdown is empty," +
-              " there are no sortable fields available")
-          .isExpressionable(true)
-          .description("If setting this value as a rule input, use the string version of the value as described in the " +
-              "following list: " + sortProperties.toString())
-          .refresh(RefreshPolicy.ALWAYS);
-      TextPropertyDescriptor.TextPropertyDescriptorBuilder filteredChoices = simpleIntegrationTemplate.textProperty(FILTER_FIELD)
-          .label("Filter Response")
-          .instructionText("Filter response by selecting a field in the dropdown.")
-          .isExpressionable(true)
-          .description("If setting this value as a rule input, use the string version of the value as described in the " +
-              "following list: " + filterProperties.toString() + ". If rule inputs are set for filter properties, the values " +
-              "are required and cannot be null.")
-          .refresh(RefreshPolicy.ALWAYS);
+    // Building up sorting and filtering options
+    if (extensions != null) {
 
       // If there are filtering options, add filtering UI
+      JsonNode filterProperties = extensions.get("x-gw-filterable");
+      if (filterProperties != null && filterProperties.size() > 0) {
+        TextPropertyDescriptor.TextPropertyDescriptorBuilder filteredChoices = simpleIntegrationTemplate.textProperty(FILTER_FIELD)
+            .label("Filter Response")
+            .instructionText("Filter response by selecting a field in the dropdown.")
+            .isExpressionable(true)
+            .description("If setting this value as a rule input, use the string version of the value as described in the " +
+                "following list: " + filterProperties.toString() + ". If rule inputs are set for filter properties, the values " +
+                "are required and cannot be null.")
+            .refresh(RefreshPolicy.ALWAYS);
 
-      if (filterProperties.size() > 0) {
         filterProperties.forEach(property -> filteredChoices.choice(
-              Choice.builder().name(Util.camelCaseToTitleCase(property.asText())).value(property.asText()).build()
-          )
+                Choice.builder().name(Util.camelCaseToTitleCase(property.asText())).value(property.asText()).build()
+            )
         );
         TextPropertyDescriptor.TextPropertyDescriptorBuilder filteringOperatorsBuilder = simpleIntegrationTemplate
             .textProperty(FILTER_OPERATOR)
@@ -365,10 +373,20 @@ public class GuidewireUIBuilder extends UIBuilder {
       }
 
       // If there are sorting options, add sorting UI
-      if (sortProperties.size() > 0) {
+      JsonNode sortProperties = extensions.get("x-gw-sortable");
+      if (sortProperties != null && sortProperties.size() > 0) {
+        TextPropertyDescriptor.TextPropertyDescriptorBuilder sortedChoices = simpleIntegrationTemplate.textProperty(SORT)
+            .label("Sort Response")
+            .instructionText("Sort response by selecting a field in the dropdown. If the dropdown is empty," +
+                " there are no sortable fields available")
+            .isExpressionable(true)
+            .description("If setting this value as a rule input, use the string version of the value as described in the " +
+                "following list: " + sortProperties)
+            .refresh(RefreshPolicy.ALWAYS);
+
         sortProperties.forEach(property -> sortedChoices.choice(
-              Choice.builder().name(Util.camelCaseToTitleCase(property.asText())).value(property.asText()).build()
-          )
+                Choice.builder().name(Util.camelCaseToTitleCase(property.asText())).value(property.asText()).build()
+            )
         );
         properties.add(sortedChoices.isRequired(integrationConfiguration.getValue(SORT_ORDER) != null).build());
         Choice[] sortOrder = {Choice.builder().name("Ascending").value("+").build(),
