@@ -1,8 +1,11 @@
 package com.appian.guidewire.templates.UI;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -14,63 +17,64 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.BooleanDi
 import com.appian.connectedsystems.templateframework.sdk.configuration.Choice;
 import com.appian.connectedsystems.templateframework.sdk.configuration.DisplayHint;
 import com.appian.connectedsystems.templateframework.sdk.configuration.DocumentPropertyDescriptor;
+import com.appian.connectedsystems.templateframework.sdk.configuration.ListTypePropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.LocalTypeDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.ParagraphHeight;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptorBuilder;
-import com.appian.connectedsystems.templateframework.sdk.configuration.RefreshPolicy;
+import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
+import com.appian.connectedsystems.templateframework.sdk.configuration.SystemType;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TypeReference;
+import com.appian.guidewire.templates.integrationTemplates.GuidewireIntegrationTemplate;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
-import io.swagger.v3.oas.models.OpenAPI;
-import io.swagger.v3.oas.models.Operation;
-import io.swagger.v3.oas.models.PathItem;
-import io.swagger.v3.oas.models.Paths;
-import io.swagger.v3.oas.models.media.ArraySchema;
-import io.swagger.v3.oas.models.media.BooleanSchema;
-import io.swagger.v3.oas.models.media.IntegerSchema;
-import io.swagger.v3.oas.models.media.Schema;
-import io.swagger.v3.oas.models.media.StringSchema;
-import io.swagger.v3.oas.models.parameters.Parameter;
-import io.swagger.v3.oas.models.parameters.PathParameter;
-import me.xdrop.fuzzywuzzy.FuzzySearch;
-import me.xdrop.fuzzywuzzy.model.ExtractedResult;
 import std.ConstantKeys;
+import com.appian.guidewire.templates.HTTP.HTTP;
+
 import std.Util;
 
 public abstract class UIBuilder implements ConstantKeys {
+
   protected String api;
   protected String subApi;
   protected String pathName;
   protected String restOperation;
   protected List<PropertyDescriptor<?>> pathVarsUI = new ArrayList<>();
-  protected OpenAPI openAPI = null;
-  protected List<String> subApiList = null;
-
-  protected Paths paths;
-  protected List<String> choicesForSearch = new ArrayList<>();
-  protected List<Choice> defaultChoices = new ArrayList<>();
+  protected JsonNode openAPI;
+  protected JsonNode paths;
   protected SimpleIntegrationTemplate simpleIntegrationTemplate;
   protected SimpleConfiguration integrationConfiguration;
+  protected SimpleConfiguration connectedSystemConfiguration;
+  protected PropertyPath propertyPath;
+  List<PropertyDescriptor<?>> properties = new ArrayList<>(); // build properties to pass into .setProperties()
+  Map<String, String> values = new HashMap<>(); // build values to pass into .setValues()
+  ObjectMapper objectMapper = GuidewireIntegrationTemplate.objectMapper;
+  protected HTTP httpService;
+
+  public UIBuilder(GuidewireIntegrationTemplate simpleIntegrationTemplate,
+      SimpleConfiguration integrationConfiguration,
+      SimpleConfiguration connectedSystemConfiguration,
+      PropertyPath propertyPath) {
+    this.simpleIntegrationTemplate = simpleIntegrationTemplate;
+    this.integrationConfiguration = integrationConfiguration;
+    this.connectedSystemConfiguration = connectedSystemConfiguration;
+    this.propertyPath = propertyPath;
+    this.httpService = new HTTP(connectedSystemConfiguration);
+  }
 
   // Methods to implement when building out the API specific details of each request
-  public abstract void buildRestCall(String restOperation, List<PropertyDescriptor<?>> result, String pathName);
+  public abstract void buildRestCall(String restOperation, String pathName) throws JsonProcessingException;
 
-  public abstract void buildGet(List<PropertyDescriptor<?>> result);
+  public abstract void buildGet();
 
-  public abstract void buildPost(List<PropertyDescriptor<?>> result);
+  public abstract void buildPost() throws IOException;
 
-  public abstract void buildPatch(List<PropertyDescriptor<?>> result);
+  public abstract void buildPatch() throws JsonProcessingException;
 
-  public abstract void buildDelete(List<PropertyDescriptor<?>> result);
-
-  public void setSimpleIntegrationTemplate(SimpleIntegrationTemplate simpleIntegrationTemplate) {
-    this.simpleIntegrationTemplate = simpleIntegrationTemplate;
-  }
-
-  public void setIntegrationConfiguration(SimpleConfiguration integrationConfiguration) {
-    this.integrationConfiguration = integrationConfiguration;
-  }
+  public abstract void buildDelete();
 
   public void setPathName(String pathName) {
     this.pathName = pathName;
@@ -80,246 +84,287 @@ public abstract class UIBuilder implements ConstantKeys {
     this.restOperation = restOperation;
   }
 
-  public void setSubApiList(String api) {this.subApiList = SUB_API_MAP.get(api);}
-
   public void setApi(String api) {this.api = api;}
 
   public void setSubApi(String subApi) {this.subApi = subApi;}
 
-  public void setOpenAPI(OpenAPI openAPI) {this.openAPI = openAPI; }
-  public void setPaths(Paths paths) {this.paths = paths;}
+  public void setOpenAPI(String swaggerStr) throws JsonProcessingException {
+    this.openAPI = swaggerStr == null ? null : objectMapper.readValue(swaggerStr, JsonNode.class);
+    this.paths = swaggerStr == null ? null : parse(openAPI, Arrays.asList(PATHS));
 
-  // Find all occurrences of variables inside path (ex. {claimId})
-  protected void setPathVarsUI() {
+    if (openAPI == null || paths == null) {
+      integrationConfiguration.setErrors(
+          Arrays.asList("Unable to fetch API information. Either the connected system's authentication credentials were not " +
+              "inputted properly or this user does not have access to this api.")
+      );
+    }
+  }
 
-    List<Parameter> pathParams = Util.getOperation(paths.get(pathName), restOperation).getParameters();
-    if (pathParams == null)  return;
+  public SimpleConfiguration setPropertiesAndValues() {
+    integrationConfiguration.setProperties(properties.toArray(new PropertyDescriptor<?>[0]));
+    if (values != null && values.size() > 0) {
+      values.forEach((key, val) -> {
+        integrationConfiguration.setValue(key, val);
+      });
+    }
+    return integrationConfiguration;
+  }
 
-    pathParams.forEach(param -> {
-      if (param instanceof PathParameter) {
-        TextPropertyDescriptor ui = simpleIntegrationTemplate.textProperty(param.getName())
-            .instructionText("")
-            .isRequired(true)
-            .isExpressionable(true)
-            .refresh(RefreshPolicy.ALWAYS)
-            .placeholder("1")
-            .label(Util.camelCaseToTitleCase(param.getName()))
-            .instructionText(param.getDescription() != null ? param.getDescription() : "")
-            .build();
-        pathVarsUI.add(ui);
-      }
+  public List<JsonNode> getRefs(JsonNode arrOfRefStrs) {
+    if (arrOfRefStrs == null || arrOfRefStrs.size() == 0) return null;
+
+    List<JsonNode> refNodeArr = new ArrayList<>();
+    arrOfRefStrs.forEach(refNode -> {
+      Optional.ofNullable(refNode.get("$ref"))
+          .ifPresent(refStr -> {
+            String refLocation = refStr.asText().replace("#/", "/");
+            refNodeArr.add(openAPI.at(refLocation));
+          });
     });
+    return refNodeArr;
+  }
 
+  public JsonNode getRefIfPresent(JsonNode currNode) {
+    // If no ref or null, just return currNode
+    if (currNode == null || !currNode.has(REF)) return currNode;
+
+    // Get Ref if it exists
+    String newLoc = currNode.get(REF).asText().replace("#/", "/");
+    JsonNode newNode = openAPI.at(newLoc);
+    if (newNode == null || newNode.isMissingNode()) return null;
+    else return newNode;
+  }
+
+  // Parse through the OpenAPI spec starting at root node and traversing down path
+  public JsonNode parse(JsonNode root, String path) {
+    return parse(root, Arrays.asList(path));
+  }
+
+  public JsonNode parse(JsonNode root, List<String> path) {
+    if (root == null || path.size() <= 0) return null;
+
+    JsonNode currNode = root;
+    for (int i = 0; i < path.size(); i++) {
+      String loc = path.get(i);
+      currNode = currNode.get(loc);
+      currNode = getRefIfPresent(currNode);
+      if (currNode == null) return null;
+    }
+
+    return getRefIfPresent(currNode);
   }
 
   public List<PropertyDescriptor<?>> getPathVarsUI() {
     return pathVarsUI;
   }
+  protected void setPathVarsUI() {
 
-  public void ReqBodyUIBuilder(List<PropertyDescriptor<?>> result,
-      Map<?,?> properties,
-      Set<String> required,
-      Map<String, List<String>> removeFieldsFromReqBody,
-      String httpCall) {
+    Optional.ofNullable(parse(paths, Arrays.asList(pathName, PARAMETERS)))
+        .map(this::getRefs)
+        .ifPresent(refs -> refs.forEach(ref -> {
+          String paramName = ref.get(NAME).asText();
+          String paramNameTitleCase = Util.camelCaseToTitleCase(paramName);
+          String paramDescription = ref.get(DESCRIPTION).asText();
+          TextPropertyDescriptor ui = simpleIntegrationTemplate.textProperty(paramName)
+              .isRequired(true)
+              .isExpressionable(true)
+              .placeholder("Insert " + paramNameTitleCase)
+              .label(paramNameTitleCase)
+              .instructionText(paramDescription != null ? paramDescription : "")
+              .build();
+          pathVarsUI.add(ui);
+        }));
+  }
+
+  public void ReqBodyUIBuilder(JsonNode reqBodyPropertiesNode,
+      JsonNode requiredNode,
+      String restOperation) {
+
     LocalTypeDescriptor.Builder builder = simpleIntegrationTemplate.localType(REQ_BODY_PROPERTIES);
-    properties.forEach((key, item) -> {
-      Schema<?> itemSchema = (Schema<?>)item;
-      String keyStr = key.toString();
+    StringBuilder rootInstructionText = new StringBuilder("Nested Property Descriptions: \n");
+    reqBodyPropertiesNode.fields().forEachRemaining(entry -> {
+      if (entry.getValue() == null) return;
 
-      //
-      Set<String> requiredProperties = required == null && itemSchema.getRequired() != null ?
-              new HashSet<>(itemSchema.getRequired()) :
-              required;
+      JsonNode itemSchema = entry.getValue();
+      String keyStr = entry.getKey();
+
+      // If that property has required fields create a new hashset of those required fields
+      // TODO: check all required logic
+      Set<String> requiredProperties = new HashSet<>();
+      if (itemSchema.get(REQUIRED) != null) {
+        itemSchema.get(REQUIRED).forEach(req -> requiredProperties.add(req.asText()));
+      } else if (requiredNode != null) {
+        requiredNode.forEach(req -> requiredProperties.add(req.asText()));
+      }
 
       // If the property is a document. This creates the property outside of the request body to use the native Appian
       // document/file picker
-      if (itemSchema.getFormat() != null && itemSchema.getFormat().equals("binary")) {
+      if (itemSchema.get(FORMAT) != null && itemSchema.get(FORMAT).equals("binary")) {
         DocumentPropertyDescriptor document = simpleIntegrationTemplate.documentProperty(keyStr)
             .label("Document " + Character.toUpperCase(keyStr.charAt(0)) + keyStr.substring(1))
-            .isRequired(requiredProperties == null ? false : requiredProperties.contains(keyStr))
+            .isRequired(requiredProperties.contains(keyStr))
             .isExpressionable(true)
-            .refresh(RefreshPolicy.ALWAYS)
-            .instructionText(itemSchema.getDescription())
+            .instructionText(itemSchema.get(DESCRIPTION).asText())
             .build();
-        result.add(document);
+        properties.add(document);
       } else {
-        LocalTypeDescriptor property = parseRequestBody(keyStr, itemSchema, requiredProperties, removeFieldsFromReqBody, httpCall);
+        LocalTypeDescriptor property = parseRequestBody(keyStr, itemSchema, requiredProperties, restOperation, -1,
+            rootInstructionText);
         if (property != null) {
           builder.properties(property.getProperties());
         }
       }
     });
 
-    result.add(
+    properties.add(
         simpleIntegrationTemplate.localTypeProperty(builder.build())
-        .key(Util.removeSpecialCharactersFromPathName(pathName))
-        .displayHint(DisplayHint.NORMAL)
-/*        .isExpressionable(true)*/
-        .label("Request Body")
-        .description("Enter values to the properties below to send new or updated data to Guidewire. Not all properties are " +
-            "required. Make sure to remove any unnecessary autogenerated properties. By default, null values will not be added " +
-            "to the request. Use a space between apostrophes for sending empty text.")
-        .instructionText(AUTOGENERATED_ERROR_DETAIL)
-        .refresh(RefreshPolicy.ALWAYS)
-        .build()
+            .key(Util.removeSpecialCharactersFromPathName(pathName))
+            .displayHint(DisplayHint.NORMAL)
+            .isExpressionable(true)
+            .label("Request Body")
+            .instructionText("Enter values to the properties below to send new or updated data to Guidewire. Not all properties are " +
+                "required. Make sure to remove any unnecessary autogenerated properties. By default, null values will not be added " +
+                "to the request. Use a space between apostrophes for sending empty text.")
+            .description(rootInstructionText.toString())
+            .build()
     );
   }
 
-  public StringBuilder parseOneOf(Schema<?> property) {
-    StringBuilder propertyType = new StringBuilder();
-    if (property instanceof StringSchema) {
-      propertyType.append("String");
-      propertyType.append(property.getExample() != null ?
-          "\n   Example: " + "'" + property.getExample().toString().replaceAll("\n", "") + "'" :
-          "");
-    } else if (property instanceof IntegerSchema) {
-      propertyType.append("Integer");
-      propertyType.append(
-          property.getExample() != null ? "\n   Example: " + property.getExample().toString().replaceAll("\n", "") : "");
-    } else if (property instanceof BooleanSchema) {
-      propertyType.append("Boolean");
-      propertyType.append(
-          property.getExample() != null ? "\n   Example: " + property.getExample().toString().replaceAll("\n", "") : "");
-    } else if (property instanceof ArraySchema) {
-      propertyType.append("Array of ").append(parseOneOf(property.getItems()));
-      propertyType.append(
-          property.getExample() != null ? "\n   Example: " + property.getExample().toString().replaceAll("\n", "") : "");
-    }
-    return propertyType;
-  }
 
-  public LocalTypeDescriptor parseRequestBody(String key,
-      Schema<?> item,
-      Set<String> requiredProperties,
-      Map<String, List<String>> removeFieldsFromReqBody,
-      String httpCall) {
+  public LocalTypeDescriptor parseRequestBody(String key, JsonNode item, Set<String> requiredProperties, String restOperation,
+      int nestingLevel, StringBuilder rootInstructionText) {
 
     // Skip if the field is a read-only value
-    if (item.getReadOnly() != null && item.getReadOnly()) return null;
+    if (item.get("readOnly") != null && item.get("readOnly").asBoolean()) return null;
 
-    // Control fields that you don't want to show on specific paths
-    if (removeFieldsFromReqBody != null &&
-        removeFieldsFromReqBody.keySet().contains(pathName) &&
-        removeFieldsFromReqBody.get(pathName).contains(key)) {
-      return null;
-    }
-
-    Optional<Object> extensions = Optional.ofNullable(item.getExtensions()).map(extensionMap -> extensionMap.get("x-gw-extensions"));
+    nestingLevel++;
+    item = getRefIfPresent(item);
 
     // For POSTs, gw sets required properties required to create a post in their extensions instead of in the required section
-    Optional<Object> requiredForCreate = extensions.map(requiredMap -> ((Map)requiredMap).get("requiredForCreate"));
-    if (httpCall.equals(POST) && requiredForCreate.isPresent() && requiredForCreate.get().equals(true)) {
-      if (requiredProperties == null) {
-        requiredProperties = new HashSet<>();
+    JsonNode requiredForCreate = item.get(REQUIRED_FOR_CREATE);
+    if (restOperation.equals(POST) && requiredForCreate != null ) {
+      for (JsonNode req : requiredForCreate) {
+        requiredProperties.add(req.asText());
       }
-      requiredProperties.add(key);
     }
 
     // Fields that are marked as createOnly are allowed in POSTs but not in PATCHes
-    Optional<Object> createOnly = extensions.map(requiredMap -> ((Map)requiredMap).get("createOnly"));
-    if (httpCall.equals(PATCH) && createOnly.isPresent() && createOnly.get().equals(true)) {
+    JsonNode createOnly = item.get("x-gw-createOnly");
+    if (restOperation.equals(PATCH) && createOnly != null && createOnly.asBoolean()) {
       return null;
     }
 
+    // TODO: fix oneOf
+    if (item.has("oneOf")) return null;
+
     LocalTypeDescriptor.Builder builder = simpleIntegrationTemplate.localType(key);
+    String type = item.get("type").asText();
+    String isRequired = requiredProperties != null && requiredProperties.size() > 0 && requiredProperties.contains(key) ?
+        "(Required) ":
+        "";
+    String description = item.get(DESCRIPTION) != null ?
+        isRequired + item.get(DESCRIPTION).asText().replaceAll("\n", "") :
+        "";
+    if (nestingLevel == 0 && !NOT_NESTED_SET.contains(type)) { // If top-level property that's an object or array, add description
+      rootInstructionText.append(key + ": " + description + ". ");
+    }
 
-    if (item.getOneOf() != null) {    // property could be one of many things
-      String description = item.getDescription() != null ? item.getDescription().replaceAll("\\n", "") : "";
-      StringBuilder oneOfStrBuilder = new StringBuilder(
-          description + "\n" + "'" + key + "'" + " can be one of the following " + "types: ");
-      int propertyNum = 1;
-      for (Schema<?> property : item.getOneOf()) {
-        oneOfStrBuilder.append("\n").append(propertyNum++).append(". ").append(parseOneOf(property));
+    if (type.equals("object")) {
+
+      if (item.get(PROPERTIES) == null) return null;
+
+      // Set required properties for the properties within the object
+      Set<String> innerRequiredProps = new HashSet<>();
+      JsonNode innerPropsNode =  item.get(REQUIRED);
+      if (item.get(REQUIRED) != null && item.get(REQUIRED).size() > 0) {
+        innerPropsNode.forEach(prop -> innerRequiredProps.add(prop.asText()));
       }
-      return builder.property(simpleIntegrationTemplate.textProperty(key)
-          .placeholder(oneOfStrBuilder.toString())
-          .isExpressionable(true)
-          .refresh(RefreshPolicy.ALWAYS)
-          .build()).build();
-    } else if (item.getType().equals("object")) {
 
-      if (item.getProperties() == null)
-        return null;
-
-      for (Map.Entry<String,Schema> entry : item.getProperties().entrySet()) {
+      Iterator<Map.Entry<String, JsonNode>> fieldsIterator = item.get(PROPERTIES).fields();
+      while (fieldsIterator.hasNext()) {
+        Map.Entry<String, JsonNode> entry = fieldsIterator.next();
         String innerKey = entry.getKey();
-        Schema<?> innerItem = entry.getValue();
-        requiredProperties = innerItem.getRequired() != null ? new HashSet<>(innerItem.getRequired()) : requiredProperties;
-        LocalTypeDescriptor nested = parseRequestBody(innerKey, innerItem, requiredProperties, removeFieldsFromReqBody, httpCall);
+        JsonNode innerItem = entry.getValue();
+
+        LocalTypeDescriptor nested = parseRequestBody(innerKey, innerItem, innerRequiredProps, restOperation, nestingLevel, rootInstructionText);
         if (nested != null) {
           builder.properties(nested.getProperties());
         }
       }
 
-      String description = item.getDescription() != null ?
-          item.getDescription().replaceAll("\n", "") :
-          "";
       return simpleIntegrationTemplate.localType(key + "Builder")
           .properties(simpleIntegrationTemplate.localTypeProperty(builder.build())
               .label(key)
-              .description(description)
-              .refresh(RefreshPolicy.ALWAYS)
+              .displayHint(DisplayHint.NORMAL)
               .isRequired(requiredProperties != null && requiredProperties.contains(key))
               .build())
           .build();
+    }
 
-    } else if (item.getType().equals("array")) {
+    else if (type.equals("array")) {
 
-      if (item.getItems() == null || item.getItems().getProperties() == null)
-        return null;
+      if (item.get(ITEMS) == null) return null;
 
-      for (Map.Entry<String,Schema> entry : item.getItems().getProperties().entrySet()) {
-        String innerKey = entry.getKey();
-        Schema<?> innerItem = entry.getValue();
+      item = item.get(ITEMS);
+      ListTypePropertyDescriptor.Builder listProperty = simpleIntegrationTemplate.listTypeProperty(key)
+          .label(key)
+          .displayHint(DisplayHint.NORMAL)
+          .isExpressionable(true)
+          .isRequired(requiredProperties != null && requiredProperties.contains(key));
+      if (item.has(REF)) {
+        item = getRefIfPresent(item);
 
-        Set<String> innerRequiredProperties = new HashSet<>();
-        if (innerItem.getRequired() != null) innerRequiredProperties.addAll(innerItem.getRequired());
-        else if (item.getItems().getRequired() != null) innerRequiredProperties.addAll(item.getItems().getRequired());
+        Iterator<Map.Entry<String, JsonNode>> fieldsIterator = item.get(PROPERTIES).fields();
+        while (fieldsIterator.hasNext()) {
+          Map.Entry<String, JsonNode> entry = fieldsIterator.next();
+          String innerKey = entry.getKey();
+          JsonNode innerItem = entry.getValue();
 
-        LocalTypeDescriptor nested = parseRequestBody(innerKey, innerItem, innerRequiredProperties,
-            removeFieldsFromReqBody, httpCall);
-        if (nested != null) {
-          builder.properties(nested.getProperties());
+          LocalTypeDescriptor nested = parseRequestBody(innerKey, innerItem, new HashSet<>(), restOperation,
+              nestingLevel, rootInstructionText);
+          if (nested != null) {
+            builder.properties(nested.getProperties());
+          }
+        }
+        // Register this list of objects
+        // The listProperty needs a typeReference to a localProperty set by localTypeProperty, but not actually displayed
+        LocalTypeDescriptor built = builder.build();
+        simpleIntegrationTemplate.localTypeProperty(built, key + "hidden");
+        listProperty.itemType(TypeReference.from(built));
+      } else { // List is of flat elements, not objects
+        if (item.get(TYPE) == null) return null;
+
+        String flatArrPropertyType = item.get(TYPE).asText();
+        switch (flatArrPropertyType) {
+          case ("boolean"):
+            listProperty.itemType(SystemType.BOOLEAN);
+            break;
+          case ("integer"):
+            listProperty.itemType(SystemType.INTEGER);
+            break;
+          case ("number"):
+            listProperty.itemType(SystemType.DOUBLE);
+            break;
+          default:
+            listProperty.itemType(SystemType.STRING);
+            break;
         }
       }
-
-      String description = item.getDescription() != null ?
-          item.getDescription().replaceAll("\n", "") :
-          "";
-
-      // The listProperty needs a typeReference to a localProperty set by localTypeProperty, but not actually displayed
-      LocalTypeDescriptor built = builder.build();
-      simpleIntegrationTemplate.localTypeProperty(built, key + "hidden");
-      return simpleIntegrationTemplate.localType(key + "Builder").properties(
-          simpleIntegrationTemplate.listTypeProperty(key)
-              .label(key)
-              .isHidden(false)
-              .refresh(RefreshPolicy.ALWAYS)
-              .description(description)
-              .displayHint(DisplayHint.NORMAL)
-              .isExpressionable(true)
-              .isRequired(requiredProperties != null && requiredProperties.contains(key))
-              .itemType(TypeReference.from(built))
-              .build()
-      ).build();
-
+      return simpleIntegrationTemplate.localType(key + "Builder").properties(listProperty.build()).build();
     } else {
-      String isRequired = requiredProperties != null && requiredProperties.contains(key) ? "(Required) ": "";
-      String description = item.getDescription() != null ?
-          isRequired + item.getDescription().replaceAll("\n", "") :
-          "";
 
       // Base case: Create new property field depending on the type
       PropertyDescriptorBuilder<?> newProperty;
-      switch (item.getType()) {
+      switch (type) {
         case ("boolean"):
-/*          newProperty = simpleIntegrationTemplate.booleanProperty(key).displayMode(BooleanDisplayMode.CHECKBOX);*/
-          // Boolean properties are automatically marked as false, need to know when a user actually selects false. Using
-          // dropdown instead
-          newProperty = simpleIntegrationTemplate.textProperty(key).choices(
-              Choice.builder().name("True").value("true").build(),
-              Choice.builder().name("False").value("false").build()
-          );
+          // Boolean properties are automatically marked as false, even if a user doesn't interact with it. Since we need to know
+          // when a user actually selects false, I use a dropdown for top-level booleans. Nested boolean properties inside of localTypes
+          // aren't automatically set to false so using normal boolean property so that they have a description
+          newProperty = nestingLevel == 0 ?
+              simpleIntegrationTemplate.textProperty(key).choices(
+                  Choice.builder().name("True").value("true").build(),
+                  Choice.builder().name("False").value("false").build()) :
+              simpleIntegrationTemplate.booleanProperty(key).displayMode(BooleanDisplayMode.CHECKBOX);
           break;
         case ("integer"):
           newProperty = simpleIntegrationTemplate.integerProperty(key);
@@ -334,105 +379,15 @@ public abstract class UIBuilder implements ConstantKeys {
           break;
       }
 
-
       return simpleIntegrationTemplate.localType(key + "Container")
           .property(newProperty
               .label(key)
               .isRequired(requiredProperties != null && requiredProperties.contains(key))
               .isExpressionable(true)
-              .refresh(RefreshPolicy.ALWAYS)
               .placeholder(description)
-/*              .instructionText(description)*/
-  /*            .description(description)*/
               .build())
           .build();
     }
   }
 
-  // Runs on initialization to set the default paths for the dropdown as well as a list of strings of choices used for
-  // sorting when a query is entered
-  public void setDefaultEndpoints(List<CustomEndpoint> customEndpoints) {
-    // Build search choices when no search query has been entered
-    // Check if rest call exists on path and add each rest call of path to list of choices
-    Map<String,Operation> operations = new HashMap<>();
-
-    paths.forEach((pathName, path) -> {
-      if (PATHS_TO_REMOVE.contains(pathName))
-        return;
-
-      operations.put(GET, path.getGet());
-      operations.put(POST, path.getPost());
-      operations.put(PATCH, path.getPatch());
-      operations.put(DELETE, path.getDelete());
-
-      operations.forEach((restOperation, openAPIOperation) -> {
-        if (openAPIOperation != null) {
-          // filter out deprecated endpoints
-          if (openAPIOperation.getDeprecated() != null && openAPIOperation.getDeprecated()) return;
-
-          String name = restOperation + " - " + openAPIOperation.getSummary();
-          String value = api + ":" + restOperation + ":" + pathName + ":" + subApi ;
-
-          // Builds up choices for search on initial run with all paths
-          choicesForSearch.add(value);
-
-          // Choice UI built
-          defaultChoices.add(Choice.builder().name(name).value(value).build());
-        }
-      });
-    });
-
-    // if there are custom endpoints that aren't from the openAPI spec, add them to the choices here
-    if (customEndpoints != null && customEndpoints.size() > 0) {
-      customEndpoints.forEach(endpoint -> {
-        String name = endpoint.getRestOperation() + " - " + endpoint.getSummary();
-
-        // Builds up choices for search on initial run with all paths
-        choicesForSearch.add(endpoint.getCustomEndpoint());
-
-        // Choice UI built
-        defaultChoices.add(Choice.builder().name(name).value(endpoint.getCustomEndpoint()).build());
-      });
-    }
-  }
-
-  // Sets the choices for endpoints with either default choices or sorted choices based off of the search query
-  public TextPropertyDescriptor endpointChoiceBuilder() {
-
-    // If there is a search query, sort the dropdown with the query
-    String searchQuery = integrationConfiguration.getValue(SEARCH);
-    ArrayList<Choice> choices = new ArrayList<>();
-    if (searchQuery != null && !searchQuery.equals("") && !choicesForSearch.isEmpty()) {
-      List<ExtractedResult> extractedResults = FuzzySearch.extractSorted(searchQuery, choicesForSearch);
-      for (ExtractedResult choice : extractedResults) {
-        String[] pathInfo = choice.getString().split(":");
-        String restOperation = pathInfo[1];
-        PathItem chosenPath = paths.get(pathInfo[2]);
-
-        String summary = Util.getPathProperties(chosenPath, restOperation, "summary");
-        choices.add(Choice.builder().name(restOperation + " - " + summary).value(choice.getString()).build());
-      }
-    }
-
-    // If an endpoint is selected, the instructionText will update to the REST call and path name
-    String chosenEndpoint = integrationConfiguration.getValue(CHOSEN_ENDPOINT);
-
-    // Add description to the instruction text if it is different from the summary
-    String instructionText = "";
-    if (chosenEndpoint != null) {
-      String restOperation = chosenEndpoint.split(":")[1];
-      String chosenPath = chosenEndpoint.split(":")[2];
-      String description = Util.getPathProperties(paths.get(chosenPath), restOperation, "description");
-      instructionText = restOperation + " " + chosenPath + " " + description;
-    }
-
-    return simpleIntegrationTemplate.textProperty(CHOSEN_ENDPOINT)
-        .isRequired(true)
-        .refresh(RefreshPolicy.ALWAYS)
-        .label("Select Operation")
-        .transientChoices(true)
-        .instructionText(instructionText)
-        .choices(choices.size() > 0 ? choices.toArray(new Choice[0]) : defaultChoices.toArray(new Choice[0]))
-        .build();
-  }
 }

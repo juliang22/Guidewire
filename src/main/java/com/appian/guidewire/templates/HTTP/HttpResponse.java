@@ -1,4 +1,4 @@
-package std;
+package com.appian.guidewire.templates.HTTP;
 
 import java.util.HashMap;
 import java.util.List;
@@ -13,13 +13,13 @@ public class HttpResponse {
     private final String statusLine;
     private List<Document> documents;
 
-    public HttpResponse(int statusCode, String statusLine, HashMap<String, Object> response) {
+    public HttpResponse(int statusCode, String statusLine, Map<String, Object> response) {
         this.statusCode = statusCode;
         this.statusLine = statusLine;
         this.response = response;
     }
 
-    public HttpResponse(int statusCode, String statusLine, HashMap<String, Object> response, List<Document> documents) {
+    public HttpResponse(int statusCode, String statusLine, Map<String, Object> response, List<Document> documents) {
         this.response = response;
         this.statusLine = statusLine;
         this.statusCode = statusCode;
