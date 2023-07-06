@@ -298,7 +298,8 @@ public class GuidewireUIBuilder extends UIBuilder {
           .isExpressionable(true)
           .isRequired(true)
           .label("Response File Save Location")
-          .instructionText("Choose the folder you would like to save the response file to.")
+          .instructionText("Choose the folder you would like to save the response file to. Integration Operation must be set to" +
+              " (Writes Data).")
           .build());
       properties.add(simpleIntegrationTemplate.textProperty(SAVED_FILENAME)
           .isExpressionable(true)
@@ -335,8 +336,8 @@ public class GuidewireUIBuilder extends UIBuilder {
             .label("Filter Response")
             .instructionText("Filter response by selecting a field in the dropdown.")
             .isExpressionable(true)
-            .description("If setting this value as a rule input, use the string version of the value as described in the " +
-                "following list: " + filterProperties.toString() + ". If rule inputs are set for filter properties, the values " +
+            .description("If setting this value as a rule input, use the abbreviation of the value as described in the " +
+                "following list: " + filterProperties + ". If rule inputs are set for filter properties, the values " +
                 "are required and cannot be null.")
             .refresh(RefreshPolicy.ALWAYS);
 
@@ -398,7 +399,7 @@ public class GuidewireUIBuilder extends UIBuilder {
             .isRequired(integrationConfiguration.getValue(SORT) != null)
             .displayHint(DisplayHint.NORMAL)
             .instructionText("Select the sort order. Default sort order is ascending.")
-            .description("If setting this value as a rule input, use the string version of the value as described in the " +
+            .description("If setting this value as a rule input, use the operator of the value as described in the " +
                 "following list: {Ascending: '+' Descending: '-'}. " + ". If rule inputs are set for sorting properties, the " +
                 "values are required and cannot be null.")
             .refresh(RefreshPolicy.ALWAYS)
@@ -514,7 +515,9 @@ public class GuidewireUIBuilder extends UIBuilder {
       }
     }
 
-    JsonNode requiredNode = parse(schema, REQUIRED);
+    JsonNode requiredNode = restOperation.equals(POST) && parse(schema, REQUIRED_FOR_CREATE) != null ?
+        parse(schema, REQUIRED_FOR_CREATE) :
+        parse(schema, REQUIRED);
     ReqBodyUIBuilder(schema.get(PROPERTIES), requiredNode, restOperation);
   }
 

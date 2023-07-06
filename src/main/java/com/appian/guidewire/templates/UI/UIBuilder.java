@@ -241,7 +241,7 @@ public abstract class UIBuilder implements ConstantKeys {
     item = getRefIfPresent(item);
 
     // For POSTs, gw sets required properties required to create a post in their extensions instead of in the required section
-    JsonNode requiredForCreate = item.get("x-gw-requiredForCreate");
+    JsonNode requiredForCreate = item.get(REQUIRED_FOR_CREATE);
     if (restOperation.equals(POST) && requiredForCreate != null ) {
       for (JsonNode req : requiredForCreate) {
         requiredProperties.add(req.asText());

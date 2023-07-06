@@ -81,6 +81,7 @@ public interface ConstantKeys {
   String METADATA = "metadata";
   String DEPRECATED = "deprecated";
   String SUMMARY = "summary";
+  String REQUIRED_FOR_CREATE = "x-gw-requiredForCreate";
 
 
 
