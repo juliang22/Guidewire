@@ -147,33 +147,30 @@ public class HTTP implements ConstantKeys {
     setToken(token);
   }
 
-  public OkHttpClient getHTTPClient(String contentType) throws IOException, MimeTypeException {
-
+  public Request.Builder addRequestHeaders(Request.Builder request, String contentType) throws IOException, MimeTypeException {
     if (getToken() == null) retrieveToken();
 
-    String token = getToken();
+    request.addHeader("Content-Type", contentType);
+    request.addHeader("Authorization", getToken());
+
+    if (integrationConfiguration != null &&
+        integrationConfiguration.getValue(CHECKSUM_IN_HEADER) != null) {
+      request.addHeader(CHECKSUM_IN_HEADER, integrationConfiguration.getValue(CHECKSUM_IN_HEADER));
+    }
+    // User context for when authentication type is service with user context
+    if (connectedSystemConfiguration.getValue(USER_CONTEXT_USERNAME) != null) {
+      String userContextHeader = createUserContextHeader();
+      request.addHeader("GW-User-Context", userContextHeader);
+    }
+    return request;
+  }
+
+  public OkHttpClient getHTTPClient() {
     return new OkHttpClient.Builder()
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
-        .callTimeout(30, TimeUnit.SECONDS)
-        .writeTimeout(30, TimeUnit.SECONDS)
-        .addInterceptor(chain -> {
-          Request.Builder newRequest = chain.request()
-              .newBuilder()
-              .addHeader("Content-Type", contentType)
-              .addHeader("Authorization", token);
-          // Checksum for api calls without a request body
-          if (integrationConfiguration != null &&
-              integrationConfiguration.getValue(CHECKSUM_IN_HEADER) != null) {
-              newRequest.addHeader(CHECKSUM_IN_HEADER, integrationConfiguration.getValue(CHECKSUM_IN_HEADER));
-          }
-          // User context for when authentication type is service with user context
-          if (connectedSystemConfiguration.getValue(USER_CONTEXT_USERNAME) != null) {
-            String userContextHeader = createUserContextHeader();
-            newRequest.addHeader("GW-User-Context", userContextHeader);
-          }
-          return chain.proceed(newRequest.build());
-        })
+        .connectTimeout(20, TimeUnit.SECONDS)
+        .readTimeout(20, TimeUnit.SECONDS)
+        .callTimeout(20, TimeUnit.SECONDS)
+        .writeTimeout(20, TimeUnit.SECONDS)
         .build();
   }
 
@@ -261,26 +258,26 @@ public class HTTP implements ConstantKeys {
 
 
   public void get(String url) throws IOException, MimeTypeException {
-    Request request = new Request.Builder().url(url).get().build();
-    OkHttpClient client = getHTTPClient("application/json");
-    executeRequest(client, request);
+    Request.Builder request = addRequestHeaders(new Request.Builder().url(url).get(), "application/json");
+    OkHttpClient client = getHTTPClient();
+    executeRequest(client, request.build());
   }
 
   public void post(String url, RequestBody body) throws IOException, MimeTypeException {
-    Request request = new Request.Builder().url(url).post(body).build();
-    OkHttpClient client = getHTTPClient("application/json");
-    executeRequest(client, request);
+    Request.Builder request = addRequestHeaders(new Request.Builder().url(url).post(body), "application/json");
+    OkHttpClient client = getHTTPClient();
+    executeRequest(client, request.build());
   }
 
   public void patch(String url, RequestBody body) throws IOException, MimeTypeException {
-    Request request = new Request.Builder().url(url).patch(body).build();
-    OkHttpClient client = getHTTPClient("application/json");
-    executeRequest(client, request);
+    Request.Builder request = addRequestHeaders(new Request.Builder().url(url).patch(body), "application/json");
+    OkHttpClient client = getHTTPClient();
+    executeRequest(client, request.build());
   }
 
   public void delete(String url) throws IOException, MimeTypeException {
-    Request request = new Request.Builder().url(url).delete().build();
-    OkHttpClient client = getHTTPClient("application/json");
-    executeRequest(client, request);
+    Request.Builder request = addRequestHeaders(new Request.Builder().url(url).delete(), "application/json");
+    OkHttpClient client = getHTTPClient();
+    executeRequest(client, request.build());
   }
 }

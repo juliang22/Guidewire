@@ -64,9 +64,11 @@ public class GuidewireUIBuilder extends UIBuilder {
     httpService.get(swaggerUrl);
     if (httpService.getHttpError() != null) {
       HttpResponse httpError = httpService.getHttpError();
-      integrationConfiguration.setErrors(
-          Arrays.asList("Error " + httpError.getStatusCode(), httpError.getResponse().toString(), httpError.getStatusLine())
-      );
+      List<String> error = httpError.getStatusCode() == 404 ?
+          Arrays.asList("Error " + httpError.getStatusCode(), httpError.getResponse().toString(),
+              "Authentication error: user does not have access to this module.") :
+          Arrays.asList("Error " + httpError.getStatusCode(), httpError.getResponse().toString(), httpError.getStatusLine());
+      integrationConfiguration.setErrors(error);
       return null;
     }
     return objectMapper.writeValueAsString(httpService.getHttpResponse().getResponse());
@@ -76,7 +78,8 @@ public class GuidewireUIBuilder extends UIBuilder {
     TextPropertyDescriptor.TextPropertyDescriptorBuilder subApiChoicesUI = simpleIntegrationTemplate.textProperty(SUB_API_TYPE)
         .label("Guidewire Module")
         .instructionText("Select the Guidewire module to access within " +
-            Util.camelCaseToTitleCase(connectedSystemConfiguration.getValue(API_TYPE)))
+            Util.camelCaseToTitleCase(connectedSystemConfiguration.getValue(API_TYPE)) + ". If no resource is found, the user " +
+            "does not have access to the module.")
         .isRequired(true)
         .refresh(RefreshPolicy.ALWAYS);
 
@@ -94,7 +97,11 @@ public class GuidewireUIBuilder extends UIBuilder {
 
       // Build and save map of all the subApi module choices with value of a map of all the subApi info
       subAPIInfoMap.put(SUB_API_KEY, subAPIInfoMap.get("title").replace(" ", ""));
-      subAPIInfoMap.put("docs", subAPIInfoMap.get("docs").replace("swagger", "openapi"));
+/*      subAPIInfoMap.put("docs", subAPIInfoMap.get("docs").replace("swagger", "openapi"));   */
+
+      String baseUrl = connectedSystemConfiguration.getValue(ROOT_URL).toString();
+      String openApiDocsUrl = baseUrl + "/rest" + subAPIInfoMap.get("basePath") + "/openapi.json";
+      subAPIInfoMap.put("docs", openApiDocsUrl);
       String subAPIInfoMapStr = objectMapper.writeValueAsString(subAPIInfoMap);
       subApiChoicesUI.choice(Choice.builder().name(subAPIInfoMap.get("title")).value(subAPIInfoMapStr).build());
     }

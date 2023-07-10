@@ -37,6 +37,8 @@ public class BasicAuth extends SimpleTestableConnectedSystemTemplate implements 
             .label("Base Url")
             .instructionText("Enter the base url of your Guidewire instance. For example, https://cc-dev-gwcpdev.<Tenant>" +
                 ".zeta1-andromeda.guidewire.net")
+            .description("The root url should be anything preceding '/rest/v1/<module>.' Some root urls will require the Claim" +
+                " Center, Policy Center, or Billing Center to be appended with /cc, /pc, or /bc.")
             .isRequired(true)
             .build(),
         textProperty(USERNAME)
