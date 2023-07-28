@@ -35,7 +35,8 @@ public class StandaloneService extends SimpleTestableConnectedSystemTemplate imp
         textProperty(ROOT_URL)
             .label("Base Url")
             .instructionText("Enter the base url of your Guidewire instance. ")
-            .description("For example, https://cc-dev-gwcpdev.<Tenant>.zeta1-andromeda.guidewire.net")
+            .description("For example, https://cc-dev-gwcpdev.<Tenant>.zeta1-andromeda.guidewire.net. This may need to end in " +
+                "/pc, /bc, or /cc.")
             .isRequired(true)
             .build(),
         textProperty(AUTH_SERVER_URL)

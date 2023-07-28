@@ -34,7 +34,6 @@ public class GuidewireIntegrationTemplate extends SimpleIntegrationTemplate impl
       PropertyPath propertyPath,
       ExecutionContext executionContext) {
 
-
     integrationConfiguration.setErrors(Collections.singletonList("")); // resetting errors if they exist
     try {
       return new GuidewireUIBuilder(this, integrationConfiguration, connectedSystemConfiguration, propertyPath).build();

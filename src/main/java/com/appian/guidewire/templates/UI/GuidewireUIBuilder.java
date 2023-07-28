@@ -64,7 +64,7 @@ public class GuidewireUIBuilder extends UIBuilder {
     httpService.get(swaggerUrl);
     if (httpService.getHttpError() != null) {
       HttpResponse httpError = httpService.getHttpError();
-      List<String> error = httpError.getStatusCode() == 404 ?
+      List<String> error = httpError.getStatusCode() == 404 || httpError.getStatusCode() == 401 ?
           Arrays.asList("Error " + httpError.getStatusCode(), httpError.getResponse().toString(),
               "Authentication error: user does not have access to this module.") :
           Arrays.asList("Error " + httpError.getStatusCode(), httpError.getResponse().toString(), httpError.getStatusLine());
