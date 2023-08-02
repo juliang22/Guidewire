@@ -43,7 +43,9 @@ public class GuidewireExecute extends Execute {
     this.apiInfoMap = objectMapper.readValue(subApiInfoStr, Map.class);
     String rootUrl = connectedSystemConfiguration.getValue(ROOT_URL);
 
-    String basePath = getBasePath(rootUrl, apiInfoMap.get("basePath"));
+    String module = apiInfoMap.get("basePath");
+    String version = connectedSystemConfiguration.getValue(VERSION).toString();
+    String basePath = module.substring(0, module.lastIndexOf("/") + 1) + version;
 
     this.pathNameModified = rootUrl + "/rest" + basePath + pathNameUnmodified;
     this.reqBodyKey = Util.removeSpecialCharactersFromPathName(pathNameUnmodified);

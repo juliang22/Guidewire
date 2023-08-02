@@ -101,24 +101,19 @@ public class HTTP implements ConstantKeys {
   }
 
   public void retrieveToken() throws IOException, MimeTypeException {
-    String clientId = "";
-    String clientSecret = "";
-    String scopes = "";
-    String authServerUrl = "";
+
     if (connectedSystemConfiguration.getValue(AUTH_TYPE).toString().equals(BASIC_AUTH)) {
       String username = connectedSystemConfiguration.getValue(USERNAME).toString().trim();
       String password = connectedSystemConfiguration.getValue(PASSWORD).toString().trim();
       String usernamePassword = username + ":" + password;
       setToken("Basic " + Base64.getEncoder().encodeToString(usernamePassword.getBytes()));
       return;
-    } else {
-      clientId = connectedSystemConfiguration.getValue(CLIENT_ID).toString().trim();
-      clientSecret = connectedSystemConfiguration.getValue(CLIENT_SECRET).toString().trim();
-      authServerUrl = connectedSystemConfiguration.getValue(AUTH_SERVER_URL).toString().trim();
-      scopes = connectedSystemConfiguration.getValue(SCOPES).toString().trim();
-      /*        scopes = Util.getStandaloneServiceScopes(connectedSystemConfiguration);*/
     }
 
+    String clientId = connectedSystemConfiguration.getValue(CLIENT_ID).toString().trim();
+    String clientSecret = connectedSystemConfiguration.getValue(CLIENT_SECRET).toString().trim();
+    String authServerUrl = connectedSystemConfiguration.getValue(AUTH_SERVER_URL).toString().trim();
+    String scopes = connectedSystemConfiguration.getValue(SCOPES).toString().trim();
     FormBody formBody = new FormBody.Builder()
         .addEncoded("client_id", clientId)
         .addEncoded("response_type", "token")

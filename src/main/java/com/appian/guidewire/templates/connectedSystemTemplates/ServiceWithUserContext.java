@@ -39,6 +39,13 @@ public class ServiceWithUserContext extends SimpleTestableConnectedSystemTemplat
                 "/pc, /bc, or /cc.")
             .isRequired(true)
             .build(),
+        textProperty(VERSION)
+            .label("Version")
+            .instructionText("Enter the API version of your Guidewire instance. For example, 'v1' or 'v2'.")
+            .description("More information about versioning can be found here https://docs.guidewire.com/cloud/cc/202302/cloudapibf/cloudAPI/topics/101-Fund/01-overview-of-Cloud-API/c_list-of-APIs-in-Cloud-API.html?hl=version")
+            .placeholder("v1")
+            .isRequired(true)
+            .build(),
         textProperty(AUTH_SERVER_URL)
             .label("Authentication Server Url")
             .instructionText("Enter the Okta authentication url of your Guidewire instance to receive an authentication token " +

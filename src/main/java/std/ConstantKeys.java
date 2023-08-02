@@ -18,6 +18,7 @@ public interface ConstantKeys {
   String USERNAME = "username";
   String PASSWORD = "password";
   String ROOT_URL = "rootUrl";
+  String VERSION = "version";
 
   // Service Auth
   String AUTH_SERVER_URL = "authServerUrl";

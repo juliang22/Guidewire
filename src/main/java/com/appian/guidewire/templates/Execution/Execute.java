@@ -80,27 +80,6 @@ public abstract class Execute implements ConstantKeys {
     });
   }
 
-  // Version might change on the base path, so this gets the most recent api version (ex. /claims/v1 changing to v2)
-  public String getBasePath(String rootUrl, String selectedBasePath) throws MimeTypeException, IOException {
-    httpService.get(rootUrl + "/rest/apis");
-    HttpResponse httpResponse = httpService.getHttpResponse();
-    Map<String, Object> responseMap = httpResponse.getResponse();
-
-    // If version is the same
-    if (responseMap.containsKey(selectedBasePath)) return selectedBasePath;
-
-    // If version has changed
-    String subApi = selectedBasePath.split("/")[1];
-    for (String basePath : responseMap.keySet()) {
-      String subApiToMatch = basePath.split("/")[1];
-      if (subApi.equals(subApiToMatch)) {
-        return basePath;
-      }
-    }
-
-    return selectedBasePath;
-  }
-
   // Getting request diagnostics
   public Map<String,Object> getRequestDiagnostics() {
     Map<String,Object> requestDiagnostic = new HashMap<>();
@@ -124,8 +103,6 @@ public abstract class Execute implements ConstantKeys {
 
   // buildRequestBodyJSON() helper function to recursively extract user inputted values from Appian property descriptors
   public Map<String,Object> parseReqBodyJSON(String key, PropertyState val) {
-
-
     Map<String, Object> propertyMap = new HashMap<>();
 
 /*    if (val == null) return propertyMap;*/

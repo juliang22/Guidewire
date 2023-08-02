@@ -97,10 +97,11 @@ public class GuidewireUIBuilder extends UIBuilder {
 
       // Build and save map of all the subApi module choices with value of a map of all the subApi info
       subAPIInfoMap.put(SUB_API_KEY, subAPIInfoMap.get("title").replace(" ", ""));
-/*      subAPIInfoMap.put("docs", subAPIInfoMap.get("docs").replace("swagger", "openapi"));   */
 
       String baseUrl = connectedSystemConfiguration.getValue(ROOT_URL).toString();
-      String openApiDocsUrl = baseUrl + "/rest" + subAPIInfoMap.get("basePath") + "/openapi.json";
+      String module = subAPIInfoMap.get("basePath");
+      String version = connectedSystemConfiguration.getValue(VERSION).toString();
+      String openApiDocsUrl = baseUrl + "/rest" + module.substring(0, module.lastIndexOf("/") + 1) + version + "/openapi.json";
       subAPIInfoMap.put("docs", openApiDocsUrl);
       String subAPIInfoMapStr = objectMapper.writeValueAsString(subAPIInfoMap);
       subApiChoicesUI.choice(Choice.builder().name(subAPIInfoMap.get("title")).value(subAPIInfoMapStr).build());
@@ -179,7 +180,8 @@ public class GuidewireUIBuilder extends UIBuilder {
         .label("Select Operation");
     if (searchQuery == null || searchQuery.equals("")) {
       // rebuild default choices from listOfChoicesForSearch (as the choices themselves change order and listOfChoicesForSearch
-      // is stable)
+      // is stable). Can't use the previously built property because we need to set the instruction text if the endpoint is
+      // actually selected (buildSelectedEndpoint())
       listOfChoicesForSearch.forEach(choice -> {
         String[] pathInfo = choice.split(":");
         String restOperation = pathInfo[1];
@@ -221,7 +223,6 @@ public class GuidewireUIBuilder extends UIBuilder {
   public SimpleConfiguration build() throws IOException, MimeTypeException {
 
     buildSubApiModuleUI(); // Build choice of subApi modules
-/*    if (openAPI == null) return integrationConfiguration;*/
 
     // Property path could be null initial load, after save, refresh after at least one save has occurred, or when switching
     // from "reads" to "modifies" data

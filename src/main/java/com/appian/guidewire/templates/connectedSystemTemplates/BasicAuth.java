@@ -41,6 +41,13 @@ public class BasicAuth extends SimpleTestableConnectedSystemTemplate implements 
                 " Center, Policy Center, or Billing Center to be appended with /cc, /pc, or /bc.")
             .isRequired(true)
             .build(),
+        textProperty(VERSION)
+            .label("Version")
+            .instructionText("Enter the API version of your Guidewire instance. For example, 'v1' or 'v2'.")
+            .description("More information about versioning can be found here https://docs.guidewire.com/cloud/cc/202302/cloudapibf/cloudAPI/topics/101-Fund/01-overview-of-Cloud-API/c_list-of-APIs-in-Cloud-API.html?hl=version")
+            .isRequired(true)
+            .placeholder("v1")
+            .build(),
         textProperty(USERNAME)
             .label("Username")
             .instructionText("Enter your Guidewire username.")

@@ -39,6 +39,13 @@ public class StandaloneService extends SimpleTestableConnectedSystemTemplate imp
                 "/pc, /bc, or /cc.")
             .isRequired(true)
             .build(),
+        textProperty(VERSION)
+            .label("Version")
+            .instructionText("Enter the API version of your Guidewire instance. For example, 'v1' or 'v2'.")
+            .description("More information about versioning can be found here https://docs.guidewire.com/cloud/cc/202302/cloudapibf/cloudAPI/topics/101-Fund/01-overview-of-Cloud-API/c_list-of-APIs-in-Cloud-API.html?hl=version")
+            .placeholder("v1")
+            .isRequired(true)
+            .build(),
         textProperty(AUTH_SERVER_URL)
             .label("Authentication Server Url")
             .instructionText("Enter the Okta authentication url of your Guidewire instance to receive an authentication token.")
@@ -46,23 +53,6 @@ public class StandaloneService extends SimpleTestableConnectedSystemTemplate imp
                 "(Make sure to append with /<VERSION>/token).")
             .isRequired(true)
             .build(),
-/*        textProperty(TENANT)
-            .label("Tenant ID")
-            .instructionText("Enter the Tenant ID of your Guidewire instance.")
-            .description("See more information here: https://docs.guidewire.com/cloud/pc/202205/cloudapica/cloudAPI/topics/71_Authentication/07_services-standalone/c_example-flow-for-standalone-services-pc.html")
-            .isRequired(true)
-            .build(),
-        textProperty(PLANET_CLASS)
-            .label("Planet Class")
-            .choices(
-                Choice.builder().name("Production").value(PROD).build(),
-                Choice.builder().name("Pre-Production").value(PRE_PROD).build(),
-                Choice.builder().name("Lower").value(LOWER).build()
-            )
-            .instructionText("Enter the planet class of your Guidewire instance.")
-            .description("See more information here: https://docs.guidewire.com/cloud/pc/202205/cloudapica/cloudAPI/topics/71_Authentication/11_enablingBearerTokenAuth/c_specifying-deployment-information.html?hl=classes,planet,class")
-            .isRequired(true)
-            .build(),*/
         textProperty(SCOPES)
             .label("Scopes")
             .instructionText("Enter the scopes required to authenticate this service. All scopes must be space separated.")
@@ -93,8 +83,6 @@ public class StandaloneService extends SimpleTestableConnectedSystemTemplate imp
     if (connectedSystemConfiguration.getValue(API_TYPE) == null ||
         connectedSystemConfiguration.getValue(ROOT_URL) == null ||
         connectedSystemConfiguration.getValue(AUTH_SERVER_URL) == null ||
-/*        connectedSystemConfiguration.getValue(TENANT) == null ||
-        connectedSystemConfiguration.getValue(PLANET_CLASS) == null ||*/
         connectedSystemConfiguration.getValue(CLIENT_ID) == null ||
         connectedSystemConfiguration.getValue(CLIENT_SECRET) == null ||
         connectedSystemConfiguration.getValue(SCOPES) == null) {
