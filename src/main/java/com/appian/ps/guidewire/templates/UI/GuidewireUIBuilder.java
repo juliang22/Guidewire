@@ -1,14 +1,17 @@
-package com.appian.guidewire.templates.UI;
+package com.appian.ps.guidewire.templates.UI;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.text.similarity.FuzzyScore;
 import org.apache.tika.mime.MimeTypeException;
 
 import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfiguration;
@@ -19,14 +22,12 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.Expressio
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
 import com.appian.connectedsystems.templateframework.sdk.configuration.RefreshPolicy;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
-import com.appian.guidewire.templates.integrationTemplates.GuidewireIntegrationTemplate;
+import com.appian.ps.guidewire.templates.HTTP.HttpResponse;
+import com.appian.ps.guidewire.templates.integrationTemplates.GuidewireIntegrationTemplate;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 
-import me.xdrop.fuzzywuzzy.FuzzySearch;
-import me.xdrop.fuzzywuzzy.model.ExtractedResult;
 import std.ConstantKeys;
-import com.appian.guidewire.templates.HTTP.HttpResponse;
 import std.Util;
 
 public class GuidewireUIBuilder extends UIBuilder {
@@ -191,14 +192,21 @@ public class GuidewireUIBuilder extends UIBuilder {
         );
       });
     } else {
+
       // If there is a search query, sort the dropdown with the query
-      List<ExtractedResult> extractedResults = FuzzySearch.extractSorted(searchQuery, listOfChoicesForSearch);
-      for (ExtractedResult choice : extractedResults) {
-        String[] pathInfo = choice.getString().split(":");
+      FuzzyScore fuzzyScore = new FuzzyScore(Locale.ENGLISH);
+      Collections.sort(listOfChoicesForSearch, (o1, o2) -> {
+        int score1 = fuzzyScore.fuzzyScore(o1, searchQuery);
+        int score2 = fuzzyScore.fuzzyScore(o2, searchQuery);
+        return Integer.compare(score2, score1); // Sort in descending order of match score
+      });
+
+      for (String choice : listOfChoicesForSearch) {
+        String[] pathInfo = choice.split(":");
         String restOperation = pathInfo[1];
         String summary = pathInfo[4];
         listOfEndpointsUI.choice(
-            new Choice.ChoiceBuilder().name(restOperation.toUpperCase() + " - " + summary).value(choice.getString()).build()
+            new Choice.ChoiceBuilder().name(restOperation.toUpperCase() + " - " + summary).value(choice).build()
         );
       }
     }

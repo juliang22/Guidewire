@@ -1,4 +1,4 @@
-package com.appian.guidewire.templates.Execution;
+package com.appian.ps.guidewire.templates.Execution;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -18,14 +18,12 @@ import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.configuration.Document;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyState;
-import com.appian.guidewire.templates.integrationTemplates.GuidewireIntegrationTemplate;
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.appian.ps.guidewire.templates.HTTP.HttpResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
 import okhttp3.RequestBody;
-import com.appian.guidewire.templates.HTTP.HttpResponse;
 import std.Util;
 
 public class GuidewireExecute extends Execute {
@@ -178,26 +176,31 @@ public class GuidewireExecute extends Execute {
     if (doc != null) {
 
       // Create a temporary file and copy the InputStream into it
+      File tempFile = null;
       String fileName = doc.getFileName();
       String fileNameWithoutExtension = fileName.substring(0, doc.getFileName().lastIndexOf("."));
-      File tempFile = File.createTempFile(fileNameWithoutExtension, "." + doc.getExtension());
-      tempFile.deleteOnExit();
-      FileOutputStream out = new FileOutputStream(tempFile);
-      IOUtils.copy(doc.getInputStream(), out);
-
-      // Create MultipartBody
-      String jsonString = new ObjectMapper().writeValueAsString(dataWrapper);
-      // Determine media type based on file extension
-      String contentType = Files.probeContentType(tempFile.toPath());
-      if (contentType == null) {
-        contentType = "application/octet-stream";  // Default to octet stream if type is unknown
+      try {
+        tempFile = File.createTempFile(fileNameWithoutExtension, "." + doc.getExtension());
+        FileOutputStream out = new FileOutputStream(tempFile);
+        IOUtils.copy(doc.getInputStream(), out);
+      } finally {
+        if (tempFile != null) {
+          tempFile.deleteOnExit();
+        }
+        // Create MultipartBody
+        String jsonString = new ObjectMapper().writeValueAsString(dataWrapper);
+        // Determine media type based on file extension
+        String contentType = Files.probeContentType(tempFile.toPath());
+        if (contentType == null) {
+          contentType = "application/octet-stream";  // Default to octet stream if type is unknown
+        }
+        RequestBody fileBody = RequestBody.create(tempFile, MediaType.parse(contentType));
+        return new MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("content", fileName, fileBody)
+            .addFormDataPart("metadata", null, RequestBody.create(jsonString, MediaType.parse("application/json")))
+            .build();
       }
-      RequestBody fileBody = RequestBody.create(tempFile, MediaType.parse(contentType));
-      return new MultipartBody.Builder()
-          .setType(MultipartBody.FORM)
-          .addFormDataPart("content", fileName, fileBody)
-          .addFormDataPart("metadata", null, RequestBody.create(jsonString, MediaType.parse("application/json")))
-          .build();
     }
 
     String jsonString = new ObjectMapper().writeValueAsString(dataWrapper);

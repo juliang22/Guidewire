@@ -1,4 +1,4 @@
-package com.appian.guidewire.templates.HTTP;
+package com.appian.ps.guidewire.templates.HTTP;
 
 import java.util.HashMap;
 import java.util.List;

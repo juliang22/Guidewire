@@ -1,4 +1,4 @@
-package com.appian.guidewire.templates.connectedSystemTemplates;
+package com.appian.ps.guidewire.templates.connectedSystemTemplates;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -12,8 +12,8 @@ import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
 import com.appian.connectedsystems.templateframework.sdk.TemplateId;
 import com.appian.connectedsystems.templateframework.sdk.configuration.Choice;
 import com.appian.connectedsystems.templateframework.sdk.connectiontesting.TestConnectionResult;
-import com.appian.guidewire.templates.HTTP.HTTP;
-import com.appian.guidewire.templates.HTTP.HttpResponse;
+import com.appian.ps.guidewire.templates.HTTP.HTTP;
+import com.appian.ps.guidewire.templates.HTTP.HttpResponse;
 
 import std.ConstantKeys;
 

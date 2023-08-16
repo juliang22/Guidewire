@@ -1,4 +1,4 @@
-package com.appian.guidewire.templates.integrationTemplates;
+package com.appian.ps.guidewire.templates.integrationTemplates;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -15,8 +15,8 @@ import com.appian.connectedsystems.templateframework.sdk.TemplateId;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyPath;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateRequestPolicy;
 import com.appian.connectedsystems.templateframework.sdk.metadata.IntegrationTemplateType;
-import com.appian.guidewire.templates.Execution.GuidewireExecute;
-import com.appian.guidewire.templates.UI.GuidewireUIBuilder;
+import com.appian.ps.guidewire.templates.Execution.GuidewireExecute;
+import com.appian.ps.guidewire.templates.UI.GuidewireUIBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import std.ConstantKeys;

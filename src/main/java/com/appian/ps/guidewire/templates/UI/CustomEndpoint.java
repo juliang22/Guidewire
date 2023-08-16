@@ -1,4 +1,4 @@
-package com.appian.guidewire.templates.UI;
+package com.appian.ps.guidewire.templates.UI;
 
 public class CustomEndpoint {
   String apiType;

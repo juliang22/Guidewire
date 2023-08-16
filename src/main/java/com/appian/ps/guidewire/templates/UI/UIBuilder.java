@@ -1,4 +1,4 @@
-package com.appian.guidewire.templates.UI;
+package com.appian.ps.guidewire.templates.UI;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -26,13 +26,13 @@ import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyP
 import com.appian.connectedsystems.templateframework.sdk.configuration.SystemType;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TextPropertyDescriptor;
 import com.appian.connectedsystems.templateframework.sdk.configuration.TypeReference;
-import com.appian.guidewire.templates.integrationTemplates.GuidewireIntegrationTemplate;
+import com.appian.ps.guidewire.templates.integrationTemplates.GuidewireIntegrationTemplate;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import std.ConstantKeys;
-import com.appian.guidewire.templates.HTTP.HTTP;
+import com.appian.ps.guidewire.templates.HTTP.HTTP;
 
 import std.Util;
 

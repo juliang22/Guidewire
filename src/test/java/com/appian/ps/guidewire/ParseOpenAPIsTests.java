@@ -1,36 +1,14 @@
-package com.appian.guidewire;
+package com.appian.ps.guidewire;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import org.apache.commons.io.IOUtils;
-
-import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
-import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Field;
-import org.apache.lucene.document.TextField;
-import org.apache.lucene.index.DirectoryReader;
-import org.apache.lucene.index.IndexReader;
-import org.apache.lucene.index.IndexWriter;
-import org.apache.lucene.index.IndexWriterConfig;
-import org.apache.lucene.index.Term;
-import org.apache.lucene.search.FuzzyQuery;
-import org.apache.lucene.search.IndexSearcher;
-import org.apache.lucene.search.Query;
-import org.apache.lucene.search.ScoreDoc;
-import org.apache.lucene.search.Sort;
-import org.apache.lucene.search.SortField;
-import org.apache.lucene.search.TopDocs;
-import org.apache.lucene.store.ByteBuffersDirectory;
-import org.apache.lucene.store.Directory;
 import org.junit.Test;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -40,91 +18,6 @@ import std.ConstantKeys;
 
 public class ParseOpenAPIsTests implements ConstantKeys {
 
-  public ParseOpenAPIsTests() throws IOException {
-  }
-
-  private static void addDoc(IndexWriter w, String title) throws Exception {
-    Document doc = new Document();
-    doc.add(new TextField("title", title, Field.Store.YES));
-    w.addDocument(doc);
-  }
-
-
-  @Test
-  public void testLuceneFuzzySearch() throws Exception {
-    ClassLoader classLoader = ParseOpenAPIsTests.class.getClassLoader();
-    InputStream input = classLoader.getResourceAsStream("com/appian/guidewire/templates/claimsv2.json");
-    String swaggerStr = IOUtils.toString(input, StandardCharsets.UTF_8);
-
-    JsonNode openApi = new ObjectMapper().readValue(swaggerStr, JsonNode.class);
-    JsonNode paths = openApi.get("paths");
-
-
-
-    // 1. Prepare Lucene to index some text
-    StandardAnalyzer analyzer = new StandardAnalyzer();
-    Directory index = new ByteBuffersDirectory();
-    IndexWriterConfig config = new IndexWriterConfig(analyzer);
-    IndexWriter w = new IndexWriter(index, config);
-    List<String> listOfChoicesForSearch = new ArrayList<>();
-    paths.fields().forEachRemaining(pathNode -> {
-      String pathName = pathNode.getKey();
-      JsonNode path = pathNode.getValue();
-      if (PATHS_TO_REMOVE.contains(pathName)) return;
-
-      Map<String, JsonNode> operations = new HashMap<>();
-      operations.put(GET, path.get(GET));
-      operations.put(POST, path.get(POST));
-      operations.put(PATCH, path.get(PATCH));
-      operations.put(DELETE, path.get(DELETE));
-      operations.forEach((restOperation, operation) -> {
-        if (operation == null || operation.size() == 0) return;
-        if (operation.get(DEPRECATED) != null && operation.get(DEPRECATED).asBoolean()) return;
-
-        // Builds up endpoint choices and choices list for search on initial run with all paths
-        String summary = operation.get(SUMMARY).asText();
-        String description = operation.get(DESCRIPTION).asText();
-        String name = restOperation.toUpperCase() + " - " + summary;
-        String value = String.join(":", "claimCenter", restOperation, pathName, "ClaimAPI", summary, description);
-        listOfChoicesForSearch.add(value);
-
-        try {
-          addDoc(w, value);
-        } catch (Exception e) {
-          throw new RuntimeException(e);
-        }
-      });
-    });
-    w.close();
-
-
-    // 2. Query
-    String querystr = "get"; // note the spelling mistake
-
-    FuzzyQuery q = new FuzzyQuery(new Term("title", querystr), 1);
-
-    // 3. Search
-    int hitsPerPage = Integer.MAX_VALUE;
-    DirectoryReader reader = DirectoryReader.open(index);
-    IndexSearcher searcher = new IndexSearcher(reader);
-    TopDocs docs = searcher.search(q, hitsPerPage);
-
-    // 4. Display results
-    System.out.println("Found " + docs.totalHits + " hits.");
-    for(int i=0;i<docs.scoreDocs.length;++i) {
-      int docId = docs.scoreDocs[i].doc;
-      Document d = searcher.doc(docId);
-      System.out.println((i + 1) + ". " + d.get("title"));
-    }
-    reader.close();
-
-
-
-
-
-
-
-  }
 
   public String formatParsingPath(JsonNode root, String[] path) {
 
@@ -147,7 +40,7 @@ public class ParseOpenAPIsTests implements ConstantKeys {
 
   public JsonNode getRefIfPresent(JsonNode currNode) throws IOException {
     ClassLoader classLoader = ParseOpenAPIsTests.class.getClassLoader();
-    InputStream input = classLoader.getResourceAsStream("com/appian/guidewire/templates/claimsv2.json");
+    InputStream input = classLoader.getResourceAsStream("com/appian/ps/guidewire/templates/claimsv2.json");
     String swaggerStr = IOUtils.toString(input, StandardCharsets.UTF_8);
     JsonNode openApi = new ObjectMapper().readValue(swaggerStr, JsonNode.class);
 
@@ -166,7 +59,7 @@ public class ParseOpenAPIsTests implements ConstantKeys {
   public JsonNode parse(JsonNode currNode, List<String> path) throws IOException {
 
     ClassLoader classLoader = ParseOpenAPIsTests.class.getClassLoader();
-    InputStream input = classLoader.getResourceAsStream("com/appian/guidewire/templates/claimsv2.json");
+    InputStream input = classLoader.getResourceAsStream("com/appian/ps/guidewire/templates/claimsv2.json");
     String swaggerStr = IOUtils.toString(input, StandardCharsets.UTF_8);
     JsonNode openApi = new ObjectMapper().readValue(swaggerStr, JsonNode.class);
 
@@ -201,7 +94,7 @@ public class ParseOpenAPIsTests implements ConstantKeys {
 @Test
 public void testingParsing() throws IOException {
   ClassLoader classLoader = ParseOpenAPIsTests.class.getClassLoader();
-  InputStream input = classLoader.getResourceAsStream("com/appian/guidewire/templates/claimsv2.json");
+  InputStream input = classLoader.getResourceAsStream("com/appian/ps/guidewire/templates/claimsv2.json");
   String swaggerStr = IOUtils.toString(input, StandardCharsets.UTF_8);
 
   JsonNode openApi = new ObjectMapper().readValue(swaggerStr, JsonNode.class);
@@ -216,7 +109,7 @@ public void testingParsing() throws IOException {
   public void swagger() throws IOException  {
 
     ClassLoader classLoader = ParseOpenAPIsTests.class.getClassLoader();
-    InputStream input = classLoader.getResourceAsStream("com/appian/guidewire/templates/claimsv2.json");
+    InputStream input = classLoader.getResourceAsStream("com/appian/ps/guidewire/templates/claimsv2.json");
     String swaggerStr = IOUtils.toString(input, StandardCharsets.UTF_8);
 
     // Getting OpenAPI obj
@@ -307,7 +200,7 @@ public void testingParsing() throws IOException {
   public void testPathVars() throws IOException {
 
     ClassLoader classLoader = ParseOpenAPIsTests.class.getClassLoader();
-    InputStream input = classLoader.getResourceAsStream("com/appian/guidewire/templates/claimsv2.json");
+    InputStream input = classLoader.getResourceAsStream("com/appian/ps/guidewire/templates/claimsv2.json");
     String swaggerStr = IOUtils.toString(input, StandardCharsets.UTF_8);
 
     JsonNode openAPI2 = new ObjectMapper().readValue(swaggerStr, JsonNode.class);
@@ -336,7 +229,7 @@ public void testingParsing() throws IOException {
   @Test
   public void rebuildingReqBodyParser() throws IOException {
     ClassLoader classLoader = ParseOpenAPIsTests.class.getClassLoader();
-    InputStream input = classLoader.getResourceAsStream("com/appian/guidewire/templates/claimsv2.json");
+    InputStream input = classLoader.getResourceAsStream("com/appian/ps/guidewire/templates/claimsv2.json");
     String swaggerStr = IOUtils.toString(input, StandardCharsets.UTF_8);
 
     JsonNode openApi = new ObjectMapper().readValue(swaggerStr, JsonNode.class);

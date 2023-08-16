@@ -1,4 +1,4 @@
-package com.appian.guidewire.templates.connectedSystemTemplates;
+package com.appian.ps.guidewire.templates.connectedSystemTemplates;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -12,13 +12,14 @@ import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
 import com.appian.connectedsystems.templateframework.sdk.TemplateId;
 import com.appian.connectedsystems.templateframework.sdk.configuration.Choice;
 import com.appian.connectedsystems.templateframework.sdk.connectiontesting.TestConnectionResult;
-import com.appian.guidewire.templates.HTTP.HTTP;
-import com.appian.guidewire.templates.HTTP.HttpResponse;
+import com.appian.ps.guidewire.templates.HTTP.HTTP;
+import com.appian.ps.guidewire.templates.HTTP.HttpResponse;
 
 import std.ConstantKeys;
 
-@TemplateId(name="ServiceWithServiceAccountMapping")
-public class ServiceWithServiceAccountMapping extends SimpleTestableConnectedSystemTemplate implements ConstantKeys {
+@TemplateId(name="BasicAuthTemplate")
+public class BasicAuth extends SimpleTestableConnectedSystemTemplate implements ConstantKeys {
+
 
   @Override
   protected SimpleConfiguration getConfiguration(SimpleConfiguration connectedSystemConfiguration, ExecutionContext executionContext) {
@@ -34,65 +35,50 @@ public class ServiceWithServiceAccountMapping extends SimpleTestableConnectedSys
             .build(),
         textProperty(ROOT_URL)
             .label("Base Url")
-            .instructionText("Enter the base url of your Guidewire instance. ")
-            .description("For example, https://cc-dev-gwcpdev.<Tenant>.zeta1-andromeda.guidewire.net. This may need to end in " +
-                "/pc, /bc, or /cc.")
+            .instructionText("Enter the base url of your Guidewire instance. For example, https://cc-dev-gwcpdev.<Tenant>" +
+                ".zeta1-andromeda.guidewire.net")
+            .description("The root url should be anything preceding '/rest/v1/<module>.' Some root urls will require the Claim" +
+                " Center, Policy Center, or Billing Center to be appended with /cc, /pc, or /bc.")
             .isRequired(true)
             .build(),
         textProperty(VERSION)
             .label("Version")
             .instructionText("Enter the API version of your Guidewire instance. For example, 'v1' or 'v2'.")
             .description("More information about versioning can be found here https://docs.guidewire.com/cloud/cc/202302/cloudapibf/cloudAPI/topics/101-Fund/01-overview-of-Cloud-API/c_list-of-APIs-in-Cloud-API.html?hl=version")
+            .isRequired(true)
             .placeholder("v1")
+            .build(),
+        textProperty(USERNAME)
+            .label("Username")
+            .instructionText("Enter your Guidewire username.")
             .isRequired(true)
             .build(),
-        textProperty(AUTH_SERVER_URL)
-            .label("Authentication Server Url")
-            .instructionText("Enter the Okta authentication url of your Guidewire instance to receive an authentication token " +
-                "(Make sure to append with /<VERSION>/token).")
-            .description("For example, https://guidewire-hub.okta.com/oauth2/<ID>/v1/token")
-            .isRequired(true)
-            .build(),
-        textProperty(SCOPES)
-            .label("Scopes")
-            .instructionText("Enter the scopes required to authenticate this service. All scopes must be space separated.")
-            .description("For example, Policy Center scopes may look like 'tenant.<TENANT> project.gwcp planet_<PLANET_CLASS>'." +
-                " Information about standalone service scopes can be found here: " +
-                "https://docs.guidewire.com/cloud/pc/202205/cloudapica/cloudAPI/topics/71_Authentication/07_services-standalone/c_example-flow-for-standalone-services-pc.html")
-            .isRequired(true)
-            .build(),
-        textProperty(CLIENT_ID)
-            .label("Client ID")
-            .instructionText("Enter your Guidewire Client ID.")
-            .isRequired(true)
-            .build(),
-        textProperty(CLIENT_SECRET)
-            .label("Client Secret")
-            .instructionText("Enter your Guidewire Client Secret.")
+        textProperty(PASSWORD)
+            .label("Password")
+            .instructionText("Enter your Guidewire password.")
             .isRequired(true)
             .masked(true)
             .build(),
         textProperty(AUTH_TYPE)
             .isHidden(true)
             .build()
-    ).setValue(AUTH_TYPE, SERVICE_ACCOUNT_MAPPING);
+    ).setValue(AUTH_TYPE, BASIC_AUTH);
   }
 
   @Override
   protected TestConnectionResult testConnection(SimpleConfiguration connectedSystemConfiguration, ExecutionContext executionContext) {
     if (connectedSystemConfiguration.getValue(API_TYPE) == null ||
         connectedSystemConfiguration.getValue(ROOT_URL) == null ||
-        connectedSystemConfiguration.getValue(AUTH_SERVER_URL) == null ||
-        connectedSystemConfiguration.getValue(CLIENT_ID) == null ||
-        connectedSystemConfiguration.getValue(CLIENT_SECRET) == null ||
-        connectedSystemConfiguration.getValue(SCOPES) == null) {
+        connectedSystemConfiguration.getValue(USERNAME) == null ||
+        connectedSystemConfiguration.getValue(PASSWORD) == null) {
       return TestConnectionResult.error(Collections.singletonList("Make sure to set all connected system values."));
     }
 
-    // Get token
+    // Get list of available subApis and their information map
+    String rootUrl = connectedSystemConfiguration.getValue(ROOT_URL);
     HTTP httpService = new HTTP(connectedSystemConfiguration);
     try {
-      httpService.retrieveToken();
+      httpService.get(rootUrl + "/rest/apis");
     } catch (IOException | MimeTypeException e) {
       return TestConnectionResult.error(Arrays.asList(e.getCause().toString(), e.getMessage()));
     }
@@ -100,7 +86,7 @@ public class ServiceWithServiceAccountMapping extends SimpleTestableConnectedSys
     if (httpService.getHttpError() != null) {
       HttpResponse httpError = httpService.getHttpError();
       return TestConnectionResult.error(
-          Arrays.asList("Error " + httpError.getStatusCode(), httpError.getResponse().toString())
+          Arrays.asList("Error " + httpError.getStatusCode(), httpError.getResponse().toString(), httpError.getStatusLine())
       );
     }
     return TestConnectionResult.success();

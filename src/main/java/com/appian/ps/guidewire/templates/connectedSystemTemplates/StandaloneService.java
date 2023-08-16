@@ -1,4 +1,4 @@
-package com.appian.guidewire.templates.connectedSystemTemplates;
+package com.appian.ps.guidewire.templates.connectedSystemTemplates;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -12,8 +12,8 @@ import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
 import com.appian.connectedsystems.templateframework.sdk.TemplateId;
 import com.appian.connectedsystems.templateframework.sdk.configuration.Choice;
 import com.appian.connectedsystems.templateframework.sdk.connectiontesting.TestConnectionResult;
-import com.appian.guidewire.templates.HTTP.HTTP;
-import com.appian.guidewire.templates.HTTP.HttpResponse;
+import com.appian.ps.guidewire.templates.HTTP.HTTP;
+import com.appian.ps.guidewire.templates.HTTP.HttpResponse;
 
 import std.ConstantKeys;
 
@@ -51,6 +51,7 @@ public class StandaloneService extends SimpleTestableConnectedSystemTemplate imp
             .instructionText("Enter the Okta authentication url of your Guidewire instance to receive an authentication token.")
             .instructionText("Enter the Okta authentication url of your Guidewire instance to receive an authentication token " +
                 "(Make sure to append with /<VERSION>/token).")
+            .description("For example, https://guidewire-hub.okta.com/oauth2/<ID>/v1/token")
             .isRequired(true)
             .build(),
         textProperty(SCOPES)

@@ -1,4 +1,4 @@
-package com.appian.guidewire.templates.Execution;
+package com.appian.ps.guidewire.templates.Execution;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -17,9 +17,9 @@ import com.appian.connectedsystems.templateframework.sdk.IntegrationError.Integr
 import com.appian.connectedsystems.templateframework.sdk.IntegrationResponse;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyState;
 import com.appian.connectedsystems.templateframework.sdk.diagnostics.IntegrationDesignerDiagnostic;
-import com.appian.guidewire.templates.HTTP.HTTP;
-import com.appian.guidewire.templates.HTTP.HttpResponse;
-import com.appian.guidewire.templates.integrationTemplates.GuidewireIntegrationTemplate;
+import com.appian.ps.guidewire.templates.HTTP.HTTP;
+import com.appian.ps.guidewire.templates.HTTP.HttpResponse;
+import com.appian.ps.guidewire.templates.integrationTemplates.GuidewireIntegrationTemplate;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import std.ConstantKeys;

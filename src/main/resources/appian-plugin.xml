@@ -1,4 +1,4 @@
-<appian-plugin name="Guidewire" key="com.appian.guidewire">
+<appian-plugin name="Guidewire" key="com.appian.ps.guidewire">
   <plugin-info>
     <description>Guidewire Connected System Plugin</description>
     <vendor name="Appian" url="https://appian.com/"/>
@@ -9,19 +9,19 @@
     <version major-version="1">
       <connected-system-template key="BasicAuth"
                                  name="Guidewire"
-                                 class="com.appian.guidewire.templates.connectedSystemTemplates.BasicAuth"/>
+                                 class="com.appian.ps.guidewire.templates.connectedSystemTemplates.BasicAuth"/>
       <connected-system-template key="StandaloneService"
                                  name="Guidewire"
-                                 class="com.appian.guidewire.templates.connectedSystemTemplates.StandaloneService"/>
+                                 class="com.appian.ps.guidewire.templates.connectedSystemTemplates.StandaloneService"/>
       <connected-system-template key="ServiceWithServiceAccountMapping"
                                  name="Guidewire"
-                                 class="com.appian.guidewire.templates.connectedSystemTemplates.ServiceWithServiceAccountMapping"/>
+                                 class="com.appian.ps.guidewire.templates.connectedSystemTemplates.ServiceWithServiceAccountMapping"/>
       <connected-system-template key="ServiceWithUserContext"
                                  name="Guidewire"
-                                 class="com.appian.guidewire.templates.connectedSystemTemplates.ServiceWithUserContext"/>
+                                 class="com.appian.ps.guidewire.templates.connectedSystemTemplates.ServiceWithUserContext"/>
       <integration-template key="GuidewireIntegrationTemplate"
                             name="Guidewire"
-                            class="com.appian.guidewire.templates.integrationTemplates.GuidewireIntegrationTemplate"
+                            class="com.appian.ps.guidewire.templates.integrationTemplates.GuidewireIntegrationTemplate"
                             request-policy="read_and_write" />
     </version>
   </connected-system>

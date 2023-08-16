@@ -1,4 +1,4 @@
-package com.appian.guidewire.templates.HTTP;
+package com.appian.ps.guidewire.templates.HTTP;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -19,8 +19,8 @@ import com.appian.connectedsystems.simplified.sdk.configuration.SimpleConfigurat
 import com.appian.connectedsystems.templateframework.sdk.ExecutionContext;
 import com.appian.connectedsystems.templateframework.sdk.configuration.Document;
 import com.appian.connectedsystems.templateframework.sdk.configuration.PropertyDescriptor;
-import com.appian.guidewire.templates.Execution.Execute;
-import com.appian.guidewire.templates.integrationTemplates.GuidewireIntegrationTemplate;
+import com.appian.ps.guidewire.templates.Execution.Execute;
+import com.appian.ps.guidewire.templates.integrationTemplates.GuidewireIntegrationTemplate;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
