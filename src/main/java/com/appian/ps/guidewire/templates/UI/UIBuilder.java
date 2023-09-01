@@ -169,8 +169,9 @@ public abstract class UIBuilder implements ConstantKeys {
               .isRequired(true)
               .isExpressionable(true)
               .placeholder("Insert " + paramNameTitleCase)
+              .description(paramNameTitleCase + " is a path parameter required to construct the url.")
               .label(paramNameTitleCase)
-              .instructionText(paramDescription != null ? paramDescription : "")
+              .instructionText(paramDescription != null ? paramDescription + "." : "")
               .build();
           pathVarsUI.add(ui);
         }));

@@ -116,7 +116,8 @@ public class GuidewireUIBuilder extends UIBuilder {
     properties.add(simpleIntegrationTemplate.textProperty(SEARCH)
         .label("Sort Endpoints")
         .refresh(RefreshPolicy.ALWAYS)
-        .instructionText("Sort the endpoints dropdown below with a relevant search query")
+        .instructionText("Sort the endpoints dropdown below with a relevant search query.")
+        .description("Use the type of REST call and the description of the call for best results. For example, 'GET claim'.")
         .placeholder("Sort Query")
         .build());
     properties.add(simpleIntegrationTemplate.textProperty(ENDPOINTS_FOR_SEARCH).isHidden(true).build());
@@ -125,7 +126,10 @@ public class GuidewireUIBuilder extends UIBuilder {
     TextPropertyDescriptor.TextPropertyDescriptorBuilder listOfEndpointsUI = simpleIntegrationTemplate
         .textProperty(CHOSEN_ENDPOINT)
         .isRequired(true)
+        .transientChoices(true)
         .refresh(RefreshPolicy.ALWAYS)
+        .description("On save and refresh, only the selected operation will remain populated. To populate the dropdown with " +
+            "the full list of operations, input text into the 'Sort Endpoints' field.")
         .label("Select Operation");
     List<String> listOfChoicesForSearch = new ArrayList<>();
     paths.fields().forEachRemaining(pathNode -> {
@@ -163,7 +167,8 @@ public class GuidewireUIBuilder extends UIBuilder {
     properties.add(simpleIntegrationTemplate.textProperty(SEARCH)
         .label("Sort Endpoints")
         .refresh(RefreshPolicy.ALWAYS)
-        .instructionText("Sort the endpoints dropdown below with a relevant search query")
+        .instructionText("Sort the endpoints dropdown below with a relevant search query.")
+        .description("Use the type of REST call and the description of the call for best results. For example, 'GET claim'.")
         .placeholder("Sort Query")
         .build());
     properties.add(simpleIntegrationTemplate.textProperty(ENDPOINTS_FOR_SEARCH).isHidden(true).build());
@@ -177,7 +182,10 @@ public class GuidewireUIBuilder extends UIBuilder {
     TextPropertyDescriptor.TextPropertyDescriptorBuilder listOfEndpointsUI = simpleIntegrationTemplate
         .textProperty(CHOSEN_ENDPOINT)
         .isRequired(true)
+        .transientChoices(true)
         .refresh(RefreshPolicy.ALWAYS)
+        .description("On save and refresh, only the selected operation will remain populated. To populate the dropdown with " +
+            "the full list of operations, input text into the 'Sort Endpoints' field.")
         .label("Select Operation");
     if (searchQuery == null || searchQuery.equals("")) {
       // rebuild default choices from listOfChoicesForSearch (as the choices themselves change order and listOfChoicesForSearch
@@ -350,6 +358,7 @@ public class GuidewireUIBuilder extends UIBuilder {
       if (filterProperties != null && filterProperties.size() > 0) {
         TextPropertyDescriptor.TextPropertyDescriptorBuilder filteredChoices = simpleIntegrationTemplate.textProperty(FILTER_FIELD)
             .label("Filter Response")
+            .transientChoices(true)
             .instructionText("Filter response by selecting a field in the dropdown.")
             .isExpressionable(true)
             .description("If setting this value as a rule input, use the abbreviation of the value as described in the " +
@@ -363,10 +372,11 @@ public class GuidewireUIBuilder extends UIBuilder {
         );
         TextPropertyDescriptor.TextPropertyDescriptorBuilder filteringOperatorsBuilder = simpleIntegrationTemplate
             .textProperty(FILTER_OPERATOR)
-            .instructionText("Select an operator to filter the results")
+            .label("Filter Operation")
+            .instructionText("Select an operator to filter the results.")
             .refresh(RefreshPolicy.ALWAYS)
             .description("If setting this value as a rule input, use the string version of the value as described in the " +
-                "following list: " + FILTERING_OPTIONS)
+                "following list: " + FILTERING_OPTIONS + ".")
             .isExpressionable(true);
         FILTERING_OPTIONS.forEach((key, value) -> filteringOperatorsBuilder.choice(Choice.builder().name(key).value(value).build()));
         // If any of the options are selected, the set will have more items than just null and the rest of the fields become
@@ -380,7 +390,8 @@ public class GuidewireUIBuilder extends UIBuilder {
         properties.add(filteredChoices.isRequired(isRequired).build());
         properties.add(filteringOperatorsBuilder.isRequired(isRequired).build());
         properties.add(simpleIntegrationTemplate.textProperty(FILTER_VALUE)
-            .instructionText("Insert the query to filter the chosen field")
+            .label("Filter Value")
+            .instructionText("Insert the query to filter the chosen field.")
             .isRequired(isRequired)
             .refresh(RefreshPolicy.ALWAYS)
             .isExpressionable(true)
@@ -395,10 +406,11 @@ public class GuidewireUIBuilder extends UIBuilder {
         TextPropertyDescriptor.TextPropertyDescriptorBuilder sortedChoices = simpleIntegrationTemplate.textProperty(SORT)
             .label("Sort Response")
             .instructionText("Sort response by selecting a field in the dropdown. If the dropdown is empty," +
-                " there are no sortable fields available")
+                " there are no sortable fields available.")
+            .transientChoices(true)
             .isExpressionable(true)
             .description("If setting this value as a rule input, use the string version of the value as described in the " +
-                "following list: " + sortProperties)
+                "following list: " + sortProperties + ".")
             .refresh(RefreshPolicy.ALWAYS);
 
         sortProperties.forEach(property -> sortedChoices.choice(
@@ -430,10 +442,9 @@ public class GuidewireUIBuilder extends UIBuilder {
         .displayMode(BooleanDisplayMode.RADIO_BUTTON)
         .instructionText("Includes a count of the total number of results available, which may be more than the total number of" +
             " results currently being returned. This value can only be set when there is more than one element returned.")
-        .description("If not specified, the default is" +
-            " considered to be `false.` If the number of resources to total is sufficiently large, using the includeTotal " +
-            "parameter can affect performance. Guidewire recommends you use this parameter only when there is a need for it, and " +
-            "only when the number of resources to total is unlikely to affect performance.")
+        .description("If not specified, the default is considered to be `false.` If the number of resources is sufficiently " +
+            "large, using the includeTotal parameter can affect performance. Guidewire recommends using this parameter only " +
+            "when there is a need for it, and only when the number of resources to total is unlikely to affect performance.")
         .build());
 
 
@@ -508,6 +519,7 @@ public class GuidewireUIBuilder extends UIBuilder {
     if (parse(schema, ONE_OF) != null) {
       TextPropertyDescriptor.TextPropertyDescriptorBuilder oneOfUI = simpleIntegrationTemplate
           .textProperty(ONE_OF)
+          .transientChoices(true)
           .isRequired(true)
           .refresh(RefreshPolicy.ALWAYS);
       if (integrationConfiguration.getProperty(ONE_OF) == null || integrationConfiguration.getValue(ONE_OF) == null) {

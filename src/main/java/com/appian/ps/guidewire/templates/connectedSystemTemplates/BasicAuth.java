@@ -1,6 +1,8 @@
 package com.appian.ps.guidewire.templates.connectedSystemTemplates;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.net.SocketTimeoutException;
 import java.util.Arrays;
 import java.util.Collections;
 
@@ -79,6 +81,9 @@ public class BasicAuth extends SimpleTestableConnectedSystemTemplate implements 
     HTTP httpService = new HTTP(connectedSystemConfiguration);
     try {
       httpService.get(rootUrl + "/rest/apis");
+    } catch (InterruptedIOException e) {
+      return TestConnectionResult.error(Arrays.asList("Please ensure that your Appian IP addresses are on the allowlist of your" +
+          " Guidewire instance.", e.getCause().toString(), e.getMessage()));
     } catch (IOException | MimeTypeException e) {
       return TestConnectionResult.error(Arrays.asList(e.getCause().toString(), e.getMessage()));
     }

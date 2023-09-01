@@ -94,10 +94,13 @@ public abstract class Execute implements ConstantKeys {
 
   public IntegrationDesignerDiagnostic getDiagnosticsUI() {
 
+    HttpResponse httpResponse = httpService.getHttpError() != null ?
+        httpService.getHttpError() :
+        httpService.getHttpResponse();
     return IntegrationDesignerDiagnostic.builder()
         .addExecutionTimeDiagnostic(System.currentTimeMillis() - start)
         .addRequestDiagnostic(getRequestDiagnostics())
-        .addResponseDiagnostic(httpService.getHttpResponse().getCombinedResponse())
+        .addResponseDiagnostic(httpResponse.getCombinedResponse())
         .build();
   }
 

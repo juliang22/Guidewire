@@ -182,8 +182,8 @@ public class HTTP implements ConstantKeys {
     }
 
     // Set response properties
-    int code = response.code();
-    String message = response.message();
+    int statusCode = response.code();
+    String statusLine = response.message();
     String bodyStr = body.string();
     Map<String,Object> responseEntity = new HashMap<>();
 
@@ -197,8 +197,8 @@ public class HTTP implements ConstantKeys {
     }
 
     // Set error if error is returned in response
-    if (code > 400 || !response.isSuccessful()) {
-      setHTTPError(new HttpResponse(code, message, responseEntity));
+    if (statusCode > 400 || !response.isSuccessful()) {
+      setHTTPError(new HttpResponse(statusCode, statusLine, responseEntity));
       return;
     }
 
@@ -223,10 +223,10 @@ public class HTTP implements ConstantKeys {
       PropertyDescriptor<?> hasSaveFolder = integrationConfiguration.getProperty(FOLDER);
       PropertyDescriptor<?> hasSaveFileName = integrationConfiguration.getProperty(SAVED_FILENAME);
       if (hasSaveFolder == null) {
-        setHTTPError(new HttpResponse(code, FILE_SAVING_ERROR_TITLE + FOLDER_LOCATION_ERROR_MESSAGE, responseEntity));
+        setHTTPError(new HttpResponse(statusCode, FILE_SAVING_ERROR_TITLE + FOLDER_LOCATION_ERROR_MESSAGE, responseEntity));
         return;
       } else if (hasSaveFileName == null) {
-        setHTTPError(new HttpResponse(code, FILE_SAVING_ERROR_TITLE + FILE_NAME_ERROR_MESSAGE, responseEntity));
+        setHTTPError(new HttpResponse(statusCode, FILE_SAVING_ERROR_TITLE + FILE_NAME_ERROR_MESSAGE, responseEntity));
         return;
       }
 
@@ -243,12 +243,12 @@ public class HTTP implements ConstantKeys {
           .downloadDocument(inputStream, folderID, fileName);
       documents.add(document);
 
-      setHttpResponse(new HttpResponse(code, message, responseEntity, documents));
+      setHttpResponse(new HttpResponse(statusCode, statusLine, responseEntity, documents));
       return;
     }
 
     // If no document, just return the response
-    setHttpResponse(new HttpResponse(code, message, responseEntity));
+    setHttpResponse(new HttpResponse(statusCode, statusLine, responseEntity));
   }
 
 

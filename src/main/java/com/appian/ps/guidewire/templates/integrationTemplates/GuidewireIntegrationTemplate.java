@@ -34,6 +34,11 @@ public class GuidewireIntegrationTemplate extends SimpleIntegrationTemplate impl
       PropertyPath propertyPath,
       ExecutionContext executionContext) {
 
+    // If connected system is deleted and user is trying to set new connected system object
+    if (connectedSystemConfiguration.getValue(API_TYPE) == null) {
+      return integrationConfiguration.setErrors(Collections.singletonList("Configure Connected System object."));
+    }
+
     integrationConfiguration.setErrors(Collections.singletonList("")); // resetting errors if they exist
     try {
       return new GuidewireUIBuilder(this, integrationConfiguration, connectedSystemConfiguration, propertyPath).build();
