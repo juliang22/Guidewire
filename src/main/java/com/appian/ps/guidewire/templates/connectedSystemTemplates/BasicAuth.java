@@ -85,7 +85,9 @@ public class BasicAuth extends SimpleTestableConnectedSystemTemplate implements 
       return TestConnectionResult.error(Arrays.asList("Please ensure that your Appian IP addresses are on the allowlist of your" +
           " Guidewire instance.", e.getCause().toString(), e.getMessage()));
     } catch (IOException | MimeTypeException e) {
-      return TestConnectionResult.error(Arrays.asList(e.getCause().toString(), e.getMessage()));
+      String cause = e.getCause() != null ? e.getCause().toString() : "Hostname Does Not Exist";
+      String message = e.getMessage() != null ? e.getMessage() : "Unable to connect";
+      return TestConnectionResult.error(Arrays.asList(cause, message));
     }
 
     if (httpService.getHttpError() != null) {
