@@ -12,17 +12,24 @@ public class HttpResponse {
     private final int statusCode;
     private final String statusLine;
     private List<Document> documents;
+    private String contentType;
+    private Map<String, Object> headers;
 
-    public HttpResponse(int statusCode, String statusLine, Map<String, Object> response) {
+    public HttpResponse(int statusCode, String statusLine, Map<String, Object> response, String contentType, Map<String, Object> headers) {
         this.statusCode = statusCode;
         this.statusLine = statusLine;
         this.response = response;
+        this.contentType = contentType;
+        this.headers = headers;
     }
 
-    public HttpResponse(int statusCode, String statusLine, Map<String, Object> response, List<Document> documents) {
+    public HttpResponse(int statusCode, String statusLine, Map<String, Object> response, String contentType, Map<String,
+        Object> headers, List<Document> documents) {
         this.response = response;
         this.statusLine = statusLine;
         this.statusCode = statusCode;
+        this.contentType = contentType;
+        this.headers = headers;
         this.documents = documents;
     }
 
@@ -47,18 +54,22 @@ public class HttpResponse {
 
     public Map<String,Object> getCombinedResponse() {
 
-        Map<String,Object> response = new HashMap<>(getResponse());
-        response.put("Status Code", statusCode);
+        Map<String,Object> formattedHTTPResponse = new HashMap<>();
+        formattedHTTPResponse.put("body", response);
+        formattedHTTPResponse.put("statusCode", statusCode);
+        formattedHTTPResponse.put("statusLine", statusLine);
+        formattedHTTPResponse.put("contentType", contentType);
+        formattedHTTPResponse.put("headers", headers);
 
         // If files were returned from the http response, add them to Appian response in designer
-        if (documents == null) return response;
+        if (documents == null) return formattedHTTPResponse;
         if (documents.size() == 1) {
-            documents.forEach(doc -> response.put("Document", doc));
+            documents.forEach(doc -> formattedHTTPResponse.put("Document", doc));
         } else {
             AtomicInteger index = new AtomicInteger(1);
-            documents.forEach(doc -> response.put("Document" + index.getAndIncrement(), doc));
+            documents.forEach(doc -> formattedHTTPResponse.put("Document" + index.getAndIncrement(), doc));
         }
 
-        return response;
+        return formattedHTTPResponse;
     }
 }

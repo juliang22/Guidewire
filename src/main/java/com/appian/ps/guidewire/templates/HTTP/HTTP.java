@@ -72,7 +72,7 @@ public class HTTP implements ConstantKeys {
     String username = connectedSystemConfiguration.getValue(USER_CONTEXT_USERNAME).toString().trim();
     if (username == null) {
       setHTTPError(
-          new HttpResponse(400, "Set username for Service with User Context in connected system.", new HashMap<>())
+          new HttpResponse(400, "Set username for Service with User Context in connected system.", new HashMap<>(), "", new HashMap<>())
       );
     }
 
@@ -91,7 +91,7 @@ public class HTTP implements ConstantKeys {
         break;
       default:
         setHTTPError(
-            new HttpResponse(400, "Set API Type in connected system.", new HashMap<>())
+            new HttpResponse(400, "Set API Type in connected system.", new HashMap<>(), "", new HashMap<>())
         );
         break;
     }
@@ -172,23 +172,24 @@ public class HTTP implements ConstantKeys {
   public void executeRequest(OkHttpClient client, Request request) throws IOException, MimeTypeException {
 
     Response response = client.newCall(request).execute();
-    // Check if null value is returned
+    // Set response properties
     ResponseBody body = response.body();
+    int statusCode = response.code();
+    String statusLine = response.message();
+    String bodyStr = body.string();
+    String contentType = response.header("Content-Type");
+    Map<String, Object> headers = new HashMap<>(response.headers().toMultimap());
+    // Check if null value is returned
     if (body == null) {
       setHTTPError(
-          new HttpResponse(204, "Null value returned", new HashMap<String, Object>(){{put("Error","Response is empty");}})
+          new HttpResponse(204, "Null value returned", new HashMap<String, Object>(){{put("Error","Response is empty");}},
+              contentType, headers)
       );
       return;
     }
 
-    // Set response properties
-    int statusCode = response.code();
-    String statusLine = response.message();
-    String bodyStr = body.string();
     Map<String,Object> responseEntity = new HashMap<>();
-
     // Normal json response sent back
-    String contentType = response.header("Content-Type");
     if (contentType != null && contentType.contains("application/json")) {
       // TODO: test replacing with readTree()
       responseEntity.putAll(objectMapper.readValue(bodyStr, new TypeReference<HashMap<String,Object>>() {}));
@@ -198,7 +199,7 @@ public class HTTP implements ConstantKeys {
 
     // Set error if error is returned in response
     if (statusCode > 400 || !response.isSuccessful()) {
-      setHTTPError(new HttpResponse(statusCode, statusLine, responseEntity));
+      setHTTPError(new HttpResponse(statusCode, statusLine, responseEntity, contentType, headers));
       return;
     }
 
@@ -223,10 +224,12 @@ public class HTTP implements ConstantKeys {
       PropertyDescriptor<?> hasSaveFolder = integrationConfiguration.getProperty(FOLDER);
       PropertyDescriptor<?> hasSaveFileName = integrationConfiguration.getProperty(SAVED_FILENAME);
       if (hasSaveFolder == null) {
-        setHTTPError(new HttpResponse(statusCode, FILE_SAVING_ERROR_TITLE + FOLDER_LOCATION_ERROR_MESSAGE, responseEntity));
+        setHTTPError(new HttpResponse(statusCode, FILE_SAVING_ERROR_TITLE + FOLDER_LOCATION_ERROR_MESSAGE, responseEntity,
+            contentType, headers));
         return;
       } else if (hasSaveFileName == null) {
-        setHTTPError(new HttpResponse(statusCode, FILE_SAVING_ERROR_TITLE + FILE_NAME_ERROR_MESSAGE, responseEntity));
+        setHTTPError(new HttpResponse(statusCode, FILE_SAVING_ERROR_TITLE + FILE_NAME_ERROR_MESSAGE, responseEntity,
+            contentType, headers));
         return;
       }
 
@@ -243,12 +246,12 @@ public class HTTP implements ConstantKeys {
           .downloadDocument(inputStream, folderID, fileName);
       documents.add(document);
 
-      setHttpResponse(new HttpResponse(statusCode, statusLine, responseEntity, documents));
+      setHttpResponse(new HttpResponse(statusCode, statusLine, responseEntity, contentType, headers, documents));
       return;
     }
 
     // If no document, just return the response
-    setHttpResponse(new HttpResponse(statusCode, statusLine, responseEntity));
+    setHttpResponse(new HttpResponse(statusCode, statusLine, responseEntity, contentType, headers));
   }
 
 
