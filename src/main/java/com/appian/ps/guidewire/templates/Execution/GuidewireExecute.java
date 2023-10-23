@@ -155,6 +155,18 @@ public class GuidewireExecute extends Execute {
   }
 
   public RequestBody getCompletedRequestBody() throws IOException {
+
+    // If composite request
+    if (pathNameUnmodified.equals("/composite") && integrationConfiguration.getProperty(COMPOSITE) != null) {
+      // TODO: Check if JSON is well formed
+
+      String compositeProp = integrationConfiguration.getValue("composite");
+      return RequestBody.create(compositeProp, MediaType.get("application/json; charset=utf-8"));
+/*      Map<String, Object> compositeReqBody = objectMapper.readValue(compositeProp, Map.class);*/
+
+
+    }
+
     // If not request body is needed for the post request
     if (integrationConfiguration.getProperty(NO_REQ_BODY) != null) {
       return RequestBody.create(new byte[0]);

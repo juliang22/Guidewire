@@ -188,6 +188,14 @@ public class HTTP implements ConstantKeys {
       return;
     }
 
+    // Making composite errors at least slightly readable
+    if (integrationConfiguration != null && integrationConfiguration.getValue(COMPOSITE) != null && statusLine.equals("")) {
+      Map<String, Object> bodyStrAsObj = objectMapper.readValue(bodyStr, Map.class);
+      if (bodyStrAsObj.get("commitError") != null && ((Map)bodyStrAsObj.get("commitError")).get("cause")!= null ) {
+        statusLine = ((Map)bodyStrAsObj.get("commitError")).get("cause").toString();
+      }
+    }
+
     Map<String,Object> responseEntity = new HashMap<>();
     // Normal json response sent back
     if (contentType != null && contentType.contains("application/json")) {

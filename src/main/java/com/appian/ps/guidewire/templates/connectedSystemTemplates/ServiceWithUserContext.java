@@ -25,9 +25,9 @@ public class ServiceWithUserContext extends SimpleTestableConnectedSystemTemplat
   protected SimpleConfiguration getConfiguration(SimpleConfiguration connectedSystemConfiguration, ExecutionContext executionContext) {
 
     return connectedSystemConfiguration.setProperties(
-        textProperty(API_TYPE).choices(Choice.builder().name("Claims Center").value(CLAIMS).build(),
-                Choice.builder().name("Policy Center").value(POLICIES).build(),
-                Choice.builder().name("Billing Center").value(BILLING).build())
+        textProperty(API_TYPE).choices(Choice.builder().name("ClaimCenter").value(CLAIMS).build(),
+                Choice.builder().name("PolicyCenter").value(POLICIES).build(),
+                Choice.builder().name("BillingCenter").value(BILLING).build())
             .label("Guidewire API")
             .instructionText("Select the Guidewire API to access. Once the API is set, it cannot be changed. Create a separate " +
                 "connected system object for each additional API.")
@@ -64,7 +64,7 @@ public class ServiceWithUserContext extends SimpleTestableConnectedSystemTemplat
         textProperty(SCOPES)
             .label("Scopes")
             .instructionText("Enter the scopes required to authenticate this service. All scopes must be space separated.")
-            .description("For example, Policy Center scopes may look like 'tenant.<TENANT> project.gwcp planet_class.<PLANET_CLASS> " +
+            .description("For example, PolicyCenter scopes may look like 'tenant.<TENANT> project.gwcp planet_class.<PLANET_CLASS> " +
                 "pc.service scp.pc.<TENANT>_serviceusercontext pc.allowusercontext'. Information about standalone service " +
                 "scopes can be found here: https://docs.guidewire.com/cloud/pc/202205/cloudapica/cloudAPI/topics/71_Authentication/07_services-standalone/c_example-flow-for-standalone-services-pc.html")
             .isRequired(true)

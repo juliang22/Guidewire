@@ -27,9 +27,9 @@ public class BasicAuth extends SimpleTestableConnectedSystemTemplate implements 
   protected SimpleConfiguration getConfiguration(SimpleConfiguration connectedSystemConfiguration, ExecutionContext executionContext) {
 
     return connectedSystemConfiguration.setProperties(
-        textProperty(API_TYPE).choices(Choice.builder().name("Claims Center").value(CLAIMS).build(),
-                Choice.builder().name("Policy Center").value(POLICIES).build(),
-                Choice.builder().name("Billing Center").value(BILLING).build())
+        textProperty(API_TYPE).choices(Choice.builder().name("ClaimCenter").value(CLAIMS).build(),
+                Choice.builder().name("PolicyCenter").value(POLICIES).build(),
+                Choice.builder().name("BillingCenter").value(BILLING).build())
             .label("Guidewire API")
             .instructionText("Select the Guidewire API to access. Once the API is set, it cannot be changed. Create a separate " +
                 "connected system object for each additional API.")
@@ -40,7 +40,7 @@ public class BasicAuth extends SimpleTestableConnectedSystemTemplate implements 
             .instructionText("Enter the base url of your Guidewire instance. For example, https://cc-dev-gwcpdev.<Tenant>" +
                 ".zeta1-andromeda.guidewire.net")
             .description("The root url should be anything preceding '/rest/v1/<module>.' Some root urls will require the Claim" +
-                " Center, Policy Center, or Billing Center to be appended with /cc, /pc, or /bc.")
+                "Center, PolicyCenter, or BillingCenter to be appended with /cc, /pc, or /bc.")
             .isRequired(true)
             .build(),
         textProperty(VERSION)
