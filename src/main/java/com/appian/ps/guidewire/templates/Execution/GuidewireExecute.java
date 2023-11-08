@@ -155,6 +155,15 @@ public class GuidewireExecute extends Execute {
   }
 
   public RequestBody getCompletedRequestBody() throws IOException {
+
+    // If composite request
+    if (pathNameUnmodified.equals("/composite") && integrationConfiguration.getProperty(COMPOSITE) != null) {
+      // TODO: Check if JSON is well formed
+
+      String compositeProp = integrationConfiguration.getValue("composite");
+      return RequestBody.create(compositeProp, MediaType.get("application/json; charset=utf-8"));
+    }
+
     // If not request body is needed for the post request
     if (integrationConfiguration.getProperty(NO_REQ_BODY) != null) {
       return RequestBody.create(new byte[0]);
@@ -176,17 +185,15 @@ public class GuidewireExecute extends Execute {
     if (doc != null) {
 
       // Create a temporary file and copy the InputStream into it
-      File tempFile = null;
       String fileName = doc.getFileName();
       String fileNameWithoutExtension = fileName.substring(0, doc.getFileName().lastIndexOf("."));
+      File tempFile = null;
+      FileOutputStream out = null;
       try {
         tempFile = File.createTempFile(fileNameWithoutExtension, "." + doc.getExtension());
-        FileOutputStream out = new FileOutputStream(tempFile);
+        out = new FileOutputStream(tempFile);
         IOUtils.copy(doc.getInputStream(), out);
       } finally {
-        if (tempFile != null) {
-          tempFile.deleteOnExit();
-        }
         // Create MultipartBody
         String jsonString = new ObjectMapper().writeValueAsString(dataWrapper);
         // Determine media type based on file extension
@@ -195,6 +202,12 @@ public class GuidewireExecute extends Execute {
           contentType = "application/octet-stream";  // Default to octet stream if type is unknown
         }
         RequestBody fileBody = RequestBody.create(tempFile, MediaType.parse(contentType));
+        if (out != null) {
+          out.close();
+        }
+        if (tempFile != null) {
+          tempFile.deleteOnExit();
+        }
         return new MultipartBody.Builder()
             .setType(MultipartBody.FORM)
             .addFormDataPart("content", fileName, fileBody)

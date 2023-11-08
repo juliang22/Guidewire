@@ -61,6 +61,7 @@ public interface ConstantKeys {
   String CONTENTS = "contents";
   String APPLICATION_JSON = "application/json";
   String MULTIPART_FORM_DATA = "multipart/form-data";
+  String COMPOSITE = "composite";
   String SCHEMAS = "schemas";
   String SCHEMA = "schema";
   String PROPERTIES = "properties";

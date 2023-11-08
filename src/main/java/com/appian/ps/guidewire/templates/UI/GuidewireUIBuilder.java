@@ -92,7 +92,7 @@ public class GuidewireUIBuilder extends UIBuilder {
       Map<String,String> subAPIInfoMap = (Map<String,String>)subApiProperties.getValue();
 
       // Filter out all unusable swagger files
-      Pattern pattern = Pattern.compile("/system/|/event/|/apis|/composite");
+      Pattern pattern = Pattern.compile("/system/|/event/|/apis");
       Matcher matcher = pattern.matcher(subAPIInfoMap.get("basePath"));
       if (matcher.find()) continue;
 
@@ -486,6 +486,20 @@ public class GuidewireUIBuilder extends UIBuilder {
   }
 
   public void buildPostOrPatch(String restOperation) throws JsonProcessingException {
+
+    // If composite request
+    if (pathName.equals("/composite")) {
+      properties.add(simpleIntegrationTemplate.textProperty(COMPOSITE)
+          .label("Composite Request Body")
+          .isExpressionable(true)
+          .displayHint(DisplayHint.EXPRESSION)
+          .instructionText("Composite requests execute multiple API sub-requests in a single database transaction." +
+              " Wrap the entire SAIL expression in a!toJson().")
+          .description("Learn more here: https://docs.guidewire.com/cloud/cc/202302/cloudapibf/cloudAPI/topics/102-Optim/02-composite-requests/c_constructing-composite-requests.html?hl=composite")
+          .isRequired(true)
+          .build());
+      return;
+    }
 
     JsonNode reqBody = parse(paths, Arrays.asList(pathName, restOperation, REQUEST_BODY));
     if(reqBody == null) {
