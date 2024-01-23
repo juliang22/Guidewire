@@ -184,9 +184,9 @@ public class GuidewireExecute extends Execute {
     Document doc = integrationConfiguration.getValue(DOCUMENT);
     if (doc != null) {
 
-      // Create a temporary file and copy the InputStream into it
+      // Code to create and write to the temp file
       String fileName = doc.getFileName();
-      String fileNameWithoutExtension = fileName.substring(0, doc.getFileName().lastIndexOf("."));
+      String fileNameWithoutExtension = fileName.substring(0, fileName.lastIndexOf("."));
       File tempFile = null;
       FileOutputStream out = null;
       try {
@@ -194,26 +194,27 @@ public class GuidewireExecute extends Execute {
         out = new FileOutputStream(tempFile);
         IOUtils.copy(doc.getInputStream(), out);
       } finally {
-        // Create MultipartBody
-        String jsonString = new ObjectMapper().writeValueAsString(dataWrapper);
-        // Determine media type based on file extension
-        String contentType = Files.probeContentType(tempFile.toPath());
-        if (contentType == null) {
-          contentType = "application/octet-stream";  // Default to octet stream if type is unknown
-        }
-        RequestBody fileBody = RequestBody.create(tempFile, MediaType.parse(contentType));
+        // Close resources
         if (out != null) {
           out.close();
         }
         if (tempFile != null) {
           tempFile.deleteOnExit();
         }
-        return new MultipartBody.Builder()
-            .setType(MultipartBody.FORM)
-            .addFormDataPart("content", fileName, fileBody)
-            .addFormDataPart("metadata", null, RequestBody.create(jsonString, MediaType.parse("application/json")))
-            .build();
       }
+
+      // Create MultipartBody
+      String jsonString = new ObjectMapper().writeValueAsString(dataWrapper);
+      String contentType = Files.probeContentType(tempFile.toPath());
+      if (contentType == null) {
+        contentType = "application/octet-stream";
+      }
+      RequestBody fileBody = RequestBody.create(tempFile, MediaType.parse(contentType));
+      return new MultipartBody.Builder()
+          .setType(MultipartBody.FORM)
+          .addFormDataPart("content", fileName, fileBody)
+          .addFormDataPart("metadata", null, RequestBody.create(jsonString, MediaType.parse("application/json")))
+          .build();
     }
 
     String jsonString = new ObjectMapper().writeValueAsString(dataWrapper);
